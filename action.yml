@@ -1,0 +1,23 @@
+name: 'Setup gdpm'
+description: 'Install the gdpm CLI (Godot plugin manager)'
+
+inputs:
+  gdpm-version:
+    description: 'gdpm version for go install (e.g., latest, main, or a commit SHA)'
+    required: false
+    default: 'latest'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install gdpm
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        mkdir -p "$HOME/.local/bin"
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+        GOBIN="$HOME/.local/bin" go install "github.com/aviorstudio/gdpm/cli/cmd/gdpm@${{ inputs.gdpm-version }}"
+
+        gdpm --help > /dev/null
