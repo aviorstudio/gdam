@@ -1,0 +1,26 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - supabase/migrations/**
+      - .github/actions/deploy-supabase-migrations/**
+      - .github/workflows/cd.yml
+  workflow_dispatch:
+
+jobs:
+  deploy-supabase-migrations:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy Supabase migrations
+        uses: ./.github/actions/deploy-supabase-migrations
+        with:
+          project-ref: ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
