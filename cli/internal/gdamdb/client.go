@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -19,7 +20,27 @@ type Client struct {
 }
 
 func NewDefaultClient() *Client {
-	return NewClient(DefaultSupabaseURL, DefaultSupabaseAnonKey)
+	return NewClient(defaultSupabaseURL(), defaultSupabaseAnonKey())
+}
+
+func defaultSupabaseURL() string {
+	if value := strings.TrimSpace(os.Getenv("GDAM_SUPABASE_URL")); value != "" {
+		return value
+	}
+	if value := strings.TrimSpace(os.Getenv("SUPABASE_URL")); value != "" {
+		return value
+	}
+	return DefaultSupabaseURL
+}
+
+func defaultSupabaseAnonKey() string {
+	if value := strings.TrimSpace(os.Getenv("GDAM_SUPABASE_ANON_KEY")); value != "" {
+		return value
+	}
+	if value := strings.TrimSpace(os.Getenv("SUPABASE_ANON_KEY")); value != "" {
+		return value
+	}
+	return DefaultSupabaseAnonKey
 }
 
 func NewClient(baseURL, anonKey string) *Client {

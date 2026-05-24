@@ -1,0 +1,1 @@
+-- Intentionally empty. Local auth users and addon data are created through the app.
