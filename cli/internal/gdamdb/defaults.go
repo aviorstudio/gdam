@@ -1,5 +1,3 @@
 package gdamdb
 
 const DefaultSupabaseURL = "https://cxstekyyusdsuxeqsbgt.supabase.co"
-
-const DefaultSupabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN4c3Rla3l5dXNkc3V4ZXFzYmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzNzYxNDksImV4cCI6MjA3OTk1MjE0OX0.DRbqVswvdb_lrma4CqZQyCmQbD3fuDNsKUIVPlvHnHw"

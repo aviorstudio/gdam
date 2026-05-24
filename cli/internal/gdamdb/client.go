@@ -1,6 +1,7 @@
 package gdamdb
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,18 +10,73 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
 type Client struct {
 	baseURL    string
-	anonKey    string
+	apiKey     string
 	httpClient *http.Client
 }
 
 func NewDefaultClient() *Client {
-	return NewClient(defaultSupabaseURL(), defaultSupabaseAnonKey())
+	loadDotEnv()
+	return NewClient(defaultSupabaseURL(), defaultSupabasePublishableKey())
+}
+
+func loadDotEnv() {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return
+	}
+
+	for _, p := range dotEnvCandidates(cwd) {
+		if loadDotEnvFile(p) {
+			return
+		}
+	}
+}
+
+func dotEnvCandidates(startDir string) []string {
+	var candidates []string
+	dir := startDir
+	for {
+		candidates = append(candidates, filepath.Join(dir, ".env"), filepath.Join(dir, "cli", ".env"))
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return candidates
+		}
+		dir = parent
+	}
+}
+
+func loadDotEnvFile(p string) bool {
+	f, err := os.Open(p)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		value = strings.Trim(strings.TrimSpace(value), `"'`)
+		if key == "" || os.Getenv(key) != "" {
+			continue
+		}
+		_ = os.Setenv(key, value)
+	}
+	return true
 }
 
 func defaultSupabaseURL() string {
@@ -33,22 +89,22 @@ func defaultSupabaseURL() string {
 	return DefaultSupabaseURL
 }
 
-func defaultSupabaseAnonKey() string {
-	if value := strings.TrimSpace(os.Getenv("GDAM_SUPABASE_ANON_KEY")); value != "" {
+func defaultSupabasePublishableKey() string {
+	if value := strings.TrimSpace(os.Getenv("GDAM_SUPABASE_PUBLISHABLE_KEY")); value != "" {
 		return value
 	}
-	if value := strings.TrimSpace(os.Getenv("SUPABASE_ANON_KEY")); value != "" {
+	if value := strings.TrimSpace(os.Getenv("SUPABASE_PUBLISHABLE_KEY")); value != "" {
 		return value
 	}
-	return DefaultSupabaseAnonKey
+	return ""
 }
 
-func NewClient(baseURL, anonKey string) *Client {
+func NewClient(baseURL, apiKey string) *Client {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
-	anonKey = strings.TrimSpace(anonKey)
+	apiKey = strings.TrimSpace(apiKey)
 	return &Client{
 		baseURL: baseURL,
-		anonKey: anonKey,
+		apiKey:  apiKey,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -204,13 +260,13 @@ func (c *Client) getPluginByOwnerAndName(ctx context.Context, userID, orgID *str
 	}
 
 	var rows []pluginRow
-	if err := c.get(ctx, "addons", q, &rows); err != nil {
+	if err := c.get(ctx, "plugins", q, &rows); err != nil {
 		errMsg := strings.ToLower(err.Error())
 		if strings.Contains(errMsg, "path") &&
 			(strings.Contains(errMsg, "does not exist") || strings.Contains(errMsg, "could not find") || strings.Contains(errMsg, "schema cache")) {
 			q.Set("select", selectLegacy)
 			rows = nil
-			if err2 := c.get(ctx, "addons", q, &rows); err2 != nil {
+			if err2 := c.get(ctx, "plugins", q, &rows); err2 != nil {
 				return pluginRow{}, false, err2
 			}
 		} else {
@@ -263,9 +319,11 @@ func (c *Client) get(ctx context.Context, table string, query url.Values, dst an
 	if err != nil {
 		return err
 	}
+	if c.apiKey == "" {
+		return fmt.Errorf("missing Supabase publishable key (set GDAM_SUPABASE_PUBLISHABLE_KEY or SUPABASE_PUBLISHABLE_KEY)")
+	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("apikey", c.anonKey)
-	req.Header.Set("Authorization", "Bearer "+c.anonKey)
+	req.Header.Set("apikey", c.apiKey)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
