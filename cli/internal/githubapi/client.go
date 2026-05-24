@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aviorstudio/gdpm/cli/internal/semver"
+	"github.com/aviorstudio/gdam/cli/internal/semver"
 )
 
 const apiBaseURL = "https://api.github.com"
@@ -33,7 +33,7 @@ func NewClient(token string) *Client {
 	return &Client{
 		httpClient: &http.Client{Timeout: 60 * time.Second},
 		token:      token,
-		userAgent:  "gdpm-cli",
+		userAgent:  "gdam-cli",
 	}
 }
 

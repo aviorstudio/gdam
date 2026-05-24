@@ -1,9 +1,9 @@
-package gdpmdb
+package gdamdb
 
 import (
 	"strings"
 
-	"github.com/aviorstudio/gdpm/cli/internal/semver"
+	"github.com/aviorstudio/gdam/cli/internal/semver"
 )
 
 func selectVersion(rows []versionRow, requested string) (versionRow, bool) {

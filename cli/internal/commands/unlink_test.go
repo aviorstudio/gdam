@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aviorstudio/gdpm/cli/internal/manifest"
+	"github.com/aviorstudio/gdam/cli/internal/manifest"
 )
 
 func TestUnlink_RemovesSymlinkWhenNoRepo(t *testing.T) {
@@ -33,8 +33,8 @@ func TestUnlink_RemovesSymlinkWhenNoRepo(t *testing.T) {
 			Path:    pluginDir,
 		},
 	})
-	if err := manifest.Save(filepath.Join(projectDir, "gdpm.json"), m); err != nil {
-		t.Fatalf("write gdpm.json: %v", err)
+	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
+		t.Fatalf("write gdam.json: %v", err)
 	}
 
 	addonDirName, err := addonDirNameForPluginKey("@user/plugin")
@@ -87,36 +87,36 @@ func TestUnlink_RemovesSymlinkWhenNoRepo(t *testing.T) {
 		t.Fatalf("expected plugin to be disabled in project.godot, got:\n%s", out)
 	}
 
-	gdpmPath := filepath.Join(projectDir, "gdpm.json")
-	m2, err := manifest.Load(gdpmPath)
+	gdamPath := filepath.Join(projectDir, "gdam.json")
+	m2, err := manifest.Load(gdamPath)
 	if err != nil {
-		t.Fatalf("read gdpm.json: %v", err)
+		t.Fatalf("read gdam.json: %v", err)
 	}
-	if _, ok := m2.Plugins["@user/plugin"]; !ok {
-		t.Fatalf("expected plugin to remain in gdpm.json")
+	if _, ok := m2.Addons["@user/plugin"]; !ok {
+		t.Fatalf("expected plugin to remain in gdam.json")
 	}
 
-	gdpmBytes, err := os.ReadFile(gdpmPath)
+	gdamBytes, err := os.ReadFile(gdamPath)
 	if err != nil {
-		t.Fatalf("read gdpm.json bytes: %v", err)
+		t.Fatalf("read gdam.json bytes: %v", err)
 	}
-	if strings.Contains(string(gdpmBytes), `"link"`) {
-		t.Fatalf("expected gdpm.json to not contain link config, got:\n%s", string(gdpmBytes))
+	if strings.Contains(string(gdamBytes), `"link"`) {
+		t.Fatalf("expected gdam.json to not contain link config, got:\n%s", string(gdamBytes))
 	}
 
 	linkManifestPath := filepath.Join(projectDir, manifest.LinkFilename)
 	lm, err := manifest.LoadLinkManifest(linkManifestPath)
 	if err != nil {
-		t.Fatalf("read gdpm.link.json: %v", err)
+		t.Fatalf("read gdam.link.json: %v", err)
 	}
-	link, ok := lm.Plugins["@user/plugin"]
+	link, ok := lm.Addons["@user/plugin"]
 	if !ok {
-		t.Fatalf("expected gdpm.link.json entry for @user/plugin")
+		t.Fatalf("expected gdam.link.json entry for @user/plugin")
 	}
 	if link.Enabled {
-		t.Fatalf("expected gdpm.link.json enabled=false, got true")
+		t.Fatalf("expected gdam.link.json enabled=false, got true")
 	}
 	if got := link.Path; got != pluginDir {
-		t.Fatalf("expected gdpm.link.json path %q, got %q", pluginDir, got)
+		t.Fatalf("expected gdam.link.json path %q, got %q", pluginDir, got)
 	}
 }

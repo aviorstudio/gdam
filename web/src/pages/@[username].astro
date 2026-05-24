@@ -201,7 +201,7 @@ if (!usernameNormal) {
       if (showCreatePluginDialog && !canCreatePlugin) {
         Astro.response.status = 403;
         pageTone = 'error';
-        pageStatus = 'You do not have permission to publish plugins for this account.';
+        pageStatus = 'You do not have permission to publish addons for this account.';
         showCreatePluginDialog = false;
       }
 
@@ -215,7 +215,7 @@ if (!usernameNormal) {
         if (!canCreatePlugin) {
           Astro.response.status = 403;
           pageTone = 'error';
-          createStatus = 'You do not have permission to publish plugins for this account.';
+          createStatus = 'You do not have permission to publish addons for this account.';
           createTone = 'error';
         } else {
           const formData = await Astro.request.formData();
@@ -226,7 +226,7 @@ if (!usernameNormal) {
           formSha = String(formData.get('sha') ?? '').trim();
 
           if (!formName || !formRepo || !formVersion || !formSha) {
-            createStatus = 'Plugin name, repository, version, and sha are required.';
+            createStatus = 'Addon name, repository, version, and sha are required.';
             createTone = 'error';
           } else {
             const versionTriplet = parseSemverTriplet(formVersion);
@@ -257,7 +257,7 @@ if (!usernameNormal) {
                   createStatus = pluginError.message;
                   createTone = 'error';
                 } else if (!createdPlugin?.id) {
-                  createStatus = 'Plugin created but no id returned.';
+                  createStatus = 'Addon created but no id returned.';
                   createTone = 'error';
                 } else {
                   const { error: versionError } = await pluginVersionsDto.insert(supabase, {
@@ -323,7 +323,7 @@ if (!usernameNormal) {
           const treeUrl = latestRelease?.sha ? toGitHubTreeUrl(repoUrl, latestRelease.sha, plugin.path ?? undefined) : '';
 
           return {
-            pluginLabel: pluginSlug || 'Untitled plugin',
+            pluginLabel: pluginSlug || 'Untitled addon',
             pluginHref,
             metaLabel: versionLabel,
             metaHref: treeUrl || undefined,
@@ -345,7 +345,7 @@ if (!usernameNormal) {
     subtitleLink={pageTone !== 'not-found' && githubUserUrl
       ? { href: githubUserUrl, label: githubUserLabel, external: true }
       : undefined}
-    action={canCreatePlugin && pageTone === 'default' ? { href: '?create=1', label: 'Create plugin' } : undefined}
+    action={canCreatePlugin && pageTone === 'default' ? { href: '?create=1', label: 'Create addon' } : undefined}
   />
 
   <PluginList
@@ -353,22 +353,22 @@ if (!usernameNormal) {
     status={pageStatus}
     tone={pageTone === 'error' ? 'error' : 'muted'}
     hideBodyWhenError
-    emptyTitle={pageTone === 'not-found' ? 'No matching owner' : 'No plugins yet'}
+    emptyTitle={pageTone === 'not-found' ? 'No matching owner' : 'No addons yet'}
     emptySubtitle={pageTone === 'not-found'
       ? 'Double-check the username and try again.'
-      : 'This account has not published any plugins.'}
+      : 'This account has not published any addons.'}
   />
 
   {
     canCreatePlugin && (
-      <Dialog id="create-plugin-dialog" open={showCreatePluginDialog} title="Create a plugin" size="lg">
+      <Dialog id="create-plugin-dialog" open={showCreatePluginDialog} title="Create an addon" size="lg">
         <Fragment slot="description">
-          Add a plugin name, repository, and initial release.
+          Add an addon name, repository, and initial release.
         </Fragment>
 
 	        <form method="post" action={Astro.url.pathname} class="flex flex-col gap-4">
 	          <Input
-	            label="Plugin name"
+	            label="Addon name"
 	            name="name"
 	            placeholder="my-awesome-addon"
 	            type="text"
@@ -435,7 +435,7 @@ if (!usernameNormal) {
               class="inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
               type="submit"
             >
-              Create plugin
+              Create addon
             </button>
           </div>
         </form>

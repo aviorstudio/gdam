@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aviorstudio/gdpm/cli/internal/manifest"
+	"github.com/aviorstudio/gdam/cli/internal/manifest"
 )
 
 func TestLink_ReplacesLegacyEditorPluginEntryForSameLocalPath(t *testing.T) {
@@ -33,8 +33,8 @@ func TestLink_ReplacesLegacyEditorPluginEntryForSameLocalPath(t *testing.T) {
 			Path:    pluginDir,
 		},
 	})
-	if err := manifest.Save(filepath.Join(projectDir, "gdpm.json"), m); err != nil {
-		t.Fatalf("write gdpm.json: %v", err)
+	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
+		t.Fatalf("write gdam.json: %v", err)
 	}
 
 	projectGodotPath := filepath.Join(projectDir, "project.godot")
@@ -94,8 +94,8 @@ func TestLink_OverwritesExistingAddonsDirWhenNotInManifest(t *testing.T) {
 	}
 
 	m := manifest.New()
-	if err := manifest.Save(filepath.Join(projectDir, "gdpm.json"), m); err != nil {
-		t.Fatalf("write gdpm.json: %v", err)
+	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
+		t.Fatalf("write gdam.json: %v", err)
 	}
 
 	addonDirName, err := addonDirNameForPluginKey("@user/plugin")
@@ -134,37 +134,37 @@ func TestLink_OverwritesExistingAddonsDirWhenNotInManifest(t *testing.T) {
 		t.Fatalf("expected dst to be symlink, got mode %v", info.Mode())
 	}
 
-	gdpmPath := filepath.Join(projectDir, "gdpm.json")
-	m2, err := manifest.Load(gdpmPath)
+	gdamPath := filepath.Join(projectDir, "gdam.json")
+	m2, err := manifest.Load(gdamPath)
 	if err != nil {
-		t.Fatalf("read gdpm.json: %v", err)
+		t.Fatalf("read gdam.json: %v", err)
 	}
-	if _, ok := m2.Plugins["@user/plugin"]; !ok {
-		t.Fatalf("expected plugin entry to exist in gdpm.json")
+	if _, ok := m2.Addons["@user/plugin"]; !ok {
+		t.Fatalf("expected addon entry to exist in gdam.json")
 	}
 
-	gdpmBytes, err := os.ReadFile(gdpmPath)
+	gdamBytes, err := os.ReadFile(gdamPath)
 	if err != nil {
-		t.Fatalf("read gdpm.json bytes: %v", err)
+		t.Fatalf("read gdam.json bytes: %v", err)
 	}
-	if strings.Contains(string(gdpmBytes), `"link"`) {
-		t.Fatalf("expected gdpm.json to not contain link config, got:\n%s", string(gdpmBytes))
+	if strings.Contains(string(gdamBytes), `"link"`) {
+		t.Fatalf("expected gdam.json to not contain link config, got:\n%s", string(gdamBytes))
 	}
 
 	linkManifestPath := filepath.Join(projectDir, manifest.LinkFilename)
 	lm, err := manifest.LoadLinkManifest(linkManifestPath)
 	if err != nil {
-		t.Fatalf("read gdpm.link.json: %v", err)
+		t.Fatalf("read gdam.link.json: %v", err)
 	}
-	link, ok := lm.Plugins["@user/plugin"]
+	link, ok := lm.Addons["@user/plugin"]
 	if !ok {
-		t.Fatalf("expected gdpm.link.json entry for @user/plugin")
+		t.Fatalf("expected gdam.link.json entry for @user/plugin")
 	}
 	if got := link.Path; got != pluginDir {
-		t.Fatalf("expected gdpm.link.json path %q, got %q", pluginDir, got)
+		t.Fatalf("expected gdam.link.json path %q, got %q", pluginDir, got)
 	}
 	if got := link.Enabled; got != true {
-		t.Fatalf("expected gdpm.link.json enabled=true, got %v", got)
+		t.Fatalf("expected gdam.link.json enabled=true, got %v", got)
 	}
 }
 
@@ -180,8 +180,8 @@ func TestLink_DisablesLegacyEditorPluginEntryDerivedFromPath(t *testing.T) {
 	}
 
 	m := manifest.New()
-	if err := manifest.Save(filepath.Join(projectDir, "gdpm.json"), m); err != nil {
-		t.Fatalf("write gdpm.json: %v", err)
+	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
+		t.Fatalf("write gdam.json: %v", err)
 	}
 
 	projectGodotPath := filepath.Join(projectDir, "project.godot")
@@ -250,8 +250,8 @@ func TestLink_UsesStoredPathWhenNoPathProvided(t *testing.T) {
 			Path:    pluginDir,
 		},
 	})
-	if err := manifest.Save(filepath.Join(projectDir, "gdpm.json"), m); err != nil {
-		t.Fatalf("write gdpm.json: %v", err)
+	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
+		t.Fatalf("write gdam.json: %v", err)
 	}
 
 	oldWd, err := os.Getwd()
@@ -293,37 +293,37 @@ func TestLink_UsesStoredPathWhenNoPathProvided(t *testing.T) {
 		}
 	}
 
-	gdpmPath := filepath.Join(projectDir, "gdpm.json")
-	m2, err := manifest.Load(gdpmPath)
+	gdamPath := filepath.Join(projectDir, "gdam.json")
+	m2, err := manifest.Load(gdamPath)
 	if err != nil {
-		t.Fatalf("read gdpm.json: %v", err)
+		t.Fatalf("read gdam.json: %v", err)
 	}
-	if _, ok := m2.Plugins["@user/plugin"]; !ok {
-		t.Fatalf("expected plugin entry to exist in gdpm.json")
+	if _, ok := m2.Addons["@user/plugin"]; !ok {
+		t.Fatalf("expected addon entry to exist in gdam.json")
 	}
 
-	gdpmBytes, err := os.ReadFile(gdpmPath)
+	gdamBytes, err := os.ReadFile(gdamPath)
 	if err != nil {
-		t.Fatalf("read gdpm.json bytes: %v", err)
+		t.Fatalf("read gdam.json bytes: %v", err)
 	}
-	if strings.Contains(string(gdpmBytes), `"link"`) {
-		t.Fatalf("expected gdpm.json to not contain link config, got:\n%s", string(gdpmBytes))
+	if strings.Contains(string(gdamBytes), `"link"`) {
+		t.Fatalf("expected gdam.json to not contain link config, got:\n%s", string(gdamBytes))
 	}
 
 	linkManifestPath := filepath.Join(projectDir, manifest.LinkFilename)
 	lm, err := manifest.LoadLinkManifest(linkManifestPath)
 	if err != nil {
-		t.Fatalf("read gdpm.link.json: %v", err)
+		t.Fatalf("read gdam.link.json: %v", err)
 	}
-	link, ok := lm.Plugins["@user/plugin"]
+	link, ok := lm.Addons["@user/plugin"]
 	if !ok {
-		t.Fatalf("expected gdpm.link.json entry for @user/plugin")
+		t.Fatalf("expected gdam.link.json entry for @user/plugin")
 	}
 	if got := link.Path; got != pluginDir {
-		t.Fatalf("expected gdpm.link.json path %q, got %q", pluginDir, got)
+		t.Fatalf("expected gdam.link.json path %q, got %q", pluginDir, got)
 	}
 	if got := link.Enabled; got != true {
-		t.Fatalf("expected gdpm.link.json enabled=true, got %v", got)
+		t.Fatalf("expected gdam.link.json enabled=true, got %v", got)
 	}
 }
 
@@ -336,8 +336,8 @@ func TestLink_RequiresPathWhenNoStoredPath(t *testing.T) {
 			Enabled: false,
 		},
 	})
-	if err := manifest.Save(filepath.Join(projectDir, "gdpm.json"), m); err != nil {
-		t.Fatalf("write gdpm.json: %v", err)
+	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
+		t.Fatalf("write gdam.json: %v", err)
 	}
 
 	oldWd, err := os.Getwd()

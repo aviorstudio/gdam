@@ -93,7 +93,7 @@ let versions: Array<{
 const notFound = () => {
   Astro.response.status = 404;
   pageTone = 'not-found';
-  pageStatus = 'That plugin could not be found.';
+  pageStatus = 'That addon could not be found.';
 };
 
 if (!usernameNormal || !pluginName) {
@@ -137,7 +137,7 @@ if (!usernameNormal || !pluginName) {
     if (showCreateReleaseDialog && !canCreateRelease) {
       Astro.response.status = 403;
       pageTone = 'error';
-      pageStatus = 'You do not have permission to publish releases for this plugin.';
+      pageStatus = 'You do not have permission to publish releases for this addon.';
       showCreateReleaseDialog = false;
     }
 
@@ -179,7 +179,7 @@ if (!usernameNormal || !pluginName) {
           if (!canCreateRelease) {
             Astro.response.status = 403;
             pageTone = 'error';
-            createStatus = 'You do not have permission to publish releases for this plugin.';
+            createStatus = 'You do not have permission to publish releases for this addon.';
             createTone = 'error';
           } else {
             const formData = await Astro.request.formData();
@@ -252,7 +252,7 @@ const versionList = versions.map((version) => ({
         ]
       : undefined}
     subtitle={pageTone === 'not-found'
-      ? 'No plugin matches that URL.'
+      ? 'No addon matches that URL.'
       : repoUrl ? undefined : 'No repository linked.'}
     subtitleLink={pageTone !== 'not-found' && repoUrl
       ? { href: repoUrl, label: repoLabel || plugin?.repo || repoUrl, external: true }
@@ -265,7 +265,7 @@ const versionList = versions.map((version) => ({
     status={pageStatus}
     tone={pageTone === 'error' ? 'error' : 'muted'}
     hideBodyWhenError
-    emptyTitle={pageTone === 'not-found' ? 'No matching plugin' : 'No versions yet'}
+    emptyTitle={pageTone === 'not-found' ? 'No matching addon' : 'No versions yet'}
     emptySubtitle={pageTone === 'not-found'
       ? 'Double-check the URL and try again.'
       : 'This plugin has not published any versions.'}
@@ -275,7 +275,7 @@ const versionList = versions.map((version) => ({
     canCreateRelease && (
       <Dialog id="create-release-dialog" open={showCreateReleaseDialog} title="Create a release" size="lg">
         <Fragment slot="description">
-          Publish a new release for this plugin.
+          Publish a new release for this addon.
         </Fragment>
 
 	        <form method="post" action={Astro.url.pathname} class="flex flex-col gap-4">

@@ -7,7 +7,7 @@ import (
 
 func FindManifestDir(startDir string) (string, bool) {
 	return findUp(startDir, func(dir string) bool {
-		_, err := os.Stat(filepath.Join(dir, "gdpm.json"))
+		_, err := os.Stat(filepath.Join(dir, "gdam.json"))
 		return err == nil
 	})
 }

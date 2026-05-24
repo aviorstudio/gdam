@@ -1,4 +1,4 @@
-package gdpmdb
+package gdamdb
 
 import (
 	"context"
@@ -50,7 +50,7 @@ func (c *Client) ResolvePlugin(ctx context.Context, username, plugin, requestedV
 	usernameNormal := strings.ToLower(strings.TrimSpace(username))
 	pluginName := strings.TrimSpace(plugin)
 	if usernameNormal == "" || pluginName == "" {
-		return ResolvedPlugin{}, fmt.Errorf("invalid plugin spec")
+		return ResolvedPlugin{}, fmt.Errorf("invalid addon spec")
 	}
 
 	userRow, ok, err := c.getUsernameByNormal(ctx, usernameNormal)
@@ -72,10 +72,10 @@ func (c *Client) ResolvePlugin(ctx context.Context, username, plugin, requestedV
 		return ResolvedPlugin{}, err
 	}
 	if !ok {
-		return ResolvedPlugin{}, fmt.Errorf("plugin not found: @%s/%s", usernameNormal, pluginName)
+		return ResolvedPlugin{}, fmt.Errorf("addon not found: @%s/%s", usernameNormal, pluginName)
 	}
 	if strings.TrimSpace(pluginRow.Repo) == "" {
-		return ResolvedPlugin{}, fmt.Errorf("plugin has no repository set: @%s/%s", usernameNormal, pluginName)
+		return ResolvedPlugin{}, fmt.Errorf("addon has no repository set: @%s/%s", usernameNormal, pluginName)
 	}
 
 	versionRows, err := c.listPluginVersions(ctx, pluginRow.ID)
@@ -183,13 +183,13 @@ func (c *Client) getPluginByOwnerAndName(ctx context.Context, userID, orgID *str
 	}
 
 	var rows []pluginRow
-	if err := c.get(ctx, "plugins", q, &rows); err != nil {
+	if err := c.get(ctx, "addons", q, &rows); err != nil {
 		errMsg := strings.ToLower(err.Error())
 		if strings.Contains(errMsg, "path") &&
 			(strings.Contains(errMsg, "does not exist") || strings.Contains(errMsg, "could not find") || strings.Contains(errMsg, "schema cache")) {
 			q.Set("select", selectLegacy)
 			rows = nil
-			if err2 := c.get(ctx, "plugins", q, &rows); err2 != nil {
+			if err2 := c.get(ctx, "addons", q, &rows); err2 != nil {
 				return pluginRow{}, false, err2
 			}
 		} else {
@@ -200,7 +200,7 @@ func (c *Client) getPluginByOwnerAndName(ctx context.Context, userID, orgID *str
 		return pluginRow{}, false, nil
 	}
 	if len(rows) > 1 {
-		return pluginRow{}, false, fmt.Errorf("plugin is not unique: %s", pluginName)
+		return pluginRow{}, false, fmt.Errorf("addon is not unique: %s", pluginName)
 	}
 	return rows[0], true, nil
 }
@@ -254,7 +254,7 @@ func (c *Client) get(ctx context.Context, table string, query url.Values, dst an
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 32<<10))
-		return fmt.Errorf("gdpm db failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(msg)))
+		return fmt.Errorf("gdam db failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(msg)))
 	}
 
 	return json.NewDecoder(resp.Body).Decode(dst)

@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aviorstudio/gdpm/cli/internal/fsutil"
-	"github.com/aviorstudio/gdpm/cli/internal/manifest"
-	"github.com/aviorstudio/gdpm/cli/internal/project"
-	"github.com/aviorstudio/gdpm/cli/internal/spec"
+	"github.com/aviorstudio/gdam/cli/internal/fsutil"
+	"github.com/aviorstudio/gdam/cli/internal/manifest"
+	"github.com/aviorstudio/gdam/cli/internal/project"
+	"github.com/aviorstudio/gdam/cli/internal/spec"
 )
 
 type LinkOptions struct {
@@ -24,7 +24,7 @@ func Link(ctx context.Context, opts LinkOptions) error {
 
 	specInput := strings.TrimSpace(opts.Spec)
 	if specInput == "" {
-		return fmt.Errorf("%w: missing plugin spec", ErrUserInput)
+		return fmt.Errorf("%w: missing addon spec", ErrUserInput)
 	}
 	if !strings.HasPrefix(specInput, "@") {
 		specInput = "@" + specInput
@@ -34,7 +34,7 @@ func Link(ctx context.Context, opts LinkOptions) error {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
 	if pkg.Version != "" {
-		return fmt.Errorf("%w: link does not take a version (use @username/plugin)", ErrUserInput)
+		return fmt.Errorf("%w: link does not take a version (use @username/addon)", ErrUserInput)
 	}
 	pluginKey := pkg.Name()
 
@@ -45,22 +45,22 @@ func Link(ctx context.Context, opts LinkOptions) error {
 
 	projectDir, ok := project.FindManifestDir(startDir)
 	if !ok {
-		return fmt.Errorf("%w: no gdpm.json found (run `gdpm init`)", ErrUserInput)
+		return fmt.Errorf("%w: no gdam.json found (run `gdam init`)", ErrUserInput)
 	}
 
-	manifestPath := filepath.Join(projectDir, "gdpm.json")
+	manifestPath := filepath.Join(projectDir, "gdam.json")
 	m, err := manifest.Load(manifestPath)
 	if err != nil {
 		return err
 	}
 
-	plugin, pluginExists := m.Plugins[pluginKey]
+	plugin, pluginExists := m.Addons[pluginKey]
 
 	pathInput := strings.TrimSpace(opts.Path)
 	usingStoredPath := false
 	if pathInput == "" {
 		if !pluginExists || plugin.Link == nil || strings.TrimSpace(plugin.Link.Path) == "" {
-			return fmt.Errorf("%w: missing local path (run `gdpm link %s <local_path>`)", ErrUserInput, pluginKey)
+			return fmt.Errorf("%w: missing local path (run `gdam link %s <local_path>`)", ErrUserInput, pluginKey)
 		}
 		pathInput = plugin.Link.Path
 		usingStoredPath = true
@@ -187,7 +187,7 @@ func disableEditorPluginAliases(projectGodotPath, projectDir string, m manifest.
 		}
 	}
 
-	for otherKey, otherPlugin := range m.Plugins {
+	for otherKey, otherPlugin := range m.Addons {
 		if otherKey == pluginKey {
 			continue
 		}

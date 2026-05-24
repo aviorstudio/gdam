@@ -9,11 +9,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aviorstudio/gdpm/cli/internal/fsutil"
-	"github.com/aviorstudio/gdpm/cli/internal/gdpmdb"
-	"github.com/aviorstudio/gdpm/cli/internal/githubapi"
-	"github.com/aviorstudio/gdpm/cli/internal/manifest"
-	"github.com/aviorstudio/gdpm/cli/internal/project"
+	"github.com/aviorstudio/gdam/cli/internal/fsutil"
+	"github.com/aviorstudio/gdam/cli/internal/gdamdb"
+	"github.com/aviorstudio/gdam/cli/internal/githubapi"
+	"github.com/aviorstudio/gdam/cli/internal/manifest"
+	"github.com/aviorstudio/gdam/cli/internal/project"
 )
 
 type InstallOptions struct{}
@@ -40,17 +40,17 @@ func Install(ctx context.Context, opts InstallOptions) error {
 
 	projectDir, ok := project.FindManifestDir(startDir)
 	if !ok {
-		return fmt.Errorf("%w: no gdpm.json found (run `gdpm init`)", ErrUserInput)
+		return fmt.Errorf("%w: no gdam.json found (run `gdam init`)", ErrUserInput)
 	}
 
-	manifestPath := filepath.Join(projectDir, "gdpm.json")
+	manifestPath := filepath.Join(projectDir, "gdam.json")
 	m, err := manifest.Load(manifestPath)
 	if err != nil {
 		return err
 	}
 
-	pluginKeys := make([]string, 0, len(m.Plugins))
-	for key := range m.Plugins {
+	pluginKeys := make([]string, 0, len(m.Addons))
+	for key := range m.Addons {
 		pluginKeys = append(pluginKeys, key)
 	}
 	sort.Strings(pluginKeys)
@@ -61,13 +61,13 @@ func Install(ctx context.Context, opts InstallOptions) error {
 	for _, pluginKey := range pluginKeys {
 		addonDirName, err := addonDirNameForPluginKey(pluginKey)
 		if err != nil {
-			return fmt.Errorf("%w: invalid plugin key in gdpm.json: %s (%v)", ErrUserInput, pluginKey, err)
+			return fmt.Errorf("%w: invalid addon key in gdam.json: %s (%v)", ErrUserInput, pluginKey, err)
 		}
 		if err := validateNoAddonDirCollision(m, pluginKey, addonDirName); err != nil {
 			return err
 		}
 
-		plugin := m.Plugins[pluginKey]
+		plugin := m.Addons[pluginKey]
 		if pluginLinkEnabled(plugin) {
 			continue
 		}
@@ -84,9 +84,9 @@ func Install(ctx context.Context, opts InstallOptions) error {
 
 		repoURL := strings.TrimSpace(plugin.Repo)
 		if repoURL == "" {
-			return fmt.Errorf("%w: plugin is not installed and has no repo: %s", ErrUserInput, pluginKey)
+			return fmt.Errorf("%w: addon is not installed and has no repo: %s", ErrUserInput, pluginKey)
 		}
-		owner, repo, ref, repoSubdir, err := gdpmdb.ParseGitHubTreeURLWithPath(repoURL)
+		owner, repo, ref, repoSubdir, err := gdamdb.ParseGitHubTreeURLWithPath(repoURL)
 		if err != nil {
 			return fmt.Errorf("%w: invalid repo for %s: %v", ErrUserInput, pluginKey, err)
 		}
@@ -119,7 +119,7 @@ func Install(ctx context.Context, opts InstallOptions) error {
 		return err
 	}
 
-	tmpDir, err := os.MkdirTemp("", "gdpm-install-*")
+	tmpDir, err := os.MkdirTemp("", "gdam-install-*")
 	if err != nil {
 		return err
 	}

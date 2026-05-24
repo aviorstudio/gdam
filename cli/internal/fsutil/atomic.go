@@ -8,7 +8,7 @@ import (
 
 func WriteFileAtomic(path string, data []byte, perm os.FileMode) error {
 	dir := filepath.Dir(path)
-	tmp, err := os.CreateTemp(dir, ".gdpm-*")
+	tmp, err := os.CreateTemp(dir, ".gdam-*")
 	if err != nil {
 		return err
 	}

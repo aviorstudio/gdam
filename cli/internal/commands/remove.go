@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aviorstudio/gdpm/cli/internal/fsutil"
-	"github.com/aviorstudio/gdpm/cli/internal/manifest"
-	"github.com/aviorstudio/gdpm/cli/internal/project"
-	"github.com/aviorstudio/gdpm/cli/internal/spec"
+	"github.com/aviorstudio/gdam/cli/internal/fsutil"
+	"github.com/aviorstudio/gdam/cli/internal/manifest"
+	"github.com/aviorstudio/gdam/cli/internal/project"
+	"github.com/aviorstudio/gdam/cli/internal/spec"
 )
 
 type RemoveOptions struct {
@@ -23,7 +23,7 @@ func Remove(ctx context.Context, opts RemoveOptions) error {
 
 	specInput := strings.TrimSpace(opts.Spec)
 	if specInput == "" {
-		return fmt.Errorf("%w: missing plugin spec", ErrUserInput)
+		return fmt.Errorf("%w: missing addon spec", ErrUserInput)
 	}
 	if !strings.HasPrefix(specInput, "@") {
 		specInput = "@" + specInput
@@ -36,10 +36,10 @@ func Remove(ctx context.Context, opts RemoveOptions) error {
 
 	projectDir, ok := project.FindManifestDir(startDir)
 	if !ok {
-		return fmt.Errorf("%w: no gdpm.json found (run `gdpm init`)", ErrUserInput)
+		return fmt.Errorf("%w: no gdam.json found (run `gdam init`)", ErrUserInput)
 	}
 
-	manifestPath := filepath.Join(projectDir, "gdpm.json")
+	manifestPath := filepath.Join(projectDir, "gdam.json")
 	m, err := manifest.Load(manifestPath)
 	if err != nil {
 		return err
@@ -50,11 +50,11 @@ func Remove(ctx context.Context, opts RemoveOptions) error {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
 	if pkg.Version != "" {
-		return fmt.Errorf("%w: remove does not take a version (use @username/plugin)", ErrUserInput)
+		return fmt.Errorf("%w: remove does not take a version (use @username/addon)", ErrUserInput)
 	}
 
 	if !manifest.HasPlugin(m, pkg.Name()) {
-		return fmt.Errorf("%w: plugin not found in gdpm.json: %s", ErrUserInput, pkg.Name())
+		return fmt.Errorf("%w: addon not found in gdam.json: %s", ErrUserInput, pkg.Name())
 	}
 
 	addonDirName := strings.ReplaceAll(pkg.Name(), "/", "_")

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aviorstudio/gdpm/cli/internal/manifest"
+	"github.com/aviorstudio/gdam/cli/internal/manifest"
 )
 
 func TestInstall_SkipsExistingAddonWithoutRepo(t *testing.T) {
@@ -14,8 +14,8 @@ func TestInstall_SkipsExistingAddonWithoutRepo(t *testing.T) {
 
 	m := manifest.New()
 	m = manifest.UpsertPlugin(m, "@user/plugin", manifest.Plugin{})
-	if err := manifest.Save(filepath.Join(projectDir, "gdpm.json"), m); err != nil {
-		t.Fatalf("write gdpm.json: %v", err)
+	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
+		t.Fatalf("write gdam.json: %v", err)
 	}
 
 	addonDirName, err := addonDirNameForPluginKey("@user/plugin")
@@ -55,8 +55,8 @@ func TestInstall_ErrorsWhenAddonMissingAndRepoMissing(t *testing.T) {
 
 	m := manifest.New()
 	m = manifest.UpsertPlugin(m, "@user/plugin", manifest.Plugin{})
-	if err := manifest.Save(filepath.Join(projectDir, "gdpm.json"), m); err != nil {
-		t.Fatalf("write gdpm.json: %v", err)
+	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
+		t.Fatalf("write gdam.json: %v", err)
 	}
 
 	oldWd, err := os.Getwd()
@@ -86,8 +86,8 @@ func TestInstall_DoesNotRemoveExistingAddonsWhenNoInstallsNeeded(t *testing.T) {
 
 	m := manifest.New()
 	m = manifest.UpsertPlugin(m, "@user/plugin", manifest.Plugin{})
-	if err := manifest.Save(filepath.Join(projectDir, "gdpm.json"), m); err != nil {
-		t.Fatalf("write gdpm.json: %v", err)
+	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
+		t.Fatalf("write gdam.json: %v", err)
 	}
 
 	pluginAddonDirName, err := addonDirNameForPluginKey("@user/plugin")

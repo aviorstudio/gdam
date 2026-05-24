@@ -105,7 +105,7 @@ const pluginList = plugins.map((plugin) => {
   return {
     ownerLabel: ownerDisplay ? `@${ownerDisplay}` : undefined,
     ownerHref: ownerPath || undefined,
-    pluginLabel: pluginSlug || 'Untitled plugin',
+    pluginLabel: pluginSlug || 'Untitled addon',
     pluginHref: pluginPath || undefined,
     metaLabel: versionLabel,
     metaHref: treeUrl || undefined,
@@ -115,13 +115,13 @@ const pluginList = plugins.map((plugin) => {
 ---
 
 <RootLayout>
-  <Splash title="Godot Plugin Manager" subtitle="Addons simplified" />
-  <Title title="All plugins" subtitle="Browse all addons" />
+  <Splash title="Godot Addon Manager" subtitle="Addons simplified" />
+  <Title title="All addons" subtitle="Browse all addons" />
   <PluginList
     items={pluginList}
     status={pluginsStatus}
     tone={pluginsStatus ? 'error' : 'muted'}
-    emptyTitle="No plugins yet"
+    emptyTitle="No addons yet"
     emptySubtitle="Be the first to publish a Godot add-on."
   />
 </RootLayout>
