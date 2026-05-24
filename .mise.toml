@@ -1,0 +1,9 @@
+[tools]
+go = "1.24.5"
+bun = "1.2"
+
+[env]
+_.path = [
+  "/home/nicodes/.cache/.bun/bin",
+  "../gd-playwright/cli/bin"
+]
