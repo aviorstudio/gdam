@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aviorstudio/gdpm/cli/internal/manifest"
-	"github.com/aviorstudio/gdpm/cli/internal/project"
+	"github.com/aviorstudio/gdam/cli/internal/manifest"
+	"github.com/aviorstudio/gdam/cli/internal/project"
 )
 
 type InitOptions struct{}
@@ -29,7 +29,7 @@ func Init(ctx context.Context, _ InitOptions) error {
 		targetDir = dir
 	}
 
-	manifestPath := filepath.Join(targetDir, "gdpm.json")
+	manifestPath := filepath.Join(targetDir, "gdam.json")
 	m := manifest.New()
 	if err := manifest.Save(manifestPath, m); err != nil {
 		return err

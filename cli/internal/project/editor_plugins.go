@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aviorstudio/gdpm/cli/internal/fsutil"
+	"github.com/aviorstudio/gdam/cli/internal/fsutil"
 )
 
 var godotStringLiteralRe = regexp.MustCompile(`"(?:[^"\\]|\\.)*"`)

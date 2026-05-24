@@ -8,19 +8,20 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aviorstudio/gdpm/cli/internal/fsutil"
+	"github.com/aviorstudio/gdam/cli/internal/fsutil"
 )
 
-const LinkFilename = "gdpm.link.json"
+const LinkFilename = "gdam.link.json"
 
 type Manifest struct {
-	Plugins map[string]Plugin `json:"plugins"`
+	Addons map[string]Plugin `json:"addons"`
 }
 
 type Plugin struct {
-	Repo    string `json:"repo,omitempty"`
-	Version string `json:"version,omitempty"`
-	Link    *Link  `json:"link,omitempty"`
+	Repo         string `json:"repo,omitempty"`
+	Version      string `json:"version,omitempty"`
+	EditorPlugin bool   `json:"editor_plugin,omitempty"`
+	Link         *Link  `json:"link,omitempty"`
 }
 
 type Link struct {
@@ -29,7 +30,7 @@ type Link struct {
 }
 
 type LinkManifest struct {
-	Plugins map[string]Link `json:"plugins"`
+	Addons map[string]Link `json:"addons"`
 }
 
 func (l *Link) UnmarshalJSON(data []byte) error {
@@ -88,32 +89,34 @@ func (p *Plugin) UnmarshalJSON(data []byte) error {
 	}
 	for k := range raw {
 		switch k {
-		case "repo", "version":
+		case "repo", "version", "editor_plugin":
 		case "link":
-			return fmt.Errorf("gdpm.json no longer supports link configuration (move it to %s)", LinkFilename)
+			return fmt.Errorf("gdam.json no longer supports link configuration (move it to %s)", LinkFilename)
 		default:
 			return fmt.Errorf("unknown field %q", k)
 		}
 	}
 
 	var tmp struct {
-		Repo    string `json:"repo,omitempty"`
-		Version string `json:"version,omitempty"`
+		Repo         string `json:"repo,omitempty"`
+		Version      string `json:"version,omitempty"`
+		EditorPlugin bool   `json:"editor_plugin,omitempty"`
 	}
 	if err := json.Unmarshal(data, &tmp); err != nil {
 		return err
 	}
 
 	*p = Plugin{
-		Repo:    tmp.Repo,
-		Version: tmp.Version,
+		Repo:         tmp.Repo,
+		Version:      tmp.Version,
+		EditorPlugin: tmp.EditorPlugin,
 	}
 	return nil
 }
 
 func New() Manifest {
 	return Manifest{
-		Plugins: map[string]Plugin{},
+		Addons: map[string]Plugin{},
 	}
 }
 
@@ -129,8 +132,8 @@ func Load(path string) (Manifest, error) {
 	if err := dec.Decode(&m); err != nil {
 		return Manifest{}, err
 	}
-	if m.Plugins == nil {
-		m.Plugins = map[string]Plugin{}
+	if m.Addons == nil {
+		m.Addons = map[string]Plugin{}
 	}
 
 	linkPath := filepath.Join(filepath.Dir(path), LinkFilename)
@@ -141,36 +144,36 @@ func Load(path string) (Manifest, error) {
 		}
 		return m, nil
 	}
-	for name, link := range lm.Plugins {
-		plugin, ok := m.Plugins[name]
+	for name, link := range lm.Addons {
+		plugin, ok := m.Addons[name]
 		if !ok {
 			continue
 		}
 		l := link
 		plugin.Link = &l
-		m.Plugins[name] = plugin
+		m.Addons[name] = plugin
 	}
 
 	return m, nil
 }
 
 func Save(path string, m Manifest) error {
-	if m.Plugins == nil {
-		m.Plugins = map[string]Plugin{}
+	if m.Addons == nil {
+		m.Addons = map[string]Plugin{}
 	}
 
 	linkPath := filepath.Join(filepath.Dir(path), LinkFilename)
-	links := LinkManifest{Plugins: map[string]Link{}}
-	outManifest := Manifest{Plugins: map[string]Plugin{}}
-	for name, plugin := range m.Plugins {
+	links := LinkManifest{Addons: map[string]Link{}}
+	outManifest := Manifest{Addons: map[string]Plugin{}}
+	for name, plugin := range m.Addons {
 		if plugin.Link != nil {
-			links.Plugins[name] = *plugin.Link
+			links.Addons[name] = *plugin.Link
 		}
 		plugin.Link = nil
-		outManifest.Plugins[name] = plugin
+		outManifest.Addons[name] = plugin
 	}
 
-	if len(links.Plugins) != 0 {
+	if len(links.Addons) != 0 {
 		if err := SaveLinkManifest(linkPath, links); err != nil {
 			return err
 		}
@@ -200,15 +203,15 @@ func LoadLinkManifest(path string) (LinkManifest, error) {
 	if err := dec.Decode(&m); err != nil {
 		return LinkManifest{}, err
 	}
-	if m.Plugins == nil {
-		m.Plugins = map[string]Link{}
+	if m.Addons == nil {
+		m.Addons = map[string]Link{}
 	}
 	return m, nil
 }
 
 func SaveLinkManifest(path string, m LinkManifest) error {
-	if m.Plugins == nil {
-		m.Plugins = map[string]Link{}
+	if m.Addons == nil {
+		m.Addons = map[string]Link{}
 	}
 	out, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
@@ -219,19 +222,19 @@ func SaveLinkManifest(path string, m LinkManifest) error {
 }
 
 func HasPlugin(m Manifest, name string) bool {
-	_, ok := m.Plugins[name]
+	_, ok := m.Addons[name]
 	return ok
 }
 
 func UpsertPlugin(m Manifest, name string, plugin Plugin) Manifest {
-	if m.Plugins == nil {
-		m.Plugins = map[string]Plugin{}
+	if m.Addons == nil {
+		m.Addons = map[string]Plugin{}
 	}
-	m.Plugins[name] = plugin
+	m.Addons[name] = plugin
 	return m
 }
 
 func RemovePlugin(m Manifest, name string) Manifest {
-	delete(m.Plugins, name)
+	delete(m.Addons, name)
 	return m
 }

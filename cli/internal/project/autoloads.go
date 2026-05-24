@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/aviorstudio/gdpm/cli/internal/fsutil"
+	"github.com/aviorstudio/gdam/cli/internal/fsutil"
 )
 
 func ReplaceAutoloadAddonDir(projectGodotPath, fromAddonDirName, toAddonDirName string) (bool, error) {

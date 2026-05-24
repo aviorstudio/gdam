@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aviorstudio/gdpm/cli/internal/fsutil"
-	"github.com/aviorstudio/gdpm/cli/internal/gdpmdb"
-	"github.com/aviorstudio/gdpm/cli/internal/githubapi"
-	"github.com/aviorstudio/gdpm/cli/internal/manifest"
-	"github.com/aviorstudio/gdpm/cli/internal/project"
-	"github.com/aviorstudio/gdpm/cli/internal/spec"
+	"github.com/aviorstudio/gdam/cli/internal/fsutil"
+	"github.com/aviorstudio/gdam/cli/internal/gdamdb"
+	"github.com/aviorstudio/gdam/cli/internal/githubapi"
+	"github.com/aviorstudio/gdam/cli/internal/manifest"
+	"github.com/aviorstudio/gdam/cli/internal/project"
+	"github.com/aviorstudio/gdam/cli/internal/spec"
 )
 
 type UnlinkOptions struct {
@@ -23,7 +23,7 @@ type UnlinkOptions struct {
 func Unlink(ctx context.Context, opts UnlinkOptions) error {
 	specInput := strings.TrimSpace(opts.Spec)
 	if specInput == "" {
-		return fmt.Errorf("%w: missing plugin spec", ErrUserInput)
+		return fmt.Errorf("%w: missing addon spec", ErrUserInput)
 	}
 	if !strings.HasPrefix(specInput, "@") {
 		specInput = "@" + specInput
@@ -36,10 +36,10 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 
 	projectDir, ok := project.FindManifestDir(startDir)
 	if !ok {
-		return fmt.Errorf("%w: no gdpm.json found (run `gdpm init`)", ErrUserInput)
+		return fmt.Errorf("%w: no gdam.json found (run `gdam init`)", ErrUserInput)
 	}
 
-	manifestPath := filepath.Join(projectDir, "gdpm.json")
+	manifestPath := filepath.Join(projectDir, "gdam.json")
 	m, err := manifest.Load(manifestPath)
 	if err != nil {
 		return err
@@ -50,16 +50,16 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
 	if pkg.Version != "" {
-		return fmt.Errorf("%w: unlink does not take a version (use @username/plugin)", ErrUserInput)
+		return fmt.Errorf("%w: unlink does not take a version (use @username/addon)", ErrUserInput)
 	}
 	pluginKey := pkg.Name()
 
-	plugin, ok := m.Plugins[pluginKey]
+	plugin, ok := m.Addons[pluginKey]
 	if !ok {
-		return fmt.Errorf("%w: plugin not found in gdpm.json: %s", ErrUserInput, pluginKey)
+		return fmt.Errorf("%w: addon not found in gdam.json: %s", ErrUserInput, pluginKey)
 	}
 	if !pluginLinkEnabled(plugin) {
-		return fmt.Errorf("%w: plugin is not linked: %s", ErrUserInput, pluginKey)
+		return fmt.Errorf("%w: addon is not linked: %s", ErrUserInput, pluginKey)
 	}
 
 	addonDirName, err := addonDirNameForPluginKey(pluginKey)
@@ -79,22 +79,24 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 
 	if strings.TrimSpace(plugin.Repo) == "" {
 		projectGodotPath := filepath.Join(projectDir, "project.godot")
-		if _, err := os.Stat(projectGodotPath); err == nil {
-			pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
-			if linkedAbs != "" {
-				if err := disableEditorPluginAliases(projectGodotPath, projectDir, m, pluginKey, addonDirName, linkedAbs); err != nil {
+		if plugin.EditorPlugin {
+			if _, err := os.Stat(projectGodotPath); err == nil {
+				pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
+				if linkedAbs != "" {
+					if err := disableEditorPluginAliases(projectGodotPath, projectDir, m, pluginKey, addonDirName, linkedAbs); err != nil {
+						return err
+					}
+				}
+				updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, false)
+				if err != nil {
 					return err
 				}
-			}
-			updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, false)
-			if err != nil {
+				if updated {
+					fmt.Printf("disabled %s\n", pluginCfgResPath)
+				}
+			} else if !os.IsNotExist(err) {
 				return err
 			}
-			if updated {
-				fmt.Printf("disabled %s\n", pluginCfgResPath)
-			}
-		} else if !os.IsNotExist(err) {
-			return err
 		}
 
 		if err := fsutil.RemoveAll(dst); err != nil {
@@ -109,12 +111,12 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 		return nil
 	}
 
-	ghOwner, ghRepo, ref, repoSubdir, err := gdpmdb.ParseGitHubTreeURLWithPath(plugin.Repo)
+	ghOwner, ghRepo, ref, repoSubdir, err := gdamdb.ParseGitHubTreeURLWithPath(plugin.Repo)
 	if err != nil {
 		return err
 	}
 
-	tmpDir, err := os.MkdirTemp("", "gdpm-unlink-*")
+	tmpDir, err := os.MkdirTemp("", "gdam-unlink-*")
 	if err != nil {
 		return err
 	}
@@ -174,22 +176,24 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 	}
 
 	projectGodotPath := filepath.Join(projectDir, "project.godot")
-	if _, err := os.Stat(projectGodotPath); err == nil {
-		pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
-		if linkedAbs != "" {
-			if err := disableEditorPluginAliases(projectGodotPath, projectDir, m, pluginKey, addonDirName, linkedAbs); err != nil {
+	if plugin.EditorPlugin {
+		if _, err := os.Stat(projectGodotPath); err == nil {
+			pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
+			if linkedAbs != "" {
+				if err := disableEditorPluginAliases(projectGodotPath, projectDir, m, pluginKey, addonDirName, linkedAbs); err != nil {
+					return err
+				}
+			}
+			updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, true)
+			if err != nil {
 				return err
 			}
-		}
-		updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, true)
-		if err != nil {
+			if updated {
+				fmt.Printf("enabled %s\n", pluginCfgResPath)
+			}
+		} else if !os.IsNotExist(err) {
 			return err
 		}
-		if updated {
-			fmt.Printf("enabled %s\n", pluginCfgResPath)
-		}
-	} else if !os.IsNotExist(err) {
-		return err
 	}
 
 	fmt.Printf("unlinked %s\n", pluginKey)

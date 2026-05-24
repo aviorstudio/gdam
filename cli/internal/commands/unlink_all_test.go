@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aviorstudio/gdpm/cli/internal/manifest"
+	"github.com/aviorstudio/gdam/cli/internal/manifest"
 )
 
 func TestUnlinkAll_RemovesSymlinksWhenNoRepo(t *testing.T) {
@@ -39,20 +39,22 @@ func TestUnlinkAll_RemovesSymlinksWhenNoRepo(t *testing.T) {
 
 	m := manifest.New()
 	m = manifest.UpsertPlugin(m, pluginKeyA, manifest.Plugin{
+		EditorPlugin: true,
 		Link: &manifest.Link{
 			Enabled: true,
 			Path:    pluginDirA,
 		},
 	})
 	m = manifest.UpsertPlugin(m, pluginKeyB, manifest.Plugin{
+		EditorPlugin: true,
 		Link: &manifest.Link{
 			Enabled: true,
 			Path:    pluginDirB,
 		},
 	})
-	gdpmPath := filepath.Join(projectDir, "gdpm.json")
-	if err := manifest.Save(gdpmPath, m); err != nil {
-		t.Fatalf("write gdpm.json: %v", err)
+	gdamPath := filepath.Join(projectDir, "gdam.json")
+	if err := manifest.Save(gdamPath, m); err != nil {
+		t.Fatalf("write gdam.json: %v", err)
 	}
 
 	addonDirNameA, err := addonDirNameForPluginKey(pluginKeyA)
@@ -123,50 +125,50 @@ func TestUnlinkAll_RemovesSymlinksWhenNoRepo(t *testing.T) {
 		t.Fatalf("expected %s to be disabled in project.godot, got:\n%s", pluginKeyB, out)
 	}
 
-	m2, err := manifest.Load(gdpmPath)
+	m2, err := manifest.Load(gdamPath)
 	if err != nil {
-		t.Fatalf("read gdpm.json: %v", err)
+		t.Fatalf("read gdam.json: %v", err)
 	}
-	if _, ok := m2.Plugins[pluginKeyA]; !ok {
-		t.Fatalf("expected plugin A to remain in gdpm.json")
+	if _, ok := m2.Addons[pluginKeyA]; !ok {
+		t.Fatalf("expected plugin A to remain in gdam.json")
 	}
-	if _, ok := m2.Plugins[pluginKeyB]; !ok {
-		t.Fatalf("expected plugin B to remain in gdpm.json")
+	if _, ok := m2.Addons[pluginKeyB]; !ok {
+		t.Fatalf("expected plugin B to remain in gdam.json")
 	}
 
-	gdpmBytes, err := os.ReadFile(gdpmPath)
+	gdamBytes, err := os.ReadFile(gdamPath)
 	if err != nil {
-		t.Fatalf("read gdpm.json bytes: %v", err)
+		t.Fatalf("read gdam.json bytes: %v", err)
 	}
-	if strings.Contains(string(gdpmBytes), `"link"`) {
-		t.Fatalf("expected gdpm.json to not contain link config, got:\n%s", string(gdpmBytes))
+	if strings.Contains(string(gdamBytes), `"link"`) {
+		t.Fatalf("expected gdam.json to not contain link config, got:\n%s", string(gdamBytes))
 	}
 
 	linkManifestPath := filepath.Join(projectDir, manifest.LinkFilename)
 	lm, err := manifest.LoadLinkManifest(linkManifestPath)
 	if err != nil {
-		t.Fatalf("read gdpm.link.json: %v", err)
+		t.Fatalf("read gdam.link.json: %v", err)
 	}
 
-	linkA, ok := lm.Plugins[pluginKeyA]
+	linkA, ok := lm.Addons[pluginKeyA]
 	if !ok {
-		t.Fatalf("expected gdpm.link.json entry for %s", pluginKeyA)
+		t.Fatalf("expected gdam.link.json entry for %s", pluginKeyA)
 	}
 	if linkA.Enabled {
-		t.Fatalf("expected gdpm.link.json enabled=false for %s", pluginKeyA)
+		t.Fatalf("expected gdam.link.json enabled=false for %s", pluginKeyA)
 	}
 	if got := linkA.Path; got != pluginDirA {
-		t.Fatalf("expected gdpm.link.json path %q for %s, got %q", pluginDirA, pluginKeyA, got)
+		t.Fatalf("expected gdam.link.json path %q for %s, got %q", pluginDirA, pluginKeyA, got)
 	}
 
-	linkB, ok := lm.Plugins[pluginKeyB]
+	linkB, ok := lm.Addons[pluginKeyB]
 	if !ok {
-		t.Fatalf("expected gdpm.link.json entry for %s", pluginKeyB)
+		t.Fatalf("expected gdam.link.json entry for %s", pluginKeyB)
 	}
 	if linkB.Enabled {
-		t.Fatalf("expected gdpm.link.json enabled=false for %s", pluginKeyB)
+		t.Fatalf("expected gdam.link.json enabled=false for %s", pluginKeyB)
 	}
 	if got := linkB.Path; got != pluginDirB {
-		t.Fatalf("expected gdpm.link.json path %q for %s, got %q", pluginDirB, pluginKeyB, got)
+		t.Fatalf("expected gdam.link.json path %q for %s, got %q", pluginDirB, pluginKeyB, got)
 	}
 }

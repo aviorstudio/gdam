@@ -1,45 +1,45 @@
-# GDPM CLI
+# GDAM CLI
 
-Installs Godot addons from GitHub repositories (including monorepo subdirectories) into your project's `addons/` folder and tracks them in `gdpm.json`.
+Installs Godot addons from GitHub repositories (including monorepo subdirectories) into your project's `addons/` folder and tracks them in `gdam.json`.
 
-`gdpm` expects the addon directory to contain a `plugin.cfg` at its root (so it can be enabled automatically in `project.godot`).
+`gdam` expects the addon directory to contain a `plugin.cfg` at its root (so it can be enabled automatically in `project.godot`).
 
 ## Build
 
 From `cli/`:
 
 ```sh
-go build ./cmd/gdpm
+go build ./cmd/gdam
 ```
 
 ## Usage
 
 ```sh
-gdpm init
-gdpm add @username/plugin@1.2.3
-gdpm add @username/plugin
-gdpm install
-gdpm remove @username/plugin
-gdpm link @username/plugin /absolute/path/to/addons/dir
-gdpm link @username/plugin
-gdpm unlink @username/plugin
-gdpm unlink --all
+gdam init
+gdam add @username/addon@1.2.3
+gdam add @username/addon
+gdam install
+gdam remove @username/addon
+gdam link @username/addon /absolute/path/to/addons/dir
+gdam link @username/addon
+gdam unlink @username/addon
+gdam unlink --all
 ```
 
 See [`USAGE.md`](USAGE.md) for complete command behavior and state-dependent cases.
 
-`gdpm link` will create a plugin entry in `gdpm.json` if it doesn't exist yet (as a local-only plugin, without a `repo`).
+`gdam link` will create an addon entry in `gdam.json` if it doesn't exist yet (as a local-only addon, without a `repo`).
 
-`gdpm.json` uses:
+`gdam.json` uses:
 
 ```json
 {
-  "plugins": {
-    "@user/plugin": {
+  "addons": {
+    "@user/addon": {
       "repo": "https://github.com/owner/repo/tree/<sha>",
       "version": "1.2.3"
     },
-    "@user/monorepo_plugin": {
+    "@user/monorepo_addon": {
       "repo": "https://github.com/owner/monorepo/tree/<sha>/path/to/addon",
       "version": "1.2.3"
     },
@@ -49,14 +49,14 @@ See [`USAGE.md`](USAGE.md) for complete command behavior and state-dependent cas
 }
 ```
 
-`gdpm.link.json` stores per-user link state and paths (add it to your `.gitignore`):
+`gdam.link.json` stores per-user link state and paths (add it to your `.gitignore`):
 
 ```json
 {
-  "plugins": {
-    "@user/plugin": {
+  "addons": {
+    "@user/addon": {
       "enabled": true,
-      "path": "~/dev/plugin"
+      "path": "~/dev/addon"
     },
     "@user/other": {
       "enabled": true,
@@ -66,6 +66,6 @@ See [`USAGE.md`](USAGE.md) for complete command behavior and state-dependent cas
 }
 ```
 
-`gdpm.json` should not contain any `"link"` fields.
+`gdam.json` should not contain any `"link"` fields.
 
 If you hit GitHub rate limits, set `GITHUB_TOKEN`.

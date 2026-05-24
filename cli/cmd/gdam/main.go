@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/aviorstudio/gdpm/cli/internal/commands"
+	"github.com/aviorstudio/gdam/cli/internal/commands"
 )
 
 func main() {
@@ -52,7 +52,7 @@ func runInit(args []string) int {
 		return 2
 	}
 	if fs.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "usage: gdpm init")
+		fmt.Fprintln(os.Stderr, "usage: gdam init")
 		return 2
 	}
 
@@ -73,7 +73,7 @@ func runAdd(args []string) int {
 		return 2
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: gdpm add @username/plugin[@version]")
+		fmt.Fprintln(os.Stderr, "usage: gdam add @username/addon[@version]")
 		return 2
 	}
 
@@ -100,7 +100,7 @@ func runRemove(args []string) int {
 		return 2
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: gdpm remove @username/plugin")
+		fmt.Fprintln(os.Stderr, "usage: gdam remove @username/addon")
 		return 2
 	}
 
@@ -128,7 +128,7 @@ func runLink(args []string) int {
 	}
 
 	if fs.NArg() != 1 && fs.NArg() != 2 {
-		fmt.Fprintln(os.Stderr, "usage: gdpm link @username/plugin [local_path]")
+		fmt.Fprintln(os.Stderr, "usage: gdam link @username/addon [local_path]")
 		return 2
 	}
 
@@ -158,18 +158,18 @@ func runLink(args []string) int {
 func runUnlink(args []string) int {
 	fs := flag.NewFlagSet("unlink", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	all := fs.Bool("all", false, "unlink all linked plugins")
+	all := fs.Bool("all", false, "unlink all linked addons")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 	if *all {
 		if fs.NArg() != 0 {
-			fmt.Fprintln(os.Stderr, "usage: gdpm unlink --all")
+			fmt.Fprintln(os.Stderr, "usage: gdam unlink --all")
 			return 2
 		}
 	} else if fs.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: gdpm unlink @username/plugin")
-		fmt.Fprintln(os.Stderr, "       gdpm unlink --all")
+		fmt.Fprintln(os.Stderr, "usage: gdam unlink @username/addon")
+		fmt.Fprintln(os.Stderr, "       gdam unlink --all")
 		return 2
 	}
 
@@ -202,7 +202,7 @@ func runInstall(args []string) int {
 		return 2
 	}
 	if fs.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "usage: gdpm install")
+		fmt.Fprintln(os.Stderr, "usage: gdam install")
 		return 2
 	}
 
@@ -221,16 +221,16 @@ func runInstall(args []string) int {
 }
 
 func printUsage() {
-	fmt.Fprintln(os.Stderr, `gdpm - Godot plugin manager (GitHub addons installer)
+	fmt.Fprintln(os.Stderr, `gdam - Godot addon manager (GitHub addons installer)
 
 Usage:
-  gdpm init
-  gdpm add @username/plugin[@version]
-  gdpm install
-  gdpm remove @username/plugin
-  gdpm link @username/plugin [local_path]
-  gdpm unlink @username/plugin
-  gdpm unlink --all
+  gdam init
+  gdam add @username/addon[@version]
+  gdam install
+  gdam remove @username/addon
+  gdam link @username/addon [local_path]
+  gdam unlink @username/addon
+  gdam unlink --all
 
 Environment:
   GITHUB_TOKEN   Optional GitHub token to avoid rate limits.`)

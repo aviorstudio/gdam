@@ -1,4 +1,4 @@
-package gdpmdb
+package gdamdb
 
 import "testing"
 

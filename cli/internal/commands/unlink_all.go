@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/aviorstudio/gdpm/cli/internal/manifest"
-	"github.com/aviorstudio/gdpm/cli/internal/project"
+	"github.com/aviorstudio/gdam/cli/internal/manifest"
+	"github.com/aviorstudio/gdam/cli/internal/project"
 )
 
 type UnlinkAllOptions struct{}
@@ -23,17 +23,17 @@ func UnlinkAll(ctx context.Context, opts UnlinkAllOptions) error {
 
 	projectDir, ok := project.FindManifestDir(startDir)
 	if !ok {
-		return fmt.Errorf("%w: no gdpm.json found (run `gdpm init`)", ErrUserInput)
+		return fmt.Errorf("%w: no gdam.json found (run `gdam init`)", ErrUserInput)
 	}
 
-	manifestPath := filepath.Join(projectDir, "gdpm.json")
+	manifestPath := filepath.Join(projectDir, "gdam.json")
 	m, err := manifest.Load(manifestPath)
 	if err != nil {
 		return err
 	}
 
-	pluginKeys := make([]string, 0, len(m.Plugins))
-	for key, plugin := range m.Plugins {
+	pluginKeys := make([]string, 0, len(m.Addons))
+	for key, plugin := range m.Addons {
 		if !pluginLinkEnabled(plugin) {
 			continue
 		}

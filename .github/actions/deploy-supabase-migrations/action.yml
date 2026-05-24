@@ -1,0 +1,29 @@
+name: Deploy Supabase migrations
+description: Link a Supabase project and push pending database migrations.
+
+inputs:
+  project-ref:
+    description: Supabase project ref to deploy migrations to.
+    required: true
+  cli-version:
+    description: Supabase CLI version to install.
+    required: false
+    default: latest
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Supabase CLI
+      uses: supabase/setup-cli@v1
+      with:
+        version: ${{ inputs.cli-version }}
+
+    - name: Link Supabase project
+      shell: bash
+      run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+      env:
+        SUPABASE_PROJECT_REF: ${{ inputs.project-ref }}
+
+    - name: Push database migrations
+      shell: bash
+      run: supabase db push

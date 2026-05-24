@@ -3,7 +3,7 @@ package commands
 import (
 	"strings"
 
-	"github.com/aviorstudio/gdpm/cli/internal/manifest"
+	"github.com/aviorstudio/gdam/cli/internal/manifest"
 )
 
 func pluginLinkEnabled(plugin manifest.Plugin) bool {

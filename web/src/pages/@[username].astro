@@ -27,6 +27,7 @@ type PluginRecord = {
   name: string | null;
   repo: string | null;
   path: string | null;
+  editor_plugin?: boolean | null;
   created_at: string | null;
 };
 
@@ -131,6 +132,7 @@ let formRepo = '';
 let formPath = '';
 let formVersion = '';
 let formSha = '';
+let formEditorPlugin = false;
 
 if (showCreatePluginDialog && !session) {
   return Astro.redirect('/signin');
@@ -201,7 +203,7 @@ if (!usernameNormal) {
       if (showCreatePluginDialog && !canCreatePlugin) {
         Astro.response.status = 403;
         pageTone = 'error';
-        pageStatus = 'You do not have permission to publish plugins for this account.';
+        pageStatus = 'You do not have permission to publish addons for this account.';
         showCreatePluginDialog = false;
       }
 
@@ -215,7 +217,7 @@ if (!usernameNormal) {
         if (!canCreatePlugin) {
           Astro.response.status = 403;
           pageTone = 'error';
-          createStatus = 'You do not have permission to publish plugins for this account.';
+          createStatus = 'You do not have permission to publish addons for this account.';
           createTone = 'error';
         } else {
           const formData = await Astro.request.formData();
@@ -224,9 +226,10 @@ if (!usernameNormal) {
           formPath = String(formData.get('path') ?? '').trim();
           formVersion = String(formData.get('version') ?? '').trim();
           formSha = String(formData.get('sha') ?? '').trim();
+          formEditorPlugin = formData.get('editor_plugin') === 'on';
 
           if (!formName || !formRepo || !formVersion || !formSha) {
-            createStatus = 'Plugin name, repository, version, and sha are required.';
+            createStatus = 'Addon name, repository, version, and sha are required.';
             createTone = 'error';
           } else {
             const versionTriplet = parseSemverTriplet(formVersion);
@@ -250,6 +253,7 @@ if (!usernameNormal) {
                   ...pluginOwnerPayload,
                   name: formName,
                   repo: formRepo,
+                  editor_plugin: formEditorPlugin,
                   ...(formPath ? { path: formPath } : {}),
                 });
 
@@ -257,7 +261,7 @@ if (!usernameNormal) {
                   createStatus = pluginError.message;
                   createTone = 'error';
                 } else if (!createdPlugin?.id) {
-                  createStatus = 'Plugin created but no id returned.';
+                  createStatus = 'Addon created but no id returned.';
                   createTone = 'error';
                 } else {
                   const { error: versionError } = await pluginVersionsDto.insert(supabase, {
@@ -323,7 +327,7 @@ if (!usernameNormal) {
           const treeUrl = latestRelease?.sha ? toGitHubTreeUrl(repoUrl, latestRelease.sha, plugin.path ?? undefined) : '';
 
           return {
-            pluginLabel: pluginSlug || 'Untitled plugin',
+            pluginLabel: pluginSlug || 'Untitled addon',
             pluginHref,
             metaLabel: versionLabel,
             metaHref: treeUrl || undefined,
@@ -345,7 +349,7 @@ if (!usernameNormal) {
     subtitleLink={pageTone !== 'not-found' && githubUserUrl
       ? { href: githubUserUrl, label: githubUserLabel, external: true }
       : undefined}
-    action={canCreatePlugin && pageTone === 'default' ? { href: '?create=1', label: 'Create plugin' } : undefined}
+    action={canCreatePlugin && pageTone === 'default' ? { href: '?create=1', label: 'Create addon' } : undefined}
   />
 
   <PluginList
@@ -353,22 +357,22 @@ if (!usernameNormal) {
     status={pageStatus}
     tone={pageTone === 'error' ? 'error' : 'muted'}
     hideBodyWhenError
-    emptyTitle={pageTone === 'not-found' ? 'No matching owner' : 'No plugins yet'}
+    emptyTitle={pageTone === 'not-found' ? 'No matching owner' : 'No addons yet'}
     emptySubtitle={pageTone === 'not-found'
       ? 'Double-check the username and try again.'
-      : 'This account has not published any plugins.'}
+      : 'This account has not published any addons.'}
   />
 
   {
     canCreatePlugin && (
-      <Dialog id="create-plugin-dialog" open={showCreatePluginDialog} title="Create a plugin" size="lg">
+      <Dialog id="create-plugin-dialog" open={showCreatePluginDialog} title="Create an addon" size="lg">
         <Fragment slot="description">
-          Add a plugin name, repository, and initial release.
+          Add an addon name, repository, and initial release.
         </Fragment>
 
 	        <form method="post" action={Astro.url.pathname} class="flex flex-col gap-4">
 	          <Input
-	            label="Plugin name"
+	            label="Addon name"
 	            name="name"
 	            placeholder="my-awesome-addon"
 	            type="text"
@@ -392,6 +396,19 @@ if (!usernameNormal) {
 	            type="text"
 	            value={formPath}
 	          />
+
+            <label class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+              <input
+                class="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-600"
+                type="checkbox"
+                name="editor_plugin"
+                checked={formEditorPlugin}
+              />
+              <span class="flex flex-col gap-1">
+                <span class="font-semibold text-slate-900">Editor plugin</span>
+                <span>Enable this addon in Godot's editor plugin list when GDAM installs it.</span>
+              </span>
+            </label>
 
 	          <div class="grid gap-4 md:grid-cols-2">
 	            <Input
@@ -435,7 +452,7 @@ if (!usernameNormal) {
               class="inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
               type="submit"
             >
-              Create plugin
+              Create addon
             </button>
           </div>
         </form>

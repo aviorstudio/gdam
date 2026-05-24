@@ -1,33 +1,110 @@
-package gdpmdb
+package gdamdb
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
 type Client struct {
 	baseURL    string
-	anonKey    string
+	apiKey     string
 	httpClient *http.Client
 }
 
 func NewDefaultClient() *Client {
-	return NewClient(DefaultSupabaseURL, DefaultSupabaseAnonKey)
+	loadDotEnv()
+	return NewClient(defaultSupabaseURL(), defaultSupabasePublishableKey())
 }
 
-func NewClient(baseURL, anonKey string) *Client {
+func loadDotEnv() {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return
+	}
+
+	for _, p := range dotEnvCandidates(cwd) {
+		if loadDotEnvFile(p) {
+			return
+		}
+	}
+}
+
+func dotEnvCandidates(startDir string) []string {
+	var candidates []string
+	dir := startDir
+	for {
+		candidates = append(candidates, filepath.Join(dir, ".env"), filepath.Join(dir, "cli", ".env"))
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return candidates
+		}
+		dir = parent
+	}
+}
+
+func loadDotEnvFile(p string) bool {
+	f, err := os.Open(p)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		value = strings.Trim(strings.TrimSpace(value), `"'`)
+		if key == "" || os.Getenv(key) != "" {
+			continue
+		}
+		_ = os.Setenv(key, value)
+	}
+	return true
+}
+
+func defaultSupabaseURL() string {
+	if value := strings.TrimSpace(os.Getenv("GDAM_SUPABASE_URL")); value != "" {
+		return value
+	}
+	if value := strings.TrimSpace(os.Getenv("SUPABASE_URL")); value != "" {
+		return value
+	}
+	return DefaultSupabaseURL
+}
+
+func defaultSupabasePublishableKey() string {
+	if value := strings.TrimSpace(os.Getenv("GDAM_SUPABASE_PUBLISHABLE_KEY")); value != "" {
+		return value
+	}
+	if value := strings.TrimSpace(os.Getenv("SUPABASE_PUBLISHABLE_KEY")); value != "" {
+		return value
+	}
+	return ""
+}
+
+func NewClient(baseURL, apiKey string) *Client {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
-	anonKey = strings.TrimSpace(anonKey)
+	apiKey = strings.TrimSpace(apiKey)
 	return &Client{
 		baseURL: baseURL,
-		anonKey: anonKey,
+		apiKey:  apiKey,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -44,13 +121,15 @@ type ResolvedPlugin struct {
 
 	Version string
 	SHA     string
+
+	EditorPlugin bool
 }
 
 func (c *Client) ResolvePlugin(ctx context.Context, username, plugin, requestedVersion string) (ResolvedPlugin, error) {
 	usernameNormal := strings.ToLower(strings.TrimSpace(username))
 	pluginName := strings.TrimSpace(plugin)
 	if usernameNormal == "" || pluginName == "" {
-		return ResolvedPlugin{}, fmt.Errorf("invalid plugin spec")
+		return ResolvedPlugin{}, fmt.Errorf("invalid addon spec")
 	}
 
 	userRow, ok, err := c.getUsernameByNormal(ctx, usernameNormal)
@@ -72,10 +151,10 @@ func (c *Client) ResolvePlugin(ctx context.Context, username, plugin, requestedV
 		return ResolvedPlugin{}, err
 	}
 	if !ok {
-		return ResolvedPlugin{}, fmt.Errorf("plugin not found: @%s/%s", usernameNormal, pluginName)
+		return ResolvedPlugin{}, fmt.Errorf("addon not found: @%s/%s", usernameNormal, pluginName)
 	}
 	if strings.TrimSpace(pluginRow.Repo) == "" {
-		return ResolvedPlugin{}, fmt.Errorf("plugin has no repository set: @%s/%s", usernameNormal, pluginName)
+		return ResolvedPlugin{}, fmt.Errorf("addon has no repository set: @%s/%s", usernameNormal, pluginName)
 	}
 
 	versionRows, err := c.listPluginVersions(ctx, pluginRow.ID)
@@ -119,6 +198,7 @@ func (c *Client) ResolvePlugin(ctx context.Context, username, plugin, requestedV
 		GitHubSubdir: ghSubdir,
 		Version:      fmt.Sprintf("%d.%d.%d", selected.Major, selected.Minor, selected.Patch),
 		SHA:          sha,
+		EditorPlugin: pluginRow.EditorPlugin != nil && *pluginRow.EditorPlugin,
 	}, nil
 }
 
@@ -129,13 +209,14 @@ type usernameRow struct {
 }
 
 type pluginRow struct {
-	ID        string  `json:"id"`
-	Name      *string `json:"name"`
-	Repo      string  `json:"repo"`
-	Path      *string `json:"path"`
-	CreatedAt *string `json:"created_at"`
-	UserID    *string `json:"user_id"`
-	OrgID     *string `json:"org_id"`
+	ID           string  `json:"id"`
+	Name         *string `json:"name"`
+	Repo         string  `json:"repo"`
+	Path         *string `json:"path"`
+	EditorPlugin *bool   `json:"editor_plugin"`
+	CreatedAt    *string `json:"created_at"`
+	UserID       *string `json:"user_id"`
+	OrgID        *string `json:"org_id"`
 }
 
 type versionRow struct {
@@ -168,7 +249,7 @@ func (c *Client) getUsernameByNormal(ctx context.Context, usernameNormal string)
 
 func (c *Client) getPluginByOwnerAndName(ctx context.Context, userID, orgID *string, pluginName string) (pluginRow, bool, error) {
 	q := url.Values{}
-	selectWithPath := "id,name,repo,path,created_at,user_id,org_id"
+	selectWithPath := "id,name,repo,path,editor_plugin,created_at,user_id,org_id"
 	selectLegacy := "id,name,repo,created_at,user_id,org_id"
 	q.Set("select", selectWithPath)
 	q.Set("name", "eq."+pluginName)
@@ -185,7 +266,7 @@ func (c *Client) getPluginByOwnerAndName(ctx context.Context, userID, orgID *str
 	var rows []pluginRow
 	if err := c.get(ctx, "plugins", q, &rows); err != nil {
 		errMsg := strings.ToLower(err.Error())
-		if strings.Contains(errMsg, "path") &&
+		if (strings.Contains(errMsg, "path") || strings.Contains(errMsg, "editor_plugin")) &&
 			(strings.Contains(errMsg, "does not exist") || strings.Contains(errMsg, "could not find") || strings.Contains(errMsg, "schema cache")) {
 			q.Set("select", selectLegacy)
 			rows = nil
@@ -200,7 +281,7 @@ func (c *Client) getPluginByOwnerAndName(ctx context.Context, userID, orgID *str
 		return pluginRow{}, false, nil
 	}
 	if len(rows) > 1 {
-		return pluginRow{}, false, fmt.Errorf("plugin is not unique: %s", pluginName)
+		return pluginRow{}, false, fmt.Errorf("addon is not unique: %s", pluginName)
 	}
 	return rows[0], true, nil
 }
@@ -242,9 +323,11 @@ func (c *Client) get(ctx context.Context, table string, query url.Values, dst an
 	if err != nil {
 		return err
 	}
+	if c.apiKey == "" {
+		return fmt.Errorf("missing Supabase publishable key (set GDAM_SUPABASE_PUBLISHABLE_KEY or SUPABASE_PUBLISHABLE_KEY)")
+	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("apikey", c.anonKey)
-	req.Header.Set("Authorization", "Bearer "+c.anonKey)
+	req.Header.Set("apikey", c.apiKey)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -254,7 +337,7 @@ func (c *Client) get(ctx context.Context, table string, query url.Values, dst an
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 32<<10))
-		return fmt.Errorf("gdpm db failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(msg)))
+		return fmt.Errorf("gdam db failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(msg)))
 	}
 
 	return json.NewDecoder(resp.Body).Decode(dst)
