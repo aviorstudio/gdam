@@ -26,4 +26,4 @@ runs:
 
     - name: Push database migrations
       shell: bash
-      run: supabase db push
+      run: supabase db push --yes
