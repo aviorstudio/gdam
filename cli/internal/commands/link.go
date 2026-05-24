@@ -148,20 +148,22 @@ func Link(ctx context.Context, opts LinkOptions) error {
 	}
 
 	projectGodotPath := filepath.Join(projectDir, "project.godot")
-	if _, err := os.Stat(projectGodotPath); err == nil {
-		pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
-		if err := disableEditorPluginAliases(projectGodotPath, projectDir, m, pluginKey, addonDirName, abs); err != nil {
+	if plugin.EditorPlugin {
+		if _, err := os.Stat(projectGodotPath); err == nil {
+			pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
+			if err := disableEditorPluginAliases(projectGodotPath, projectDir, m, pluginKey, addonDirName, abs); err != nil {
+				return err
+			}
+			updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, true)
+			if err != nil {
+				return err
+			}
+			if updated {
+				fmt.Printf("enabled %s\n", pluginCfgResPath)
+			}
+		} else if !os.IsNotExist(err) {
 			return err
 		}
-		updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, true)
-		if err != nil {
-			return err
-		}
-		if updated {
-			fmt.Printf("enabled %s\n", pluginCfgResPath)
-		}
-	} else if !os.IsNotExist(err) {
-		return err
 	}
 
 	fmt.Printf("linked %s -> %s\n", pluginKey, storedPath)

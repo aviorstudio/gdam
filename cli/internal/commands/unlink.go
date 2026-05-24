@@ -79,22 +79,24 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 
 	if strings.TrimSpace(plugin.Repo) == "" {
 		projectGodotPath := filepath.Join(projectDir, "project.godot")
-		if _, err := os.Stat(projectGodotPath); err == nil {
-			pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
-			if linkedAbs != "" {
-				if err := disableEditorPluginAliases(projectGodotPath, projectDir, m, pluginKey, addonDirName, linkedAbs); err != nil {
+		if plugin.EditorPlugin {
+			if _, err := os.Stat(projectGodotPath); err == nil {
+				pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
+				if linkedAbs != "" {
+					if err := disableEditorPluginAliases(projectGodotPath, projectDir, m, pluginKey, addonDirName, linkedAbs); err != nil {
+						return err
+					}
+				}
+				updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, false)
+				if err != nil {
 					return err
 				}
-			}
-			updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, false)
-			if err != nil {
+				if updated {
+					fmt.Printf("disabled %s\n", pluginCfgResPath)
+				}
+			} else if !os.IsNotExist(err) {
 				return err
 			}
-			if updated {
-				fmt.Printf("disabled %s\n", pluginCfgResPath)
-			}
-		} else if !os.IsNotExist(err) {
-			return err
 		}
 
 		if err := fsutil.RemoveAll(dst); err != nil {
@@ -174,22 +176,24 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 	}
 
 	projectGodotPath := filepath.Join(projectDir, "project.godot")
-	if _, err := os.Stat(projectGodotPath); err == nil {
-		pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
-		if linkedAbs != "" {
-			if err := disableEditorPluginAliases(projectGodotPath, projectDir, m, pluginKey, addonDirName, linkedAbs); err != nil {
+	if plugin.EditorPlugin {
+		if _, err := os.Stat(projectGodotPath); err == nil {
+			pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
+			if linkedAbs != "" {
+				if err := disableEditorPluginAliases(projectGodotPath, projectDir, m, pluginKey, addonDirName, linkedAbs); err != nil {
+					return err
+				}
+			}
+			updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, true)
+			if err != nil {
 				return err
 			}
-		}
-		updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, true)
-		if err != nil {
+			if updated {
+				fmt.Printf("enabled %s\n", pluginCfgResPath)
+			}
+		} else if !os.IsNotExist(err) {
 			return err
 		}
-		if updated {
-			fmt.Printf("enabled %s\n", pluginCfgResPath)
-		}
-	} else if !os.IsNotExist(err) {
-		return err
 	}
 
 	fmt.Printf("unlinked %s\n", pluginKey)

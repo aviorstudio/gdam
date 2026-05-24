@@ -61,6 +61,7 @@ export type PluginInsert = {
   name: string;
   repo: string;
   path?: string | null;
+  editor_plugin?: boolean;
 };
 
 export const pluginsDto = {
@@ -69,7 +70,7 @@ export const pluginsDto = {
   listAll: async (client: SupabaseClient) => {
     const withPath = await client
       .from('plugins')
-      .select('id,name,repo,path,created_at,user_id,org_id')
+      .select('id,name,repo,path,editor_plugin,created_at,user_id,org_id')
       .order('created_at', { ascending: false });
     if (!withPath.error) return withPath;
 

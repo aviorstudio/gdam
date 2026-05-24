@@ -27,6 +27,7 @@ type PluginRecord = {
   name: string | null;
   repo: string | null;
   path: string | null;
+  editor_plugin?: boolean | null;
   created_at: string | null;
 };
 
@@ -81,6 +82,7 @@ let plugin: {
   name: string;
   repo: string;
   path: string;
+  editorPlugin: boolean;
   createdAt: string;
 } | null = null;
 
@@ -166,6 +168,7 @@ if (!usernameNormal || !pluginName) {
           name: pluginRecord.name ?? pluginName,
           repo: pluginRecord.repo ?? '',
           path: pluginRecord.path ?? '',
+          editorPlugin: Boolean(pluginRecord.editor_plugin),
           createdAt: pluginRecord.created_at ?? '',
         };
 
@@ -253,7 +256,7 @@ const versionList = versions.map((version) => ({
       : undefined}
     subtitle={pageTone === 'not-found'
       ? 'No addon matches that URL.'
-      : repoUrl ? undefined : 'No repository linked.'}
+      : repoUrl ? (plugin?.editorPlugin ? 'Editor plugin' : 'Runtime addon') : 'No repository linked.'}
     subtitleLink={pageTone !== 'not-found' && repoUrl
       ? { href: repoUrl, label: repoLabel || plugin?.repo || repoUrl, external: true }
       : undefined}

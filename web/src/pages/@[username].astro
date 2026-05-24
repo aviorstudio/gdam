@@ -27,6 +27,7 @@ type PluginRecord = {
   name: string | null;
   repo: string | null;
   path: string | null;
+  editor_plugin?: boolean | null;
   created_at: string | null;
 };
 
@@ -131,6 +132,7 @@ let formRepo = '';
 let formPath = '';
 let formVersion = '';
 let formSha = '';
+let formEditorPlugin = false;
 
 if (showCreatePluginDialog && !session) {
   return Astro.redirect('/signin');
@@ -224,6 +226,7 @@ if (!usernameNormal) {
           formPath = String(formData.get('path') ?? '').trim();
           formVersion = String(formData.get('version') ?? '').trim();
           formSha = String(formData.get('sha') ?? '').trim();
+          formEditorPlugin = formData.get('editor_plugin') === 'on';
 
           if (!formName || !formRepo || !formVersion || !formSha) {
             createStatus = 'Addon name, repository, version, and sha are required.';
@@ -250,6 +253,7 @@ if (!usernameNormal) {
                   ...pluginOwnerPayload,
                   name: formName,
                   repo: formRepo,
+                  editor_plugin: formEditorPlugin,
                   ...(formPath ? { path: formPath } : {}),
                 });
 
@@ -392,6 +396,19 @@ if (!usernameNormal) {
 	            type="text"
 	            value={formPath}
 	          />
+
+            <label class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+              <input
+                class="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-600"
+                type="checkbox"
+                name="editor_plugin"
+                checked={formEditorPlugin}
+              />
+              <span class="flex flex-col gap-1">
+                <span class="font-semibold text-slate-900">Editor plugin</span>
+                <span>Enable this addon in Godot's editor plugin list when GDAM installs it.</span>
+              </span>
+            </label>
 
 	          <div class="grid gap-4 md:grid-cols-2">
 	            <Input

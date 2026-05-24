@@ -66,6 +66,7 @@ func Add(ctx context.Context, opts AddOptions) error {
 	if isLinked {
 		existing.Repo = gdamdb.GitHubTreeURLWithPath(resolved.GitHubOwner, resolved.GitHubRepo, resolved.SHA, resolved.GitHubSubdir)
 		existing.Version = resolved.Version
+		existing.EditorPlugin = resolved.EditorPlugin
 		m = manifest.UpsertPlugin(m, pkg.Name(), existing)
 		if err := manifest.Save(manifestPath, m); err != nil {
 			return err
@@ -151,26 +152,29 @@ func Add(ctx context.Context, opts AddOptions) error {
 		link = existing.Link
 	}
 	m = manifest.UpsertPlugin(m, pkg.Name(), manifest.Plugin{
-		Repo:    gdamdb.GitHubTreeURLWithPath(resolved.GitHubOwner, resolved.GitHubRepo, resolved.SHA, resolved.GitHubSubdir),
-		Version: resolved.Version,
-		Link:    link,
+		Repo:         gdamdb.GitHubTreeURLWithPath(resolved.GitHubOwner, resolved.GitHubRepo, resolved.SHA, resolved.GitHubSubdir),
+		Version:      resolved.Version,
+		EditorPlugin: resolved.EditorPlugin,
+		Link:         link,
 	})
 	if err := manifest.Save(manifestPath, m); err != nil {
 		return err
 	}
 
 	projectGodotPath := filepath.Join(projectDir, "project.godot")
-	if _, err := os.Stat(projectGodotPath); err == nil {
-		pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
-		updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, true)
-		if err != nil {
+	if resolved.EditorPlugin {
+		if _, err := os.Stat(projectGodotPath); err == nil {
+			pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
+			updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, true)
+			if err != nil {
+				return err
+			}
+			if updated {
+				fmt.Printf("enabled %s\n", pluginCfgResPath)
+			}
+		} else if !os.IsNotExist(err) {
 			return err
 		}
-		if updated {
-			fmt.Printf("enabled %s\n", pluginCfgResPath)
-		}
-	} else if !os.IsNotExist(err) {
-		return err
 	}
 
 	fmt.Printf("installed %s@%s (%s)\n", pkg.Name(), resolved.Version, resolved.SHA)

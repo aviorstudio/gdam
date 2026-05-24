@@ -121,6 +121,8 @@ type ResolvedPlugin struct {
 
 	Version string
 	SHA     string
+
+	EditorPlugin bool
 }
 
 func (c *Client) ResolvePlugin(ctx context.Context, username, plugin, requestedVersion string) (ResolvedPlugin, error) {
@@ -196,6 +198,7 @@ func (c *Client) ResolvePlugin(ctx context.Context, username, plugin, requestedV
 		GitHubSubdir: ghSubdir,
 		Version:      fmt.Sprintf("%d.%d.%d", selected.Major, selected.Minor, selected.Patch),
 		SHA:          sha,
+		EditorPlugin: pluginRow.EditorPlugin != nil && *pluginRow.EditorPlugin,
 	}, nil
 }
 
@@ -206,13 +209,14 @@ type usernameRow struct {
 }
 
 type pluginRow struct {
-	ID        string  `json:"id"`
-	Name      *string `json:"name"`
-	Repo      string  `json:"repo"`
-	Path      *string `json:"path"`
-	CreatedAt *string `json:"created_at"`
-	UserID    *string `json:"user_id"`
-	OrgID     *string `json:"org_id"`
+	ID           string  `json:"id"`
+	Name         *string `json:"name"`
+	Repo         string  `json:"repo"`
+	Path         *string `json:"path"`
+	EditorPlugin *bool   `json:"editor_plugin"`
+	CreatedAt    *string `json:"created_at"`
+	UserID       *string `json:"user_id"`
+	OrgID        *string `json:"org_id"`
 }
 
 type versionRow struct {
@@ -245,7 +249,7 @@ func (c *Client) getUsernameByNormal(ctx context.Context, usernameNormal string)
 
 func (c *Client) getPluginByOwnerAndName(ctx context.Context, userID, orgID *string, pluginName string) (pluginRow, bool, error) {
 	q := url.Values{}
-	selectWithPath := "id,name,repo,path,created_at,user_id,org_id"
+	selectWithPath := "id,name,repo,path,editor_plugin,created_at,user_id,org_id"
 	selectLegacy := "id,name,repo,created_at,user_id,org_id"
 	q.Set("select", selectWithPath)
 	q.Set("name", "eq."+pluginName)
@@ -262,7 +266,7 @@ func (c *Client) getPluginByOwnerAndName(ctx context.Context, userID, orgID *str
 	var rows []pluginRow
 	if err := c.get(ctx, "plugins", q, &rows); err != nil {
 		errMsg := strings.ToLower(err.Error())
-		if strings.Contains(errMsg, "path") &&
+		if (strings.Contains(errMsg, "path") || strings.Contains(errMsg, "editor_plugin")) &&
 			(strings.Contains(errMsg, "does not exist") || strings.Contains(errMsg, "could not find") || strings.Contains(errMsg, "schema cache")) {
 			q.Set("select", selectLegacy)
 			rows = nil

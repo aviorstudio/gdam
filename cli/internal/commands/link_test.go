@@ -33,6 +33,7 @@ func TestLink_ReplacesLegacyEditorPluginEntryForSameLocalPath(t *testing.T) {
 			Path:    pluginDir,
 		},
 	})
+	m = manifest.UpsertPlugin(m, "@user/plugin", manifest.Plugin{EditorPlugin: true})
 	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}
@@ -180,6 +181,7 @@ func TestLink_DisablesLegacyEditorPluginEntryDerivedFromPath(t *testing.T) {
 	}
 
 	m := manifest.New()
+	m = manifest.UpsertPlugin(m, "@aviorstudio/gd-playwright", manifest.Plugin{EditorPlugin: true})
 	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}

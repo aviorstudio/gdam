@@ -19,15 +19,16 @@ import (
 type InstallOptions struct{}
 
 type installCandidate struct {
-	pluginKey   string
-	addonDir    string
-	dst         string
-	version     string
-	ghOwner     string
-	ghRepo      string
-	ref         string
-	repoSubdir  string
-	prepRootDir string
+	pluginKey    string
+	addonDir     string
+	dst          string
+	version      string
+	editorPlugin bool
+	ghOwner      string
+	ghRepo       string
+	ref          string
+	repoSubdir   string
+	prepRootDir  string
 }
 
 func Install(ctx context.Context, opts InstallOptions) error {
@@ -92,14 +93,15 @@ func Install(ctx context.Context, opts InstallOptions) error {
 		}
 
 		candidates = append(candidates, installCandidate{
-			pluginKey:  pluginKey,
-			addonDir:   addonDirName,
-			dst:        dst,
-			version:    strings.TrimSpace(plugin.Version),
-			ghOwner:    owner,
-			ghRepo:     repo,
-			ref:        ref,
-			repoSubdir: repoSubdir,
+			pluginKey:    pluginKey,
+			addonDir:     addonDirName,
+			dst:          dst,
+			version:      strings.TrimSpace(plugin.Version),
+			editorPlugin: plugin.EditorPlugin,
+			ghOwner:      owner,
+			ghRepo:       repo,
+			ref:          ref,
+			repoSubdir:   repoSubdir,
 		})
 	}
 
@@ -183,7 +185,7 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			return fmt.Errorf("%w: installed addon is missing plugin.cfg at %s", ErrUserInput, filepath.Join(candidates[i].dst, "plugin.cfg"))
 		}
 
-		if hasProjectGodot {
+		if hasProjectGodot && candidates[i].editorPlugin {
 			pluginCfgResPath := "res://" + path.Join("addons", candidates[i].addonDir, "plugin.cfg")
 			updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, true)
 			if err != nil {

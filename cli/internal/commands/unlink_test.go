@@ -28,6 +28,7 @@ func TestUnlink_RemovesSymlinkWhenNoRepo(t *testing.T) {
 
 	m := manifest.New()
 	m = manifest.UpsertPlugin(m, "@user/plugin", manifest.Plugin{
+		EditorPlugin: true,
 		Link: &manifest.Link{
 			Enabled: true,
 			Path:    pluginDir,

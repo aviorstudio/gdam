@@ -53,7 +53,8 @@ func Remove(ctx context.Context, opts RemoveOptions) error {
 		return fmt.Errorf("%w: remove does not take a version (use @username/addon)", ErrUserInput)
 	}
 
-	if !manifest.HasPlugin(m, pkg.Name()) {
+	plugin, ok := m.Addons[pkg.Name()]
+	if !ok {
 		return fmt.Errorf("%w: addon not found in gdam.json: %s", ErrUserInput, pkg.Name())
 	}
 
@@ -65,17 +66,19 @@ func Remove(ctx context.Context, opts RemoveOptions) error {
 	dst := filepath.Join(projectDir, "addons", addonDirName)
 
 	projectGodotPath := filepath.Join(projectDir, "project.godot")
-	if _, err := os.Stat(projectGodotPath); err == nil {
-		pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
-		updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, false)
-		if err != nil {
+	if plugin.EditorPlugin {
+		if _, err := os.Stat(projectGodotPath); err == nil {
+			pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
+			updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, false)
+			if err != nil {
+				return err
+			}
+			if updated {
+				fmt.Printf("disabled %s\n", pluginCfgResPath)
+			}
+		} else if !os.IsNotExist(err) {
 			return err
 		}
-		if updated {
-			fmt.Printf("disabled %s\n", pluginCfgResPath)
-		}
-	} else if !os.IsNotExist(err) {
-		return err
 	}
 
 	if err := fsutil.RemoveAll(dst); err != nil {

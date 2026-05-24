@@ -40,6 +40,7 @@ create table public.plugins (
   name text not null,
   repo text not null,
   path text,
+  editor_plugin boolean not null default false,
   created_at timestamptz not null default now(),
   constraint plugins_exactly_one_owner check ((user_id is not null) <> (org_id is not null))
 );
