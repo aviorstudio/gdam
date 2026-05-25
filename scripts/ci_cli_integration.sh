@@ -5,6 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK_DIR="${GDAM_CI_WORK_DIR:-$(mktemp -d)}"
 SUPABASE_URL="${SUPABASE_URL:-http://127.0.0.1:54421}"
 SUPABASE_PUBLISHABLE_KEY="${SUPABASE_PUBLISHABLE_KEY:-sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH}"
+export SUPABASE_URL
+export SUPABASE_PUBLISHABLE_KEY
 DEV_EMAIL="${GDAM_DEV_EMAIL:-dev@gdam.local}"
 DEV_PASSWORD="${GDAM_DEV_PASSWORD:-password123}"
 ADDON_NAME="${GDAM_TEST_ADDON_NAME:-gdam-test-addon}"
@@ -26,6 +28,30 @@ api_get() {
 }
 
 api_post() {
+  local url="$1"
+  local payload="$2"
+  curl -sS -f \
+    -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -H "Prefer: return=representation" \
+    -d "$payload" \
+    "$url"
+}
+
+api_patch() {
+  local url="$1"
+  local payload="$2"
+  curl -sS -f -X PATCH \
+    -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -H "Prefer: return=representation" \
+    -d "$payload" \
+    "$url"
+}
+
+api_upsert() {
   local url="$1"
   local payload="$2"
   curl -sS -f \
@@ -75,14 +101,21 @@ plugin_payload="$(jq -cn \
   --arg name "$ADDON_NAME" \
   --arg repo "$ADDON_REPO" \
   '{user_id:$user_id,org_id:null,name:$name,repo:$repo,path:null,editor_plugin:true}')"
-plugin_response="$(api_post "$SUPABASE_URL/rest/v1/plugins?on_conflict=user_id,name" "$plugin_payload")"
+addon_name_encoded="$(jq -rn --arg value "$ADDON_NAME" '$value|@uri')"
+existing_plugin="$(api_get "$SUPABASE_URL/rest/v1/plugins?select=id&user_id=eq.$USER_ID&name=eq.$addon_name_encoded&limit=1")"
+existing_plugin_id="$(jq -r '.[0].id // empty' <<<"$existing_plugin")"
+if [[ -n "$existing_plugin_id" ]]; then
+  plugin_response="$(api_patch "$SUPABASE_URL/rest/v1/plugins?id=eq.$existing_plugin_id" "$plugin_payload")"
+else
+  plugin_response="$(api_post "$SUPABASE_URL/rest/v1/plugins" "$plugin_payload")"
+fi
 PLUGIN_ID="$(jq -r '.[0].id' <<<"$plugin_response")"
 
 version_payload="$(jq -cn \
   --arg plugin_id "$PLUGIN_ID" \
   --arg sha "$ADDON_SHA" \
   '{plugin_id:$plugin_id,major:0,minor:1,patch:0,sha:$sha}')"
-api_post "$SUPABASE_URL/rest/v1/plugin_versions?on_conflict=plugin_id,major,minor,patch" "$version_payload" >/dev/null
+api_upsert "$SUPABASE_URL/rest/v1/plugin_versions?on_conflict=plugin_id,major,minor,patch" "$version_payload" >/dev/null
 
 cd "$GODOT_DIR"
 "$ROOT_DIR/cli/bin/gdam" init
