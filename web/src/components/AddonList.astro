@@ -13,6 +13,7 @@ export type AddonListItem = {
     label: string;
     fields: Record<string, string>;
     confirm?: string;
+    csrfToken?: string;
   };
 };
 
@@ -159,6 +160,7 @@ const shouldRenderBody = !(hideBodyWhenError && tone === 'error');
                         {Object.entries(item.deleteForm.fields).map(([name, value]) => (
                           <input type="hidden" name={name} value={value} />
                         ))}
+                        {item.deleteForm.csrfToken && <input type="hidden" name="csrf_token" value={item.deleteForm.csrfToken} />}
                         <button
                           class="rounded-full border border-red-200 bg-white px-3 py-1 font-semibold text-red-600 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
                           type="submit"

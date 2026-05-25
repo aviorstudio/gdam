@@ -11,6 +11,9 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   integrations: [qwikdev()],
   adapter: vercel(),
+  security: {
+    checkOrigin: false,
+  },
 
   vite: {
     plugins: [tailwindcss()]

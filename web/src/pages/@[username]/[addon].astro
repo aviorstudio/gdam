@@ -13,6 +13,8 @@ import { parseGitHubOwnerRepo, toGitHubRepoRootUrl, toRepoUrl } from '../../lib/
 import { formatSemverTripletFromNullable, parseSemverTriplet } from '../../lib/semver';
 import { supabase } from '../../lib/supabase';
 
+const DELETE_CSRF_COOKIE = 'gdam-delete-csrf';
+
 type UsernameRecord = {
   username_display: string | null;
   user_id: string | null;
@@ -60,6 +62,11 @@ const addonName = safeDecodeURIComponent(addonParamRaw).trim();
 
 const session = hasAuthCookies(Astro.cookies) ? await getSessionFromCookies(Astro.cookies) : null;
 const profileId = session?.user?.id ?? '';
+let deleteCsrfToken = Astro.cookies.get(DELETE_CSRF_COOKIE)?.value ?? '';
+if (!deleteCsrfToken) {
+  deleteCsrfToken = crypto.randomUUID();
+  Astro.cookies.set(DELETE_CSRF_COOKIE, deleteCsrfToken, { path: '/', sameSite: 'lax', secure: Astro.url.protocol === 'https:' });
+}
 
 let pageTone: 'default' | 'not-found' | 'error' = 'default';
 let pageStatus = '';
@@ -192,6 +199,11 @@ if (!usernameNormal || !addonName) {
             createStatus = 'You do not have permission to publish releases for this addon.';
             createTone = 'error';
           } else if (action === 'delete-addon') {
+            if (String(formData.get('csrf_token') ?? '') !== deleteCsrfToken) {
+              Astro.response.status = 403;
+              pageTone = 'error';
+              pageStatus = 'Invalid delete request.';
+            } else {
             const { error: deleteError } = await addonsDto.deleteById(supabase, addon.id);
             if (deleteError) {
               Astro.response.status = 500;
@@ -200,11 +212,16 @@ if (!usernameNormal || !addonName) {
             } else {
               return Astro.redirect(`/@${ownerSlug}`);
             }
+            }
           } else if (action === 'delete-version') {
             const major = Number(String(formData.get('major') ?? ''));
             const minor = Number(String(formData.get('minor') ?? ''));
             const patch = Number(String(formData.get('patch') ?? ''));
-            if (!Number.isInteger(major) || !Number.isInteger(minor) || !Number.isInteger(patch)) {
+            if (String(formData.get('csrf_token') ?? '') !== deleteCsrfToken) {
+              Astro.response.status = 403;
+              pageTone = 'error';
+              pageStatus = 'Invalid delete request.';
+            } else if (!Number.isInteger(major) || !Number.isInteger(minor) || !Number.isInteger(patch)) {
               Astro.response.status = 400;
               pageTone = 'error';
               pageStatus = 'Invalid version selected.';
@@ -315,6 +332,7 @@ const versionList = versions.map((version) => ({
       patch: String(version.patch),
     },
     confirm: `Delete version ${version.version}?`,
+    csrfToken: deleteCsrfToken,
   } : undefined,
 }));
 ---
@@ -422,6 +440,7 @@ const versionList = versions.map((version) => ({
         onsubmit={`return confirm(${JSON.stringify(`Delete ${addon.name}? This cannot be undone.`)})`}
       >
         <input type="hidden" name="action" value="delete-addon" />
+        <input type="hidden" name="csrf_token" value={deleteCsrfToken} />
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p class="text-sm font-semibold text-red-900">Delete addon</p>
