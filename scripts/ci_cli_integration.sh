@@ -159,8 +159,8 @@ fi
 ADDON_SHA="$(git -C "$ADDON_DIR" rev-parse HEAD)"
 PLUGIN_ID="$(upsert_plugin "$ADDON_NAME" true)"
 RUNTIME_PLUGIN_ID="$(upsert_plugin "$RUNTIME_ADDON_NAME" false)"
-upsert_version "$PLUGIN_ID" "$ADDON_SHA" "v0.1.0"
-upsert_version "$RUNTIME_PLUGIN_ID" "$ADDON_SHA" "v0.1.0"
+upsert_version "$PLUGIN_ID" "$ADDON_SHA" "$ADDON_SHA"
+upsert_version "$RUNTIME_PLUGIN_ID" "$ADDON_SHA" "$ADDON_SHA"
 
 cd "$GODOT_DIR"
 "$ROOT_DIR/cli/bin/gdam" init
