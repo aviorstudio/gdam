@@ -5,9 +5,10 @@ import RootLayout from '../layouts/RootLayout.astro';
 import AuthForm from '../components/AuthForm.astro';
 import Input from '../components/Input.astro';
 import Splash from '../components/Splash.astro';
-import { hasAuthCookies } from '../lib/auth';
+import { getSessionFromCookies, hasAuthCookies } from '../lib/auth';
 
-if (hasAuthCookies(Astro.cookies)) {
+const session = hasAuthCookies(Astro.cookies) ? await getSessionFromCookies(Astro.cookies) : null;
+if (session?.user?.id) {
 	return Astro.redirect('/');
 }
 ---

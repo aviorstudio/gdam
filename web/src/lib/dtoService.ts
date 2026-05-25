@@ -2,15 +2,23 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type ProfileUpsert = {
   id: string;
+  link?: string | null;
+  bio?: string | null;
 };
 
 export const profilesDto = {
   getById: (client: SupabaseClient, id: string) => client.from('profiles').select('*').eq('id', id).maybeSingle(),
   upsert: (client: SupabaseClient, payload: ProfileUpsert) => client.from('profiles').upsert(payload),
+  updateById: (client: SupabaseClient, id: string, payload: { link?: string | null; bio?: string | null }) =>
+    client.from('profiles').update(payload).eq('id', id),
 };
 
 export const orgsDto = {
-  insert: (client: SupabaseClient) => client.from('orgs').insert({}).select('*').maybeSingle(),
+  getById: (client: SupabaseClient, id: string) => client.from('orgs').select('*').eq('id', id).maybeSingle(),
+  insert: (client: SupabaseClient, payload: { link?: string | null; bio?: string | null } = {}) =>
+    client.from('orgs').insert(payload).select('*').maybeSingle(),
+  updateById: (client: SupabaseClient, id: string, payload: { link?: string | null; bio?: string | null }) =>
+    client.from('orgs').update(payload).eq('id', id),
 };
 
 export type OrgProfileInsert = {
@@ -38,6 +46,8 @@ export type UsernameInsert = {
 
 export const usernamesDto = {
   insert: (client: SupabaseClient, payload: UsernameInsert) => client.from('usernames').insert(payload),
+  updateById: (client: SupabaseClient, id: string, payload: { name: string }) =>
+    client.from('usernames').update(payload).eq('id', id),
   getByUserId: (client: SupabaseClient, userId: string) => client.from('usernames').select('*').eq('user_id', userId),
   listByUserIds: (client: SupabaseClient, userIds: string[]) =>
     client.from('usernames').select('name,user_id,org_id').in('user_id', userIds),

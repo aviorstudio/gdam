@@ -3,7 +3,6 @@ export const prerender = false;
 
 import RootLayout from '../layouts/RootLayout.astro';
 import Splash from '../components/Splash.astro';
-import Title from '../components/Title.astro';
 import AddonList from '../components/AddonList.astro';
 import { addonVersionsDto, addonsDto, usernamesDto } from '../lib/dtoService';
 import { toRepoUrl } from '../lib/repo';
@@ -115,7 +114,6 @@ const addonList = addons.map((addon) => {
 
 <RootLayout>
   <Splash title="Godot Addon Manager" subtitle="Addons simplified" />
-  <Title title="All addons" subtitle="Browse all addons" />
   <AddonList
     items={addonList}
     status={addonsStatus}

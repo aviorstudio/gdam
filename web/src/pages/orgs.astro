@@ -1,12 +1,12 @@
 ---
 export const prerender = false;
 
-import RootLayout from '../../layouts/RootLayout.astro';
-import Title from '../../components/Title.astro';
-import AddonList from '../../components/AddonList.astro';
-import { getSessionFromCookies } from '../../lib/auth';
-import { orgsProfilesDto, usernamesDto } from '../../lib/dtoService';
-import { supabase } from '../../lib/supabase';
+import RootLayout from '../layouts/RootLayout.astro';
+import Title from '../components/Title.astro';
+import AddonList from '../components/AddonList.astro';
+import { getSessionFromCookies } from '../lib/auth';
+import { orgsProfilesDto, usernamesDto } from '../lib/dtoService';
+import { supabase } from '../lib/supabase';
 
 type UsernameRecord = {
   name: string | null;
@@ -20,43 +20,19 @@ type OrgsProfileRecord = {
   created_at: string | null;
 };
 
-const safeDecodeURIComponent = (value: string) => {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-};
-
-const normalizeUsername = (value: string) => value.trim().toLowerCase();
-
-const usernameParamRaw = Astro.params.username ?? '';
-const usernameParam = safeDecodeURIComponent(usernameParamRaw);
-const usernameNormal = normalizeUsername(usernameParam);
-
-const publicPath = Astro.url.pathname.replace(/\/orgs\/?$/, '') || '/';
-
 const session = await getSessionFromCookies(Astro.cookies);
 if (!session) {
-  return Astro.redirect(publicPath);
+  return Astro.redirect('/');
 }
 
 const profileId = session.user?.id ?? '';
-if (!profileId || !usernameNormal) {
-  return Astro.redirect(publicPath);
+if (!profileId) {
+  return Astro.redirect('/');
 }
 
-const { data: usernameRow, error: usernameError } = await usernamesDto.getByName(supabase, usernameNormal);
-if (usernameError || !usernameRow) {
-  return Astro.redirect(publicPath);
-}
-
-const usernameRecord = usernameRow as UsernameRecord;
-if (!usernameRecord.user_id || usernameRecord.user_id !== profileId) {
-  return Astro.redirect(publicPath);
-}
-
-const usernameDisplay = usernameRecord.name || usernameParam;
+const { data: usernameRows } = await usernamesDto.getByUserId(supabase, profileId);
+const usernameRecord = ((usernameRows as UsernameRecord[] | null) ?? []).find((row) => row.name);
+const usernameDisplay = usernameRecord?.name ?? '';
 
 let status = '';
 let tone: 'muted' | 'error' = 'muted';
@@ -77,12 +53,12 @@ if (membershipError) {
 
   const usernameByOrgId = new Map<string, string>();
   if (orgIds.length > 0) {
-    const { data: usernameRows, error: usernameListError } = await usernamesDto.listByOrgIds(supabase, orgIds);
+    const { data: orgUsernameRows, error: usernameListError } = await usernamesDto.listByOrgIds(supabase, orgIds);
     if (usernameListError) {
       status = usernameListError.message;
       tone = 'error';
     } else {
-      for (const row of (usernameRows as UsernameRecord[] | null) ?? []) {
+      for (const row of (orgUsernameRows as UsernameRecord[] | null) ?? []) {
         if (!row.org_id || !row.name) continue;
         if (!usernameByOrgId.has(row.org_id)) {
           usernameByOrgId.set(row.org_id, row.name);
@@ -109,7 +85,11 @@ if (membershipError) {
 ---
 
 <RootLayout>
-  <Title title="Orgs" subtitle={`Organizations for @${usernameDisplay}.`} />
+  <Title
+    title="Orgs"
+    subtitle={usernameDisplay ? `Organizations for @${usernameDisplay}.` : 'Your organizations.'}
+    action={{ href: '/orgs/create', label: 'Create org' }}
+  />
 
   <AddonList
     items={orgItems}
@@ -117,6 +97,7 @@ if (membershipError) {
     tone={tone}
     hideBodyWhenError
     emptyTitle="No orgs yet"
-    emptySubtitle="Create an org from Settings to get started."
+    emptySubtitle="Create an org to publish addons under a shared account."
   />
+
 </RootLayout>

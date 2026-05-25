@@ -1,0 +1,256 @@
+---
+export const prerender = false;
+
+import RootLayout from '../../layouts/RootLayout.astro';
+import Card from '../../components/Card.astro';
+import Title from '../../components/Title.astro';
+import Button from '../../components/Button.astro';
+import Input from '../../components/Input.astro';
+import { getSessionFromCookies } from '../../lib/auth';
+import { orgsDto, orgsProfilesDto, profilesDto, usernamesDto } from '../../lib/dtoService';
+import { supabase } from '../../lib/supabase';
+
+type UsernameRecord = {
+  id: string;
+  name: string | null;
+  user_id: string | null;
+  org_id: string | null;
+};
+
+type OwnerRecord = {
+  link: string | null;
+  bio: string | null;
+};
+
+type OrgsProfileRecord = {
+  admin: boolean | null;
+};
+
+const safeDecodeURIComponent = (value: string) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
+const normalizeUsername = (value: string) => value.trim().toLowerCase();
+const normalizeOptionalValue = (value: string) => {
+  const trimmed = value.trim();
+  return trimmed || null;
+};
+
+const normalizeOptionalUrl = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return { value: null, error: '' };
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return { value: null, error: 'Link must start with http:// or https://.' };
+    }
+    return { value: url.toString(), error: '' };
+  } catch {
+    return { value: null, error: 'Link must be a valid URL.' };
+  }
+};
+const reservedUsernames = new Set([
+  'signin',
+  'register',
+  'account',
+  'settings',
+  'api',
+  '404',
+  'robots.txt',
+  'sitemap.xml',
+  'favicon.ico',
+  'favicon.svg',
+]);
+const isReservedUsername = (value: string) => reservedUsernames.has(value);
+
+const usernameParamRaw = Astro.params.username ?? '';
+const usernameParam = safeDecodeURIComponent(usernameParamRaw);
+const usernameNormal = normalizeUsername(usernameParam);
+
+const publicPath = usernameNormal ? `/@${encodeURIComponent(usernameParam)}` : '/';
+
+const session = await getSessionFromCookies(Astro.cookies);
+if (!session) {
+  return Astro.redirect(publicPath);
+}
+
+const profileId = session.user?.id ?? '';
+if (!profileId || !usernameNormal) {
+  return Astro.redirect(publicPath);
+}
+
+const { data: usernameRow, error: usernameError } = await usernamesDto.getByName(supabase, usernameNormal);
+if (usernameError || !usernameRow) {
+  return Astro.redirect(publicPath);
+}
+
+const usernameRecord = usernameRow as UsernameRecord;
+let isProfileSettings = false;
+let isOrgSettings = false;
+
+if (usernameRecord.user_id && usernameRecord.user_id === profileId) {
+  isProfileSettings = true;
+} else if (usernameRecord.org_id) {
+  const { data: membershipRow, error: membershipError } = await orgsProfilesDto.getByOrgIdAndProfileId(
+    supabase,
+    usernameRecord.org_id,
+    profileId
+  );
+  const membershipRecord = membershipRow as OrgsProfileRecord | null;
+  isOrgSettings = Boolean(!membershipError && membershipRecord?.admin);
+}
+
+if (!isProfileSettings && !isOrgSettings) {
+  return Astro.redirect(publicPath);
+}
+
+const email = session.user?.email ?? '';
+const usernameDisplay = usernameRecord.name || usernameParam;
+const settingsSubtitle = isOrgSettings
+  ? 'Manage organization details.'
+  : 'Manage your profile details.';
+
+const ownerResult = isOrgSettings && usernameRecord.org_id
+  ? await orgsDto.getById(supabase, usernameRecord.org_id)
+  : await profilesDto.getById(supabase, profileId);
+const ownerData = ownerResult.data;
+const ownerRecord = ownerData as OwnerRecord | null;
+
+let settingsStatus = '';
+let settingsTone: 'muted' | 'error' | 'success' = 'muted';
+let formUsername = usernameDisplay;
+let formLink = ownerRecord?.link ?? '';
+let formBio = ownerRecord?.bio ?? '';
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const action = String(formData.get('action') ?? 'save-settings');
+
+  if (action === 'save-settings') {
+    formUsername = String(formData.get('username') ?? '').trim();
+    formLink = String(formData.get('link') ?? '').trim();
+    formBio = String(formData.get('bio') ?? '').trim();
+
+    const usernameNormal = normalizeUsername(formUsername);
+    const normalizedLink = normalizeOptionalUrl(formLink);
+    if (!usernameNormal) {
+      settingsStatus = 'Username is required.';
+      settingsTone = 'error';
+    } else if (isReservedUsername(usernameNormal)) {
+      settingsStatus = 'That username is reserved.';
+      settingsTone = 'error';
+    } else if (normalizedLink.error) {
+      settingsStatus = normalizedLink.error;
+      settingsTone = 'error';
+    } else {
+      const { data: existingUsername, error: existingUsernameError } = await usernamesDto.getByName(
+        supabase,
+        usernameNormal
+      );
+      const existingUsernameRecord = existingUsername as UsernameRecord | null;
+      if (existingUsernameError) {
+        settingsStatus = existingUsernameError.message;
+        settingsTone = 'error';
+      } else if (existingUsernameRecord && existingUsernameRecord.id !== usernameRecord.id) {
+        settingsStatus = 'That username is already taken.';
+        settingsTone = 'error';
+      } else {
+        const { error: usernameUpdateError } = await usernamesDto.updateById(supabase, usernameRecord.id, {
+          name: formUsername,
+        });
+
+        const ownerPayload = {
+          link: normalizedLink.value,
+          bio: normalizeOptionalValue(formBio),
+        };
+        const ownerUpdateResult = isOrgSettings && usernameRecord.org_id
+          ? await orgsDto.updateById(supabase, usernameRecord.org_id, ownerPayload)
+          : await profilesDto.updateById(supabase, profileId, ownerPayload);
+        const ownerUpdateError = ownerUpdateResult.error;
+
+        if (usernameUpdateError || ownerUpdateError) {
+          settingsStatus = usernameUpdateError?.message ?? ownerUpdateError?.message ?? 'Unable to save settings.';
+          settingsTone = 'error';
+        } else {
+          return Astro.redirect(`/settings/@${encodeURIComponent(formUsername)}`);
+        }
+      }
+    }
+  }
+}
+---
+
+<RootLayout>
+  <Title
+    title="Settings"
+    subtitle={settingsStatus || settingsSubtitle}
+  />
+
+  <form method="post" action={Astro.url.pathname}>
+  <Card class="flex flex-col gap-5">
+    <input type="hidden" name="action" value="save-settings" hidden />
+    <div class="grid gap-4">
+      <Input
+        label="Username"
+        name="username"
+        autocomplete="username"
+        placeholder="your-handle"
+        type="text"
+        value={formUsername}
+      />
+
+      {isProfileSettings ? (
+        <Input
+          label="Email"
+          name="email"
+          autocomplete="email"
+          type="email"
+          value={email}
+          readonly={true}
+          class="bg-slate-50"
+        />
+      ) : null}
+
+      <Input
+        label="Link"
+        name="link"
+        placeholder="https://example.com"
+        type="url"
+        value={formLink}
+      />
+
+      <label class="grid gap-1 text-sm font-semibold text-slate-900">
+        <span>Bio</span>
+        <textarea
+          class="min-h-28 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+          name="bio"
+          placeholder="Tell people what you build."
+          value={formBio}
+        ></textarea>
+      </label>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <Button variant="primary" size="form" icon="check" type="submit">
+        Save changes
+      </Button>
+      <Button href={publicPath} size="form" icon="x">
+        Cancel
+      </Button>
+      {isProfileSettings ? (
+        <Button form="signout-form" variant="muted" size="form" icon="sign-out" type="submit">
+          Sign out
+        </Button>
+      ) : null}
+    </div>
+  </Card>
+  </form>
+
+  {isProfileSettings ? (
+    <form id="signout-form" action="/api/auth/signout"></form>
+  ) : null}
+</RootLayout>

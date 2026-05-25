@@ -1,5 +1,6 @@
 ---
 import AuthTabs from './AuthTabs.astro';
+import Button from './Button.astro';
 
 interface Props {
   status?: string;
@@ -21,12 +22,9 @@ const formAction = action ?? (mode === 'signin' ? '/api/auth/signin' : '/registe
 
 	<slot />
 
-	<button
-		class="w-full rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
-		type="submit"
-	>
+	<Button class="w-full" variant="primary" size="form" icon="check" type="submit">
 		{mode === 'signin' ? 'Sign in' : 'Create account'}
-	</button>
+	</Button>
 	<p
 		class:list={{
 			'min-h-[20px] text-sm': true,

@@ -1,5 +1,6 @@
 ---
 import Card from './Card.astro';
+import Button from './Button.astro';
 
 export type AddonListItem = {
   ownerLabel?: string;
@@ -23,6 +24,10 @@ export type Props = {
   items: AddonListItem[];
   status?: string;
   tone?: AddonListTone;
+  action?: {
+    href: string;
+    label: string;
+  };
   emptyTitle?: string;
   emptySubtitle?: string;
   hideBodyWhenError?: boolean;
@@ -32,6 +37,7 @@ const {
   items,
   status = '',
   tone = 'muted',
+  action,
   emptyTitle = 'Nothing here yet',
   emptySubtitle = '',
   hideBodyWhenError = false,
@@ -50,6 +56,14 @@ const shouldRenderBody = !(hideBodyWhenError && tone === 'error');
 ---
 
 <Card class="flex flex-col gap-4">
+  {action && (
+    <div class="flex justify-end">
+      <Button href={action.href} variant="primary" size="form" icon={action.label.toLowerCase().includes('create') ? 'plus' : 'docs'}>
+        {action.label}
+      </Button>
+    </div>
+  )}
+
   {status && (
     <p
       class:list={{
@@ -77,10 +91,10 @@ const shouldRenderBody = !(hideBodyWhenError && tone === 'error');
         <ul class="divide-y divide-slate-200">
           {
             items.map((item) => (
-              <li class="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <div class="flex min-w-0 flex-col gap-1">
+              <li class="flex items-center justify-between gap-3 py-4">
+                <div class="min-w-0 flex-1">
                   {item.ownerLabel ? (
-                    <p class="break-words text-sm font-semibold text-slate-900">
+                    <p class="truncate text-sm font-semibold text-slate-900">
                       {(item.ownerHref ? (
                         <a
                           class="text-slate-900 hover:underline"
@@ -104,27 +118,10 @@ const shouldRenderBody = !(hideBodyWhenError && tone === 'error');
                       ) : (
                         <span class="text-slate-900">{item.addonLabel}</span>
                       ))}
-                      {item.metaLabel && (
-                        <>
-                          {' '}
-                          {item.metaHref ? (
-                            <a
-                              class="text-xs font-semibold text-slate-600 hover:underline"
-                              href={item.metaHref}
-                              target={isExternalHref(item.metaHref) ? '_blank' : undefined}
-                              rel={isExternalHref(item.metaHref) ? 'noopener noreferrer' : undefined}
-                            >
-                              {item.metaLabel}
-                            </a>
-                          ) : (
-                            <span class="text-xs font-semibold text-slate-600">{item.metaLabel}</span>
-                          )}
-                        </>
-                      )}
                     </p>
                   ) : item.addonHref ? (
                     <a
-                      class="break-words text-sm font-semibold text-slate-900 hover:underline"
+                      class="block truncate text-sm font-semibold text-slate-900 hover:underline"
                       href={item.addonHref}
                       target={isExternalHref(item.addonHref) ? '_blank' : undefined}
                       rel={isExternalHref(item.addonHref) ? 'noopener noreferrer' : undefined}
@@ -132,25 +129,27 @@ const shouldRenderBody = !(hideBodyWhenError && tone === 'error');
                       {item.addonLabel}
                     </a>
                   ) : (
-                    <p class="break-words text-sm font-semibold text-slate-900">{item.addonLabel}</p>
+                    <p class="truncate text-sm font-semibold text-slate-900">{item.addonLabel}</p>
                   )}
-
-                  {item.metaLabel && !item.ownerLabel &&
-                    (item.metaHref ? (
-                      <a
-                        class="text-xs font-semibold text-slate-600 hover:underline"
-                        href={item.metaHref}
-                        target={isExternalHref(item.metaHref) ? '_blank' : undefined}
-                        rel={isExternalHref(item.metaHref) ? 'noopener noreferrer' : undefined}
-                      >
-                        {item.metaLabel}
-                      </a>
-                    ) : (
-                      <p class="text-xs font-semibold text-slate-600">{item.metaLabel}</p>
-                    ))}
                 </div>
-                {(item.date || item.deleteForm) && (
-                  <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                {(item.metaLabel || item.date || item.deleteForm) && (
+                  <div class="flex shrink-0 items-center gap-2 text-xs font-semibold">
+                    {item.metaLabel && (
+                      item.metaHref ? (
+                        <a
+                          class="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-700 transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+                          href={item.metaHref}
+                          target={isExternalHref(item.metaHref) ? '_blank' : undefined}
+                          rel={isExternalHref(item.metaHref) ? 'noopener noreferrer' : undefined}
+                        >
+                          {item.metaLabel}
+                        </a>
+                      ) : (
+                        <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-700">
+                          {item.metaLabel}
+                        </span>
+                      )
+                    )}
                     {item.deleteForm && (
                       <form
                         method="post"
@@ -161,14 +160,16 @@ const shouldRenderBody = !(hideBodyWhenError && tone === 'error');
                           <input type="hidden" name={name} value={value} />
                         ))}
                         {item.deleteForm.csrfToken && <input type="hidden" name="csrf_token" value={item.deleteForm.csrfToken} />}
-                        <button
-                          class="rounded-full border border-red-200 bg-white px-3 py-1 font-semibold text-red-600 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                        <Button
+                          variant="danger-outline"
+                          size="chip"
+                          icon="trash"
                           type="submit"
                           name="action"
                           value={item.deleteForm.fields.action}
                         >
                           {item.deleteForm.label}
-                        </button>
+                        </Button>
                       </form>
                     )}
                     {item.date && (

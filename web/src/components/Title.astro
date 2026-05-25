@@ -1,4 +1,6 @@
 ---
+import Button from './Button.astro';
+
 type TitleLink = {
   label: string;
   href: string;
@@ -21,28 +23,28 @@ interface Props {
   titleParts?: TitlePart[];
   subtitle?: string;
   subtitleLink?: TitleLink;
+  subtitleLinkFirst?: boolean;
   action?: TitleAction;
+  actions?: TitleAction[];
 }
 
-const { title = '', titleParts, subtitle = '', subtitleLink, action } = Astro.props as Props;
-
-const primaryActionClasses =
-  'inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600';
+const { title = '', titleParts, subtitle = '', subtitleLink, subtitleLinkFirst = false, action, actions } = Astro.props as Props;
+const actionItems = actions ?? (action ? [action] : []);
 
 const titleLinkClasses = 'text-slate-900 hover:underline';
 const subtitleLinkClasses = 'font-semibold text-slate-900 hover:underline';
 
 const shouldRenderTitle = Boolean(titleParts?.length) || Boolean(title);
 const shouldRenderSubtitle = Boolean(subtitleLink) || Boolean(subtitle);
-const shouldRenderActions = Boolean(action);
+const shouldRenderActions = actionItems.length > 0;
 ---
 
 <section
-  class="mx-auto flex w-[calc(100%-2rem)] max-w-5xl flex-col gap-4 text-center sm:text-left md:flex-row md:items-end md:justify-between"
+  class="mx-auto flex w-[calc(100%-2rem)] max-w-5xl flex-col gap-4 text-center"
 >
   <div class="flex flex-col gap-2">
     {shouldRenderTitle && (
-      <h1 class="text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
+      <h1 class="text-3xl font-semibold tracking-tight text-slate-900">
         {
           titleParts?.length
             ? titleParts.map((part, index) => (
@@ -75,33 +77,57 @@ const shouldRenderActions = Boolean(action);
     )}
     {
       shouldRenderSubtitle && (
-        <p class="mx-auto max-w-3xl text-base text-slate-600 sm:mx-0">
-          {subtitle && <span>{subtitle}</span>}
-          {subtitle && subtitleLink && <span class="text-slate-400"> {' '}·{' '} </span>}
-          {
-            subtitleLink ? (
-              <a
-                class={subtitleLinkClasses}
-                href={subtitleLink.href}
-                target={subtitleLink.external ? '_blank' : undefined}
-                rel={subtitleLink.external ? 'noopener noreferrer' : undefined}
-              >
-                {subtitleLink.label}
-              </a>
-            ) : (
-              null
-            )
-          }
-        </p>
+        subtitleLinkFirst ? (
+          <p class="mx-auto flex max-w-3xl flex-col gap-1 text-base text-slate-600">
+            {
+              subtitleLink ? (
+                <a
+                  class={subtitleLinkClasses}
+                  href={subtitleLink.href}
+                  target={subtitleLink.external ? '_blank' : undefined}
+                  rel={subtitleLink.external ? 'noopener noreferrer' : undefined}
+                >
+                  {subtitleLink.label}
+                </a>
+              ) : null
+            }
+            {subtitle && <span>{subtitle}</span>}
+          </p>
+        ) : (
+          <p class="mx-auto max-w-3xl text-base text-slate-600">
+            {subtitle && <span>{subtitle}</span>}
+            {subtitle && subtitleLink && <span class="text-slate-400"> {' '}·{' '} </span>}
+            {
+              subtitleLink ? (
+                <a
+                  class={subtitleLinkClasses}
+                  href={subtitleLink.href}
+                  target={subtitleLink.external ? '_blank' : undefined}
+                  rel={subtitleLink.external ? 'noopener noreferrer' : undefined}
+                >
+                  {subtitleLink.label}
+                </a>
+              ) : null
+            }
+          </p>
+        )
       )
     }
   </div>
 
   {
     shouldRenderActions && (
-      <a class={primaryActionClasses} href={action?.href}>
-        {action?.label}
-      </a>
+      <div class="flex flex-wrap justify-center gap-2">
+        {actionItems.map((item) => (
+          <Button
+            href={item.href}
+            variant="primary"
+            icon={item.label.toLowerCase().includes('settings') ? 'settings' : item.label.toLowerCase().includes('create') ? 'plus' : 'docs'}
+          >
+            {item.label}
+          </Button>
+        ))}
+      </div>
     )
   }
 </section>

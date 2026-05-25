@@ -1,0 +1,161 @@
+---
+export const prerender = false;
+
+import RootLayout from '../../../layouts/RootLayout.astro';
+import Card from '../../../components/Card.astro';
+import Title from '../../../components/Title.astro';
+import Button from '../../../components/Button.astro';
+import { getSessionFromCookies, hasAuthCookies } from '../../../lib/auth';
+import { addonsDto, orgsProfilesDto, usernamesDto } from '../../../lib/dtoService';
+import { supabase } from '../../../lib/supabase';
+
+const DELETE_CSRF_COOKIE = 'gdam-delete-csrf';
+
+type UsernameRecord = {
+  name: string | null;
+  user_id: string | null;
+  org_id: string | null;
+};
+
+type OrgsProfileRecord = {
+  admin: boolean | null;
+};
+
+type AddonRecord = {
+  id: string;
+  name: string | null;
+  repo: string | null;
+};
+
+const safeDecodeURIComponent = (value: string) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
+const normalizeUsername = (value: string) => value.trim().toLowerCase();
+
+const usernameParamRaw = Astro.params.username ?? '';
+const usernameParam = safeDecodeURIComponent(usernameParamRaw);
+const usernameNormal = normalizeUsername(usernameParam);
+const addonParamRaw = Astro.params.addon ?? '';
+const addonName = safeDecodeURIComponent(addonParamRaw).trim();
+
+const publicPath = usernameParam && addonName ? `/@${encodeURIComponent(usernameParam)}/${encodeURIComponent(addonName)}` : '/';
+const session = hasAuthCookies(Astro.cookies) ? await getSessionFromCookies(Astro.cookies) : null;
+if (!session) {
+  return Astro.redirect(publicPath);
+}
+
+const profileId = session.user?.id ?? '';
+if (!profileId || !usernameNormal || !addonName) {
+  return Astro.redirect(publicPath);
+}
+
+let deleteCsrfToken = Astro.cookies.get(DELETE_CSRF_COOKIE)?.value ?? '';
+if (!deleteCsrfToken) {
+  deleteCsrfToken = crypto.randomUUID();
+  Astro.cookies.set(DELETE_CSRF_COOKIE, deleteCsrfToken, { path: '/', sameSite: 'lax', secure: Astro.url.protocol === 'https:' });
+}
+
+const { data: usernameRow, error: usernameError } = await usernamesDto.getByName(supabase, usernameNormal);
+if (usernameError || !usernameRow) {
+  return Astro.redirect(publicPath);
+}
+
+const usernameRecord = usernameRow as UsernameRecord;
+const ownerProfileId = usernameRecord.user_id;
+const ownerOrgId = usernameRecord.org_id;
+let canManageAddon = Boolean(ownerProfileId && ownerProfileId === profileId);
+if (!canManageAddon && ownerOrgId) {
+  const { data: membershipRow, error: membershipError } = await orgsProfilesDto.getByOrgIdAndProfileId(
+    supabase,
+    ownerOrgId,
+    profileId
+  );
+  const membershipRecord = membershipRow as OrgsProfileRecord | null;
+  canManageAddon = Boolean(!membershipError && membershipRecord?.admin);
+}
+
+if (!canManageAddon) {
+  return Astro.redirect(publicPath);
+}
+
+const { data: addonRow, error: addonError } = ownerOrgId
+  ? await addonsDto.getByOrgIdAndName(supabase, ownerOrgId, addonName)
+  : await addonsDto.getByProfileIdAndName(supabase, ownerProfileId ?? '', addonName);
+if (addonError || !addonRow) {
+  return Astro.redirect(publicPath);
+}
+
+const addon = addonRow as AddonRecord;
+const ownerSlug = encodeURIComponent(usernameRecord.name || usernameParam);
+const addonSlug = encodeURIComponent(addon.name || addonName);
+const addonPath = `/@${ownerSlug}/${addonSlug}`;
+let status = '';
+let tone: 'muted' | 'error' = 'muted';
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const action = String(formData.get('action') ?? '');
+  if (action === 'delete-addon') {
+    if (String(formData.get('csrf_token') ?? '') !== deleteCsrfToken) {
+      status = 'Invalid delete request.';
+      tone = 'error';
+    } else {
+      const { error: deleteError } = await addonsDto.deleteById(supabase, addon.id);
+      if (deleteError) {
+        status = deleteError.message;
+        tone = 'error';
+      } else {
+        return Astro.redirect(`/@${ownerSlug}`);
+      }
+    }
+  }
+}
+---
+
+<RootLayout>
+  <Title
+    title="Settings"
+    titleParts={[
+      { label: `@${usernameRecord.name || usernameParam}`, href: `/@${ownerSlug}` },
+      { label: addon.name || addonName, href: addonPath },
+      { label: 'Settings' },
+    ]}
+    subtitle={status || 'Manage addon settings.'}
+  />
+
+  <Card class="flex flex-col gap-5">
+    <div class="flex flex-col gap-1">
+      <p class="text-sm font-semibold text-slate-900">Repository</p>
+      <p class="break-words text-sm text-slate-600">{addon.repo}</p>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <Button href={addonPath} size="form" icon="x">
+        Cancel
+      </Button>
+    </div>
+  </Card>
+
+  <form
+    method="post"
+    action={Astro.url.pathname}
+    class="mx-auto w-[calc(100%-2rem)] max-w-5xl rounded-2xl border border-red-200 bg-red-50 p-5"
+    onsubmit={`return confirm(${JSON.stringify(`Delete ${addon.name || addonName}? This cannot be undone.`)})`}
+  >
+    <input type="hidden" name="csrf_token" value={deleteCsrfToken} />
+    <div class="flex flex-col gap-3">
+      <div>
+        <p class="text-sm font-semibold text-red-900">Delete addon</p>
+        <p class="text-sm text-red-700">Delete this addon and all of its versions from the registry.</p>
+      </div>
+      <Button variant="danger" size="form" icon="trash" type="submit" name="action" value="delete-addon">
+        Delete addon
+      </Button>
+    </div>
+  </form>
+</RootLayout>
