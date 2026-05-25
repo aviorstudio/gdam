@@ -22,7 +22,7 @@ export default defineConfig({
     serviceWorkers: 'block',
   },
   webServer: {
-    command: 'bun run dev -- --host 127.0.0.1',
+    command: 'GDAM_ALLOW_LOCAL_RELEASE_FIXTURES=true bun run dev -- --host 127.0.0.1',
     url: 'http://127.0.0.1:4321',
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

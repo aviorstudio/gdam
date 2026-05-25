@@ -82,6 +82,9 @@ jobs:
       - name: Start local Supabase
         run: ./scripts/db_start.sh
 
+      - name: Reset local Supabase
+        run: supabase db reset
+
       - name: Seed local Supabase
         run: ./scripts/db_seed.sh
 

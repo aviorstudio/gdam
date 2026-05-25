@@ -123,7 +123,7 @@ expect_rejected_status "$(sed -n '1p' <<<"$attacker_owner_response")" 'attacker 
 
 attacker_version_payload="$(jq -cn \
   --arg plugin_id "$OWNER_PLUGIN_ID" \
-  '{plugin_id:$plugin_id,major:9,minor:9,patch:9,sha:"df63bd560ea9d97ea8e277fd0fc46a07a5fc38fc"}')"
+  '{plugin_id:$plugin_id,major:9,minor:9,patch:9,sha:"df63bd560ea9d97ea8e277fd0fc46a07a5fc38fc",release_tag:"v9.9.9"}')"
 attacker_version_response="$(rest_status POST "$ATTACKER_TOKEN" plugin_versions "$attacker_version_payload")"
 expect_rejected_status "$(sed -n '1p' <<<"$attacker_version_response")" 'attacker version insert for owner plugin'
 

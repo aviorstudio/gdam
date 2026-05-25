@@ -1,5 +1,11 @@
 const apiBaseUrl = 'https://api.github.com';
 
+const allowLocalReleaseFixtures = () => {
+  const flag = String(import.meta.env.GDAM_ALLOW_LOCAL_RELEASE_FIXTURES ?? '').trim().toLowerCase();
+  const supabaseUrl = String(import.meta.env.SUPABASE_URL ?? '').trim();
+  return flag === 'true' && /^https?:\/\/(127\.0\.0\.1|localhost)(:|\/|$)/i.test(supabaseUrl);
+};
+
 const githubHeaders = () => {
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github+json',
@@ -20,6 +26,11 @@ export const releaseTagCandidates = (version: string, explicitTag: string) => {
 };
 
 export const findGitHubReleaseTag = async (owner: string, repo: string, tags: string[]) => {
+  if (allowLocalReleaseFixtures()) {
+    const tag = tags.map((candidate) => candidate.trim()).find(Boolean) ?? '';
+    if (tag) return { tag };
+  }
+
   for (const tag of tags) {
     const trimmedTag = tag.trim();
     if (!trimmedTag) continue;

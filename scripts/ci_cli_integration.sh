@@ -90,12 +90,14 @@ upsert_plugin() {
 upsert_version() {
   local plugin_id="$1"
   local sha="$2"
+  local release_tag="$3"
   local payload
 
   payload="$(jq -cn \
     --arg plugin_id "$plugin_id" \
     --arg sha "$sha" \
-    '{plugin_id:$plugin_id,major:0,minor:1,patch:0,sha:$sha}')"
+    --arg release_tag "$release_tag" \
+    '{plugin_id:$plugin_id,major:0,minor:1,patch:0,sha:$sha,release_tag:$release_tag}')"
   api_upsert "$SUPABASE_URL/rest/v1/plugin_versions?on_conflict=plugin_id,major,minor,patch" "$payload" >/dev/null
 }
 
@@ -157,8 +159,8 @@ fi
 ADDON_SHA="$(git -C "$ADDON_DIR" rev-parse HEAD)"
 PLUGIN_ID="$(upsert_plugin "$ADDON_NAME" true)"
 RUNTIME_PLUGIN_ID="$(upsert_plugin "$RUNTIME_ADDON_NAME" false)"
-upsert_version "$PLUGIN_ID" "$ADDON_SHA"
-upsert_version "$RUNTIME_PLUGIN_ID" "$ADDON_SHA"
+upsert_version "$PLUGIN_ID" "$ADDON_SHA" "v0.1.0"
+upsert_version "$RUNTIME_PLUGIN_ID" "$ADDON_SHA" "v0.1.0"
 
 cd "$GODOT_DIR"
 "$ROOT_DIR/cli/bin/gdam" init
