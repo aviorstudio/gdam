@@ -93,7 +93,7 @@ jobs:
             (cd cli && GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 go build \
               -ldflags "-s -w -X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE -X github.com/aviorstudio/gdam/cli/internal/gdamdb.DefaultSupabasePublishableKey=$SUPABASE_PUBLISHABLE_KEY" \
               -o "$out_path" ./cmd/gdam)
-            cp cli/README.md "$out_dir/README.md"
+            cp README.md "$out_dir/README.md"
 
             if [ "$archive_ext" = "zip" ]; then
               (cd "$out_dir" && zip -q "../$name.zip" "gdam$exe" README.md)
