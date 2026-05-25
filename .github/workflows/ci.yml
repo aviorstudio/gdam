@@ -27,6 +27,9 @@ jobs:
 
   web:
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: http://127.0.0.1:54421
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,6 +49,9 @@ jobs:
 
   integration:
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: http://127.0.0.1:54421
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
     steps:
       - name: Checkout
         uses: actions/checkout@v4
