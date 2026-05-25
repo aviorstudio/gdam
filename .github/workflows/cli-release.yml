@@ -1,0 +1,94 @@
+name: CLI Release
+
+on:
+  push:
+    tags:
+      - 'cli/v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+
+      - name: Test CLI
+        working-directory: cli
+        run: go test ./...
+
+      - name: Verify release key
+        env:
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo 'Missing required secret: SUPABASE_PUBLISHABLE_KEY' >&2
+            exit 1
+          fi
+
+      - name: Build release artifacts
+        env:
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          TAG: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#cli/v}"
+          DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          mkdir -p dist
+
+          build() {
+            goos="$1"
+            goarch="$2"
+            os_label="$3"
+            arch_label="$4"
+            archive_ext="$5"
+            exe=""
+            if [ "$goos" = "windows" ]; then
+              exe=".exe"
+            fi
+
+            name="gdam_${os_label}_${arch_label}"
+            out_dir="dist/$name"
+            mkdir -p "$out_dir"
+            out_path="$PWD/$out_dir/gdam$exe"
+            (cd cli && GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 go build \
+              -ldflags "-s -w -X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE -X github.com/aviorstudio/gdam/cli/internal/gdamdb.DefaultSupabasePublishableKey=$SUPABASE_PUBLISHABLE_KEY" \
+              -o "$out_path" ./cmd/gdam)
+            cp cli/README.md "$out_dir/README.md"
+
+            if [ "$archive_ext" = "zip" ]; then
+              (cd "$out_dir" && zip -q "../$name.zip" "gdam$exe" README.md)
+            else
+              tar -C "$out_dir" -czf "dist/$name.tar.gz" "gdam$exe" README.md
+            fi
+          }
+
+          build linux amd64 Linux x86_64 tar.gz
+          build linux arm64 Linux arm64 tar.gz
+          build darwin amd64 Darwin x86_64 tar.gz
+          build darwin arm64 Darwin arm64 tar.gz
+          build windows amd64 Windows x86_64 zip
+          build windows arm64 Windows arm64 zip
+
+          (cd dist && sha256sum *.tar.gz *.zip > checksums.txt)
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#cli/v}"
+          gh release create "$TAG" dist/*.tar.gz dist/*.zip dist/checksums.txt \
+            --title "CLI v$VERSION" \
+            --generate-notes

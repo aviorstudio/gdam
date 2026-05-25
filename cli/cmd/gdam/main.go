@@ -11,6 +11,12 @@ import (
 	"github.com/aviorstudio/gdam/cli/internal/commands"
 )
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	os.Exit(run(os.Args))
 }
@@ -25,6 +31,9 @@ func run(args []string) int {
 	switch cmd {
 	case "-h", "--help", "help":
 		printUsage()
+		return 0
+	case "-v", "--version", "version":
+		printVersion()
 		return 0
 	case "init":
 		return runInit(args[2:])
@@ -224,6 +233,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, `gdam - Godot addon manager (GitHub addons installer)
 
 Usage:
+  gdam --version
   gdam init
   gdam add @username/addon[@version]
   gdam install
@@ -234,4 +244,8 @@ Usage:
 
 Environment:
   GITHUB_TOKEN   Optional GitHub token to avoid rate limits.`)
+}
+
+func printVersion() {
+	fmt.Printf("gdam %s\ncommit: %s\nbuilt: %s\n", version, commit, date)
 }
