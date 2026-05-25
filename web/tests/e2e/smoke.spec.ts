@@ -23,7 +23,7 @@ const publishAddon = async (
   await page.getByLabel('Addon name').fill(opts.name);
   await page.getByLabel('Repository').fill('https://github.com/aviorstudio/gdam-test-addon');
   await page.getByLabel('Version').fill('0.1.0');
-  await page.getByLabel('Sha').fill('df63bd560ea9d97ea8e277fd0fc46a07a5fc38fc');
+  await page.getByLabel('Release tag (optional)').fill('v0.1.0');
 
   const editorPlugin = page.getByLabel('Editor plugin');
   if (opts.editorPlugin) {
@@ -40,7 +40,7 @@ const fillCreateAddonForm = async (page: Page, name: string) => {
   await page.getByLabel('Addon name').fill(name);
   await page.getByLabel('Repository').fill('https://github.com/aviorstudio/gdam-test-addon');
   await page.getByLabel('Version').fill('0.1.0');
-  await page.getByLabel('Sha').fill('df63bd560ea9d97ea8e277fd0fc46a07a5fc38fc');
+  await page.getByLabel('Release tag (optional)').fill('v0.1.0');
 };
 
 test('homepage loads against local Supabase', async ({ page }) => {
@@ -80,7 +80,7 @@ test('signed-in user can publish a new release', async ({ page }) => {
   await page.getByRole('link', { name: 'Create release' }).click();
   await expect(page.getByRole('heading', { name: 'Create a release' })).toBeVisible();
   await page.getByLabel('Version').fill('0.2.0');
-  await page.getByLabel('Sha').fill('df63bd560ea9d97ea8e277fd0fc46a07a5fc38fc');
+  await page.getByLabel('Release tag (optional)').fill('v0.2.0');
   await page.getByRole('button', { name: 'Create release' }).click();
 
   await expect(page).toHaveURL(`/@dev/${addon}`);
@@ -138,7 +138,7 @@ test('create release form rejects invalid versions and duplicates', async ({ pag
 
   await page.goto(`/@dev/${addon}?create=1`);
   await page.getByLabel('Version').fill('0.2');
-  await page.getByLabel('Sha').fill('df63bd560ea9d97ea8e277fd0fc46a07a5fc38fc');
+  await page.getByLabel('Release tag (optional)').fill('v0.1.0');
   await page.getByRole('button', { name: 'Create release' }).click();
   await expect(page.getByText('Version must be in MAJOR.MINOR.PATCH format.')).toBeVisible();
 

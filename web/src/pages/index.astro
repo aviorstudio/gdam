@@ -25,7 +25,7 @@ type PluginVersionRecord = {
   major: number | null;
   minor: number | null;
   patch: number | null;
-  sha: string | null;
+  release_tag: string | null;
   created_at: string | null;
 };
 
@@ -42,7 +42,7 @@ if (pluginsError) pluginsStatus = pluginsError.message;
 
 const plugins = (pluginsData as PluginRecord[] | null) ?? [];
 
-const latestReleaseByPluginId = new Map<string, { version: string; sha: string; createdAt: string }>();
+const latestReleaseByPluginId = new Map<string, { version: string; releaseTag: string; createdAt: string }>();
 if (plugins.length > 0) {
   const pluginIds = plugins.map((plugin) => plugin.id);
   const { data: versionRows, error: versionError } = await pluginVersionsDto.listByPluginIds(supabase, pluginIds);
@@ -51,7 +51,7 @@ if (plugins.length > 0) {
       if (!latestReleaseByPluginId.has(row.plugin_id)) {
         latestReleaseByPluginId.set(row.plugin_id, {
           version: formatSemverTripletFromNullable(row),
-          sha: row.sha ?? '',
+          releaseTag: row.release_tag ?? '',
           createdAt: row.created_at ?? '',
         });
       }
@@ -100,7 +100,7 @@ const pluginList = plugins.map((plugin) => {
   const latestRelease = latestReleaseByPluginId.get(plugin.id);
   const repoUrl = plugin.repo ? toRepoUrl(plugin.repo) : '';
   const versionLabel = latestRelease?.version ? latestRelease.version : 'No versions';
-  const treeUrl = latestRelease?.sha ? toGitHubTreeUrl(repoUrl, latestRelease.sha, plugin.path ?? undefined) : '';
+  const treeUrl = latestRelease?.releaseTag ? toGitHubTreeUrl(repoUrl, latestRelease.releaseTag, plugin.path ?? undefined) : '';
 
   return {
     ownerLabel: ownerDisplay ? `@${ownerDisplay}` : undefined,

@@ -94,7 +94,7 @@ export const pluginsDto = {
 };
 
 export const pluginVersionsDto = {
-  insert: (client: SupabaseClient, payload: { plugin_id: string; major: number; minor: number; patch: number; sha: string }) =>
+  insert: (client: SupabaseClient, payload: { plugin_id: string; major: number; minor: number; patch: number; release_tag: string }) =>
     client.from('plugin_versions').insert(payload).select('*').maybeSingle(),
   listByPluginIds: (client: SupabaseClient, pluginIds: string[]) =>
     client

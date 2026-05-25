@@ -43,11 +43,27 @@ export const toGitHubRepoRootUrl = (repoUrl: string) => {
   return `${url.origin}/${parts[0]}/${parts[1]}`;
 };
 
-export const toGitHubTreeUrl = (repoUrl: string, sha: string, repoSubdir?: string) => {
+export const parseGitHubOwnerRepo = (repoUrl: string) => {
+  const root = toGitHubRepoRootUrl(repoUrl);
+  if (!root) return null;
+
+  let url: URL;
+  try {
+    url = new URL(root);
+  } catch {
+    return null;
+  }
+
+  const parts = url.pathname.replace(/\/+$/, '').replace(/\.git$/i, '').split('/').filter(Boolean);
+  if (parts.length < 2) return null;
+  return { owner: parts[0], repo: parts[1] };
+};
+
+export const toGitHubTreeUrl = (repoUrl: string, ref: string, repoSubdir?: string) => {
   const repo = toGitHubRepoRootUrl(repoUrl);
-  const commitSha = sha.trim();
-  if (!repo || !commitSha) return '';
-  const base = `${repo}/tree/${encodeURIComponent(commitSha)}`;
+  const treeRef = ref.trim();
+  if (!repo || !treeRef) return '';
+  const base = `${repo}/tree/${encodeURIComponent(treeRef)}`;
 
   const subdirRaw = String(repoSubdir ?? '').trim();
   if (!subdirRaw) return base;

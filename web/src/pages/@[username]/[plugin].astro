@@ -8,7 +8,8 @@ import PluginList from '../../components/PluginList.astro';
 import Input from '../../components/Input.astro';
 import { getSessionFromCookies, hasAuthCookies } from '../../lib/auth';
 import { orgsProfilesDto, pluginVersionsDto, pluginsDto, usernamesDto } from '../../lib/dtoService';
-import { toGitHubRepoRootUrl, toGitHubTreeUrl, toRepoUrl } from '../../lib/repo';
+import { findGitHubReleaseTag, releaseTagCandidates } from '../../lib/github';
+import { parseGitHubOwnerRepo, toGitHubRepoRootUrl, toGitHubTreeUrl, toRepoUrl } from '../../lib/repo';
 import { formatSemverTripletFromNullable, parseSemverTriplet } from '../../lib/semver';
 import { supabase } from '../../lib/supabase';
 
@@ -36,7 +37,7 @@ type PluginVersionRecord = {
   major: number | null;
   minor: number | null;
   patch: number | null;
-  sha: string | null;
+  release_tag: string | null;
   created_at: string | null;
 };
 
@@ -71,7 +72,7 @@ let createStatus = '';
 let createTone: 'muted' | 'error' | 'success' = 'muted';
 
 let formVersion = '';
-let formSha = '';
+let formReleaseTag = '';
 
 if (showCreateReleaseDialog && !session) {
   return Astro.redirect('/signin');
@@ -88,7 +89,7 @@ let plugin: {
 
 let versions: Array<{
   version: string;
-  sha: string;
+  releaseTag: string;
   createdAt: string;
 }> = [];
 
@@ -187,10 +188,10 @@ if (!usernameNormal || !pluginName) {
           } else {
             const formData = await Astro.request.formData();
             formVersion = String(formData.get('version') ?? '').trim();
-            formSha = String(formData.get('sha') ?? '').trim();
+            formReleaseTag = String(formData.get('release_tag') ?? '').trim();
 
-            if (!formVersion || !formSha) {
-              createStatus = 'Version and sha are required.';
+            if (!formVersion) {
+              createStatus = 'Version is required.';
               createTone = 'error';
             } else {
               const versionTriplet = parseSemverTriplet(formVersion);
@@ -198,19 +199,36 @@ if (!usernameNormal || !pluginName) {
                 createStatus = 'Version must be in MAJOR.MINOR.PATCH format.';
                 createTone = 'error';
               } else {
-                const { error: versionError } = await pluginVersionsDto.insert(supabase, {
-                  plugin_id: plugin.id,
-                  major: versionTriplet.major,
-                  minor: versionTriplet.minor,
-                  patch: versionTriplet.patch,
-                  sha: formSha,
-                });
-
-                if (versionError) {
-                  createStatus = versionError.message;
+                const githubRepo = parseGitHubOwnerRepo(plugin.repo);
+                if (!githubRepo) {
+                  createStatus = 'Only GitHub repositories are supported (github.com/owner/repo).';
                   createTone = 'error';
                 } else {
-                  return Astro.redirect(Astro.url.pathname);
+                  const releaseLookup = await findGitHubReleaseTag(
+                    githubRepo.owner,
+                    githubRepo.repo,
+                    releaseTagCandidates(formVersion, formReleaseTag)
+                  );
+                  if (!releaseLookup.tag) {
+                    createStatus = releaseLookup.error ?? 'Matching GitHub Release was not found.';
+                    createTone = 'error';
+                  } else {
+                    formReleaseTag = releaseLookup.tag;
+                    const { error: versionError } = await pluginVersionsDto.insert(supabase, {
+                      plugin_id: plugin.id,
+                      major: versionTriplet.major,
+                      minor: versionTriplet.minor,
+                      patch: versionTriplet.patch,
+                      release_tag: formReleaseTag,
+                    });
+
+                    if (versionError) {
+                      createStatus = versionError.message;
+                      createTone = 'error';
+                    } else {
+                      return Astro.redirect(Astro.url.pathname);
+                    }
+                  }
                 }
               }
             }
@@ -226,7 +244,7 @@ if (!usernameNormal || !pluginName) {
           versions = ((versionRows as PluginVersionRecord[] | null) ?? [])
             .map((row) => ({
               version: formatSemverTripletFromNullable(row),
-              sha: row.sha ?? '',
+              releaseTag: row.release_tag ?? '',
               createdAt: row.created_at ?? '',
             }));
         }
@@ -240,7 +258,7 @@ const repoUrl = plugin?.repo ? toGitHubRepoRootUrl(plugin.repo) || toRepoUrl(plu
 const repoLabel = repoUrl ? repoUrl.replace(/^https?:\/\//i, '') : '';
 const versionList = versions.map((version) => ({
   pluginLabel: version.version || 'Unknown version',
-  pluginHref: version.sha ? toGitHubTreeUrl(repoUrl, version.sha, plugin?.path) : undefined,
+  pluginHref: version.releaseTag ? toGitHubTreeUrl(repoUrl, version.releaseTag, plugin?.path) : undefined,
   date: version.createdAt,
 }));
 ---
@@ -293,12 +311,11 @@ const versionList = versions.map((version) => ({
 	            />
 
 	            <Input
-	              label="Sha"
-	              name="sha"
-	              placeholder="Git commit sha"
+	              label="Release tag (optional)"
+	              name="release_tag"
+	              placeholder="v0.1.0"
 	              type="text"
-	              value={formSha}
-	              required
+	              value={formReleaseTag}
 	            />
 	          </div>
 

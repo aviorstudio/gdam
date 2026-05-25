@@ -119,8 +119,8 @@ type ResolvedPlugin struct {
 	GitHubRepo   string
 	GitHubSubdir string
 
-	Version string
-	SHA     string
+	Version    string
+	ReleaseTag string
 
 	EditorPlugin bool
 }
@@ -165,10 +165,10 @@ func (c *Client) ResolvePlugin(ctx context.Context, username, plugin, requestedV
 	if !ok {
 		return ResolvedPlugin{}, fmt.Errorf("version not found: %s", requestedVersion)
 	}
-	sha := strings.TrimSpace(selected.SHA)
-	if sha == "" {
+	releaseTag := strings.TrimSpace(selected.ReleaseTag)
+	if releaseTag == "" {
 		return ResolvedPlugin{}, fmt.Errorf(
-			"selected version has no sha: %d.%d.%d",
+			"selected version has no release tag: %d.%d.%d",
 			selected.Major,
 			selected.Minor,
 			selected.Patch,
@@ -197,7 +197,7 @@ func (c *Client) ResolvePlugin(ctx context.Context, username, plugin, requestedV
 		GitHubRepo:   ghRepo,
 		GitHubSubdir: ghSubdir,
 		Version:      fmt.Sprintf("%d.%d.%d", selected.Major, selected.Minor, selected.Patch),
-		SHA:          sha,
+		ReleaseTag:   releaseTag,
 		EditorPlugin: pluginRow.EditorPlugin != nil && *pluginRow.EditorPlugin,
 	}, nil
 }
@@ -220,12 +220,12 @@ type pluginRow struct {
 }
 
 type versionRow struct {
-	PluginID  *string `json:"plugin_id"`
-	Major     int     `json:"major"`
-	Minor     int     `json:"minor"`
-	Patch     int     `json:"patch"`
-	SHA       string  `json:"sha"`
-	CreatedAt *string `json:"created_at"`
+	PluginID   *string `json:"plugin_id"`
+	Major      int     `json:"major"`
+	Minor      int     `json:"minor"`
+	Patch      int     `json:"patch"`
+	ReleaseTag string  `json:"release_tag"`
+	CreatedAt  *string `json:"created_at"`
 }
 
 func (c *Client) getUsernameByNormal(ctx context.Context, usernameNormal string) (usernameRow, bool, error) {
@@ -293,7 +293,7 @@ func (c *Client) listPluginVersions(ctx context.Context, pluginID string) ([]ver
 	}
 
 	q := url.Values{}
-	q.Set("select", "plugin_id,major,minor,patch,sha,created_at")
+	q.Set("select", "plugin_id,major,minor,patch,release_tag,created_at")
 	q.Set("plugin_id", "eq."+pluginID)
 	q.Set("order", "major.desc,minor.desc,patch.desc,created_at.desc")
 	q.Set("limit", "100")

@@ -8,7 +8,8 @@ import PluginList from '../components/PluginList.astro';
 import Input from '../components/Input.astro';
 import { getSessionFromCookies, hasAuthCookies } from '../lib/auth';
 import { orgsProfilesDto, pluginVersionsDto, pluginsDto, usernamesDto } from '../lib/dtoService';
-import { toGitHubTreeUrl, toRepoUrl } from '../lib/repo';
+import { findGitHubReleaseTag, releaseTagCandidates } from '../lib/github';
+import { parseGitHubOwnerRepo, toGitHubTreeUrl, toRepoUrl } from '../lib/repo';
 import { formatSemverTripletFromNullable, parseSemverTriplet } from '../lib/semver';
 import { supabase } from '../lib/supabase';
 
@@ -36,7 +37,7 @@ type PluginVersionRecord = {
   major: number | null;
   minor: number | null;
   patch: number | null;
-  sha: string | null;
+  release_tag: string | null;
   created_at: string | null;
 };
 
@@ -131,7 +132,7 @@ let formName = '';
 let formRepo = '';
 let formPath = '';
 let formVersion = '';
-let formSha = '';
+let formReleaseTag = '';
 let formEditorPlugin = false;
 
 if (showCreatePluginDialog && !session) {
@@ -225,11 +226,11 @@ if (!usernameNormal) {
           formRepo = String(formData.get('repo') ?? '').trim();
           formPath = String(formData.get('path') ?? '').trim();
           formVersion = String(formData.get('version') ?? '').trim();
-          formSha = String(formData.get('sha') ?? '').trim();
+          formReleaseTag = String(formData.get('release_tag') ?? '').trim();
           formEditorPlugin = formData.get('editor_plugin') === 'on';
 
-          if (!formName || !formRepo || !formVersion || !formSha) {
-            createStatus = 'Addon name, repository, version, and sha are required.';
+          if (!formName || !formRepo || !formVersion) {
+            createStatus = 'Addon name, repository, and version are required.';
             createTone = 'error';
           } else {
             const versionTriplet = parseSemverTriplet(formVersion);
@@ -245,38 +246,56 @@ if (!usernameNormal) {
                 formRepo = normalized.repo;
                 formPath = normalized.path;
 
-                const pluginOwnerPayload = ownerOrgId
-                  ? { user_id: null, org_id: ownerOrgId }
-                  : { user_id: ownerProfileId, org_id: null };
-
-                const { data: createdPlugin, error: pluginError } = await pluginsDto.insert(supabase, {
-                  ...pluginOwnerPayload,
-                  name: formName,
-                  repo: formRepo,
-                  editor_plugin: formEditorPlugin,
-                  ...(formPath ? { path: formPath } : {}),
-                });
-
-                if (pluginError) {
-                  createStatus = pluginError.message;
-                  createTone = 'error';
-                } else if (!createdPlugin?.id) {
-                  createStatus = 'Addon created but no id returned.';
+                const githubRepo = parseGitHubOwnerRepo(formRepo);
+                if (!githubRepo) {
+                  createStatus = 'Only GitHub repositories are supported (github.com/owner/repo).';
                   createTone = 'error';
                 } else {
-                  const { error: versionError } = await pluginVersionsDto.insert(supabase, {
-                    plugin_id: createdPlugin.id,
-                    major: versionTriplet.major,
-                    minor: versionTriplet.minor,
-                    patch: versionTriplet.patch,
-                    sha: formSha,
-                  });
-
-                  if (versionError) {
-                    createStatus = versionError.message;
+                  const releaseLookup = await findGitHubReleaseTag(
+                    githubRepo.owner,
+                    githubRepo.repo,
+                    releaseTagCandidates(formVersion, formReleaseTag)
+                  );
+                  if (!releaseLookup.tag) {
+                    createStatus = releaseLookup.error ?? 'Matching GitHub Release was not found.';
                     createTone = 'error';
                   } else {
-                    return Astro.redirect(`/@${encodeURIComponent(usernameDisplay)}/${encodeURIComponent(formName)}`);
+                    formReleaseTag = releaseLookup.tag;
+
+                    const pluginOwnerPayload = ownerOrgId
+                      ? { user_id: null, org_id: ownerOrgId }
+                      : { user_id: ownerProfileId, org_id: null };
+
+                    const { data: createdPlugin, error: pluginError } = await pluginsDto.insert(supabase, {
+                      ...pluginOwnerPayload,
+                      name: formName,
+                      repo: formRepo,
+                      editor_plugin: formEditorPlugin,
+                      ...(formPath ? { path: formPath } : {}),
+                    });
+
+                    if (pluginError) {
+                      createStatus = pluginError.message;
+                      createTone = 'error';
+                    } else if (!createdPlugin?.id) {
+                      createStatus = 'Addon created but no id returned.';
+                      createTone = 'error';
+                    } else {
+                      const { error: versionError } = await pluginVersionsDto.insert(supabase, {
+                        plugin_id: createdPlugin.id,
+                        major: versionTriplet.major,
+                        minor: versionTriplet.minor,
+                        patch: versionTriplet.patch,
+                        release_tag: formReleaseTag,
+                      });
+
+                      if (versionError) {
+                        createStatus = versionError.message;
+                        createTone = 'error';
+                      } else {
+                        return Astro.redirect(`/@${encodeURIComponent(usernameDisplay)}/${encodeURIComponent(formName)}`);
+                      }
+                    }
                   }
                 }
               }
@@ -296,7 +315,7 @@ if (!usernameNormal) {
       } else {
         const plugins = (pluginsData as PluginRecord[] | null) ?? [];
 
-        const latestReleaseByPluginId = new Map<string, { version: string; sha: string; createdAt: string }>();
+        const latestReleaseByPluginId = new Map<string, { version: string; releaseTag: string; createdAt: string }>();
         if (plugins.length > 0) {
           const pluginIds = plugins.map((plugin) => plugin.id);
           const { data: versionRows, error: versionError } = await pluginVersionsDto.listByPluginIds(
@@ -310,7 +329,7 @@ if (!usernameNormal) {
               if (!latestReleaseByPluginId.has(row.plugin_id)) {
                 latestReleaseByPluginId.set(row.plugin_id, {
                   version: formatSemverTripletFromNullable(row),
-                  sha: row.sha ?? '',
+                  releaseTag: row.release_tag ?? '',
                   createdAt: row.created_at ?? '',
                 });
               }
@@ -324,7 +343,7 @@ if (!usernameNormal) {
           const latestRelease = latestReleaseByPluginId.get(plugin.id);
           const repoUrl = plugin.repo ? toRepoUrl(plugin.repo) : '';
           const versionLabel = latestRelease?.version ? latestRelease.version : 'No versions';
-          const treeUrl = latestRelease?.sha ? toGitHubTreeUrl(repoUrl, latestRelease.sha, plugin.path ?? undefined) : '';
+          const treeUrl = latestRelease?.releaseTag ? toGitHubTreeUrl(repoUrl, latestRelease.releaseTag, plugin.path ?? undefined) : '';
 
           return {
             pluginLabel: pluginSlug || 'Untitled addon',
@@ -421,12 +440,11 @@ if (!usernameNormal) {
 	            />
 
 	            <Input
-	              label="Sha"
-	              name="sha"
-	              placeholder="Git commit sha"
+	              label="Release tag (optional)"
+	              name="release_tag"
+	              placeholder="v0.1.0"
 	              type="text"
-	              value={formSha}
-	              required
+	              value={formReleaseTag}
 	            />
 	          </div>
 

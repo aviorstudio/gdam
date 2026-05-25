@@ -14,7 +14,7 @@ func selectVersion(rows []versionRow, requested string) (versionRow, bool) {
 			return versionRow{}, false
 		}
 		for _, row := range rows {
-			if strings.TrimSpace(row.SHA) == "" {
+			if strings.TrimSpace(row.ReleaseTag) == "" {
 				continue
 			}
 			if row.Major == reqVer.Major && row.Minor == reqVer.Minor && row.Patch == reqVer.Patch {
@@ -28,7 +28,7 @@ func selectVersion(rows []versionRow, requested string) (versionRow, bool) {
 	var bestSet bool
 
 	for _, row := range rows {
-		if strings.TrimSpace(row.SHA) == "" {
+		if strings.TrimSpace(row.ReleaseTag) == "" {
 			continue
 		}
 		if row.Major < 0 || row.Minor < 0 || row.Patch < 0 {
@@ -44,7 +44,7 @@ func selectVersion(rows []versionRow, requested string) (versionRow, bool) {
 	}
 
 	for _, row := range rows {
-		if strings.TrimSpace(row.SHA) == "" {
+		if strings.TrimSpace(row.ReleaseTag) == "" {
 			continue
 		}
 		return row, true
