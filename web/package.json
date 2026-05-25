@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "install:browsers": "playwright install",
+    "postinstall": "playwright install chromium",
+    "test:e2e": "playwright test --project=chromium",
     "preview": "astro preview",
     "astro": "astro"
   },
@@ -16,5 +19,8 @@
     "@tailwindcss/vite": "^4.1.18",
     "astro": "^5.16.2",
     "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
   }
 }
