@@ -115,6 +115,13 @@ assert_project_lacks_plugin() {
   fi
 }
 
+expect_failure() {
+  if "$@" >/dev/null 2>&1; then
+    printf 'expected command to fail: %s\n' "$*" >&2
+    exit 1
+  fi
+}
+
 require_cmd curl
 require_cmd git
 require_cmd jq
@@ -157,6 +164,9 @@ cd "$GODOT_DIR"
 "$ROOT_DIR/cli/bin/gdam" init
 test -f gdam.json
 
+expect_failure "$ROOT_DIR/cli/bin/gdam" add "@dev/$ADDON_NAME@0.1"
+expect_failure "$ROOT_DIR/cli/bin/gdam" add "@dev/does-not-exist@0.1.0"
+
 "$ROOT_DIR/cli/bin/gdam" add "@dev/$ADDON_NAME@0.1.0"
 test -f "addons/@dev_${ADDON_NAME}/plugin.cfg"
 jq -e --arg addon "@dev/$ADDON_NAME" '.addons[$addon].editor_plugin == true' gdam.json >/dev/null
@@ -187,6 +197,11 @@ test ! -e "addons/@dev_${RUNTIME_ADDON_NAME}"
 LOCAL_ADDON="$WORK_DIR/local-addon"
 mkdir -p "$LOCAL_ADDON"
 printf '[plugin]\nname="Local Test"\n' > "$LOCAL_ADDON/plugin.cfg"
+
+BAD_LOCAL_ADDON="$WORK_DIR/not-addon"
+mkdir -p "$BAD_LOCAL_ADDON"
+expect_failure "$ROOT_DIR/cli/bin/gdam" link @dev/bad-local "$BAD_LOCAL_ADDON"
+expect_failure "$ROOT_DIR/cli/bin/gdam" link @dev/local-addon
 
 "$ROOT_DIR/cli/bin/gdam" link @dev/local-addon "$LOCAL_ADDON"
 test -L addons/@dev_local-addon

@@ -89,5 +89,8 @@ jobs:
         working-directory: web
         run: bun run test:e2e
 
+      - name: Run Supabase RLS tests
+        run: ./scripts/ci_supabase_rls.sh
+
       - name: Run CLI integration tests
         run: ./scripts/ci_cli_integration.sh

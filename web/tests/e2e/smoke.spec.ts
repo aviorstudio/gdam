@@ -12,11 +12,12 @@ const signInAsDev = async (page: Page) => {
 
 const publishAddon = async (
   page: Page,
-  opts: { name: string; editorPlugin: boolean }
+  opts: { name: string; editorPlugin: boolean; owner?: string }
 ) => {
-  await page.goto('/@dev?create=1');
+  const owner = opts.owner ?? 'dev';
+  await page.goto(`/@${owner}?create=1`);
 
-  await expect(page.getByRole('heading', { name: '@dev' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: `@${owner}` })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Create an addon' })).toBeVisible();
 
   await page.getByLabel('Addon name').fill(opts.name);
@@ -32,7 +33,14 @@ const publishAddon = async (
   }
 
   await page.getByRole('button', { name: 'Create addon' }).click();
-  await expect(page).toHaveURL(`/@dev/${opts.name}`);
+  await expect(page).toHaveURL(`/@${owner}/${opts.name}`);
+};
+
+const fillCreateAddonForm = async (page: Page, name: string) => {
+  await page.getByLabel('Addon name').fill(name);
+  await page.getByLabel('Repository').fill('https://github.com/aviorstudio/gdam-test-addon');
+  await page.getByLabel('Version').fill('0.1.0');
+  await page.getByLabel('Sha').fill('df63bd560ea9d97ea8e277fd0fc46a07a5fc38fc');
 };
 
 test('homepage loads against local Supabase', async ({ page }) => {
@@ -77,4 +85,64 @@ test('signed-in user can publish a new release', async ({ page }) => {
 
   await expect(page).toHaveURL(`/@dev/${addon}`);
   await expect(page.getByRole('link', { name: '0.2.0' })).toBeVisible();
+});
+
+test('signed-in user can create an org and publish under it', async ({ page }) => {
+  await signInAsDev(page);
+
+  const org = `org-${Date.now().toString(36)}`;
+  await page.goto('/@dev/settings?create_org=1');
+  await expect(page.getByRole('heading', { name: 'Create an org' })).toBeVisible();
+  await page.getByLabel('Org username').fill(org);
+  await page.getByLabel('Org name').fill(`Org ${org}`);
+  await page.getByRole('button', { name: 'Create org' }).click();
+  await expect(page).toHaveURL(`/@${org}`);
+
+  const addon = `org-addon-${Date.now().toString(36)}`;
+  await publishAddon(page, { owner: org, name: addon, editorPlugin: true });
+  await expect(page.getByText('Editor plugin')).toBeVisible();
+});
+
+test('unauthenticated users cannot open publish dialogs', async ({ page }) => {
+  await page.goto('/@dev?create=1');
+  await expect(page).toHaveURL('/signin');
+});
+
+test('create addon form rejects invalid input and duplicates', async ({ page }) => {
+  await signInAsDev(page);
+
+  const addon = `negative-${Date.now().toString(36)}`;
+  await page.goto('/@dev?create=1');
+  await fillCreateAddonForm(page, addon);
+  await page.getByLabel('Version').fill('1.0');
+  await page.getByRole('button', { name: 'Create addon' }).click();
+  await expect(page.getByText('Version must be in MAJOR.MINOR.PATCH format.')).toBeVisible();
+
+  await page.getByLabel('Version').fill('0.1.0');
+  await page.getByLabel('Repository').fill('https://example.com/owner/repo');
+  await page.getByRole('button', { name: 'Create addon' }).click();
+  await expect(page.getByText('Only GitHub repositories are supported')).toBeVisible();
+
+  await publishAddon(page, { name: addon, editorPlugin: false });
+  await page.goto('/@dev?create=1');
+  await fillCreateAddonForm(page, addon);
+  await page.getByRole('button', { name: 'Create addon' }).click();
+  await expect(page.getByText('duplicate key value violates unique constraint')).toBeVisible();
+});
+
+test('create release form rejects invalid versions and duplicates', async ({ page }) => {
+  await signInAsDev(page);
+
+  const addon = `release-negative-${Date.now().toString(36)}`;
+  await publishAddon(page, { name: addon, editorPlugin: true });
+
+  await page.goto(`/@dev/${addon}?create=1`);
+  await page.getByLabel('Version').fill('0.2');
+  await page.getByLabel('Sha').fill('df63bd560ea9d97ea8e277fd0fc46a07a5fc38fc');
+  await page.getByRole('button', { name: 'Create release' }).click();
+  await expect(page.getByText('Version must be in MAJOR.MINOR.PATCH format.')).toBeVisible();
+
+  await page.getByLabel('Version').fill('0.1.0');
+  await page.getByRole('button', { name: 'Create release' }).click();
+  await expect(page.getByText('duplicate key value violates unique constraint')).toBeVisible();
 });
