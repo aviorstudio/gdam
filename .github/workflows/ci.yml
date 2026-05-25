@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  cli:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+
+      - name: Test CLI
+        working-directory: cli
+        run: go test ./...
+
+      - name: Build CLI
+        run: ./scripts/cli_build.sh
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.23
+
+      - name: Install dependencies
+        working-directory: web
+        run: bun install --frozen-lockfile
+
+      - name: Build web
+        working-directory: web
+        run: bun run build
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.23
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Install web dependencies
+        working-directory: web
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright browser
+        working-directory: web
+        run: bunx playwright install --with-deps chromium
+
+      - name: Start local Supabase
+        run: ./scripts/db_start.sh
+
+      - name: Seed local Supabase
+        run: ./scripts/db_seed.sh
+
+      - name: Run Playwright tests
+        working-directory: web
+        run: bun run test:e2e
+
+      - name: Run CLI integration tests
+        run: ./scripts/ci_cli_integration.sh
