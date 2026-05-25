@@ -76,6 +76,8 @@ const shouldRenderActions = Boolean(action);
     {
       shouldRenderSubtitle && (
         <p class="mx-auto max-w-3xl text-base text-slate-600 sm:mx-0">
+          {subtitle && <span>{subtitle}</span>}
+          {subtitle && subtitleLink && <span class="text-slate-400"> {' '}·{' '} </span>}
           {
             subtitleLink ? (
               <a
@@ -87,7 +89,7 @@ const shouldRenderActions = Boolean(action);
                 {subtitleLink.label}
               </a>
             ) : (
-              subtitle
+              null
             )
           }
         </p>

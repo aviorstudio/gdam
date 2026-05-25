@@ -10,6 +10,7 @@ export SUPABASE_PUBLISHABLE_KEY
 DEV_EMAIL="${GDAM_DEV_EMAIL:-dev@gdam.local}"
 DEV_PASSWORD="${GDAM_DEV_PASSWORD:-password123}"
 ADDON_NAME="${GDAM_TEST_ADDON_NAME:-gdam-test-addon}"
+RUNTIME_ADDON_NAME="${GDAM_TEST_RUNTIME_ADDON_NAME:-gdam-test-runtime}"
 ADDON_REPO="${GDAM_TEST_ADDON_REPO:-https://github.com/aviorstudio/gdam-test-addon}"
 GODOT_REPO="${GDAM_TEST_GODOT_REPO:-https://github.com/aviorstudio/gdam-test-godot}"
 
@@ -63,6 +64,57 @@ api_upsert() {
     "$url"
 }
 
+upsert_plugin() {
+  local name="$1"
+  local editor_plugin="$2"
+  local payload name_encoded existing existing_id response
+
+  payload="$(jq -cn \
+    --arg user_id "$USER_ID" \
+    --arg name "$name" \
+    --arg repo "$ADDON_REPO" \
+    --argjson editor_plugin "$editor_plugin" \
+    '{user_id:$user_id,org_id:null,name:$name,repo:$repo,path:null,editor_plugin:$editor_plugin}')"
+  name_encoded="$(jq -rn --arg value "$name" '$value|@uri')"
+  existing="$(api_get "$SUPABASE_URL/rest/v1/plugins?select=id&user_id=eq.$USER_ID&name=eq.$name_encoded&limit=1")"
+  existing_id="$(jq -r '.[0].id // empty' <<<"$existing")"
+  if [[ -n "$existing_id" ]]; then
+    response="$(api_patch "$SUPABASE_URL/rest/v1/plugins?id=eq.$existing_id" "$payload")"
+  else
+    response="$(api_post "$SUPABASE_URL/rest/v1/plugins" "$payload")"
+  fi
+
+  jq -r '.[0].id' <<<"$response"
+}
+
+upsert_version() {
+  local plugin_id="$1"
+  local sha="$2"
+  local payload
+
+  payload="$(jq -cn \
+    --arg plugin_id "$plugin_id" \
+    --arg sha "$sha" \
+    '{plugin_id:$plugin_id,major:0,minor:1,patch:0,sha:$sha}')"
+  api_upsert "$SUPABASE_URL/rest/v1/plugin_versions?on_conflict=plugin_id,major,minor,patch" "$payload" >/dev/null
+}
+
+assert_project_has_plugin() {
+  local addon_name="$1"
+  if ! grep -q "res://addons/@dev_${addon_name}/plugin.cfg" project.godot; then
+    printf 'expected editor plugin entry for %s in project.godot\n' "$addon_name" >&2
+    exit 1
+  fi
+}
+
+assert_project_lacks_plugin() {
+  local addon_name="$1"
+  if grep -q "res://addons/@dev_${addon_name}/plugin.cfg" project.godot; then
+    printf 'unexpected editor plugin entry for %s in project.godot\n' "$addon_name" >&2
+    exit 1
+  fi
+}
+
 require_cmd curl
 require_cmd git
 require_cmd jq
@@ -96,26 +148,10 @@ if [[ ! -f "$ADDON_DIR/plugin.cfg" ]]; then
 fi
 
 ADDON_SHA="$(git -C "$ADDON_DIR" rev-parse HEAD)"
-plugin_payload="$(jq -cn \
-  --arg user_id "$USER_ID" \
-  --arg name "$ADDON_NAME" \
-  --arg repo "$ADDON_REPO" \
-  '{user_id:$user_id,org_id:null,name:$name,repo:$repo,path:null,editor_plugin:true}')"
-addon_name_encoded="$(jq -rn --arg value "$ADDON_NAME" '$value|@uri')"
-existing_plugin="$(api_get "$SUPABASE_URL/rest/v1/plugins?select=id&user_id=eq.$USER_ID&name=eq.$addon_name_encoded&limit=1")"
-existing_plugin_id="$(jq -r '.[0].id // empty' <<<"$existing_plugin")"
-if [[ -n "$existing_plugin_id" ]]; then
-  plugin_response="$(api_patch "$SUPABASE_URL/rest/v1/plugins?id=eq.$existing_plugin_id" "$plugin_payload")"
-else
-  plugin_response="$(api_post "$SUPABASE_URL/rest/v1/plugins" "$plugin_payload")"
-fi
-PLUGIN_ID="$(jq -r '.[0].id' <<<"$plugin_response")"
-
-version_payload="$(jq -cn \
-  --arg plugin_id "$PLUGIN_ID" \
-  --arg sha "$ADDON_SHA" \
-  '{plugin_id:$plugin_id,major:0,minor:1,patch:0,sha:$sha}')"
-api_upsert "$SUPABASE_URL/rest/v1/plugin_versions?on_conflict=plugin_id,major,minor,patch" "$version_payload" >/dev/null
+PLUGIN_ID="$(upsert_plugin "$ADDON_NAME" true)"
+RUNTIME_PLUGIN_ID="$(upsert_plugin "$RUNTIME_ADDON_NAME" false)"
+upsert_version "$PLUGIN_ID" "$ADDON_SHA"
+upsert_version "$RUNTIME_PLUGIN_ID" "$ADDON_SHA"
 
 cd "$GODOT_DIR"
 "$ROOT_DIR/cli/bin/gdam" init
@@ -123,20 +159,44 @@ test -f gdam.json
 
 "$ROOT_DIR/cli/bin/gdam" add "@dev/$ADDON_NAME@0.1.0"
 test -f "addons/@dev_${ADDON_NAME}/plugin.cfg"
+jq -e --arg addon "@dev/$ADDON_NAME" '.addons[$addon].editor_plugin == true' gdam.json >/dev/null
+assert_project_has_plugin "$ADDON_NAME"
 
-if ! grep -q "res://addons/@dev_${ADDON_NAME}/plugin.cfg" project.godot; then
-  printf 'expected editor plugin entry in project.godot\n' >&2
-  exit 1
-fi
+rm -rf "addons/@dev_${ADDON_NAME}"
+"$ROOT_DIR/cli/bin/gdam" install
+test -f "addons/@dev_${ADDON_NAME}/plugin.cfg"
+assert_project_has_plugin "$ADDON_NAME"
+
+"$ROOT_DIR/cli/bin/gdam" add "@dev/$RUNTIME_ADDON_NAME@0.1.0"
+test -f "addons/@dev_${RUNTIME_ADDON_NAME}/plugin.cfg"
+jq -e --arg addon "@dev/$RUNTIME_ADDON_NAME" '.addons[$addon].editor_plugin != true' gdam.json >/dev/null
+assert_project_lacks_plugin "$RUNTIME_ADDON_NAME"
+
+rm -rf "addons/@dev_${RUNTIME_ADDON_NAME}"
+"$ROOT_DIR/cli/bin/gdam" install
+test -f "addons/@dev_${RUNTIME_ADDON_NAME}/plugin.cfg"
+assert_project_lacks_plugin "$RUNTIME_ADDON_NAME"
 
 "$ROOT_DIR/cli/bin/gdam" remove "@dev/$ADDON_NAME"
 test ! -e "addons/@dev_${ADDON_NAME}"
+assert_project_lacks_plugin "$ADDON_NAME"
+
+"$ROOT_DIR/cli/bin/gdam" remove "@dev/$RUNTIME_ADDON_NAME"
+test ! -e "addons/@dev_${RUNTIME_ADDON_NAME}"
 
 LOCAL_ADDON="$WORK_DIR/local-addon"
 mkdir -p "$LOCAL_ADDON"
 printf '[plugin]\nname="Local Test"\n' > "$LOCAL_ADDON/plugin.cfg"
 
 "$ROOT_DIR/cli/bin/gdam" link @dev/local-addon "$LOCAL_ADDON"
+test -L addons/@dev_local-addon
+jq -e --arg addon '@dev/local-addon' --arg path "$LOCAL_ADDON" '.addons[$addon].enabled == true and .addons[$addon].path == $path' gdam.link.json >/dev/null
+
+"$ROOT_DIR/cli/bin/gdam" unlink @dev/local-addon
+test ! -e addons/@dev_local-addon
+jq -e --arg addon '@dev/local-addon' --arg path "$LOCAL_ADDON" '.addons[$addon].enabled == false and .addons[$addon].path == $path' gdam.link.json >/dev/null
+
+"$ROOT_DIR/cli/bin/gdam" link @dev/local-addon
 test -L addons/@dev_local-addon
 
 "$ROOT_DIR/cli/bin/gdam" unlink @dev/local-addon
