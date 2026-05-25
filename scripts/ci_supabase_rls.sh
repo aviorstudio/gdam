@@ -100,7 +100,7 @@ ANON_ADDON_NAME="rls-anon-addon-$RUN_ID"
 owner_addon_payload="$(jq -cn \
   --arg user_id "$OWNER_ID" \
   --arg name "$OWNER_ADDON_NAME" \
-  '{user_id:$user_id,org_id:null,name:$name,repo:"https://github.com/aviorstudio/gdam-test-addon",editor_plugin:false}')"
+  '{user_id:$user_id,org_id:null,name:$name,repo:"https://github.com/aviorstudio/gdam-test-addon",editor:false}')"
 owner_addon_response="$(rest_status POST "$OWNER_TOKEN" addons "$owner_addon_payload")"
 owner_addon_status="$(sed -n '1p' <<<"$owner_addon_response")"
 owner_addon_body="$(sed -n '2,$p' <<<"$owner_addon_response")"
@@ -110,14 +110,14 @@ OWNER_ADDON_ID="$(jq -r '.[0].id' <<<"$owner_addon_body")"
 attacker_own_payload="$(jq -cn \
   --arg user_id "$ATTACKER_ID" \
   --arg name "$ATTACKER_ADDON_NAME" \
-  '{user_id:$user_id,org_id:null,name:$name,repo:"https://github.com/aviorstudio/gdam-test-addon",editor_plugin:false}')"
+  '{user_id:$user_id,org_id:null,name:$name,repo:"https://github.com/aviorstudio/gdam-test-addon",editor:false}')"
 attacker_own_response="$(rest_status POST "$ATTACKER_TOKEN" addons "$attacker_own_payload")"
 expect_status 201 "$(sed -n '1p' <<<"$attacker_own_response")" 'attacker own addon insert'
 
 attacker_owner_payload="$(jq -cn \
   --arg user_id "$OWNER_ID" \
   --arg name "$STOLEN_ADDON_NAME" \
-  '{user_id:$user_id,org_id:null,name:$name,repo:"https://github.com/aviorstudio/gdam-test-addon",editor_plugin:false}')"
+  '{user_id:$user_id,org_id:null,name:$name,repo:"https://github.com/aviorstudio/gdam-test-addon",editor:false}')"
 attacker_owner_response="$(rest_status POST "$ATTACKER_TOKEN" addons "$attacker_owner_payload")"
 expect_rejected_status "$(sed -n '1p' <<<"$attacker_owner_response")" 'attacker addon insert for owner'
 
@@ -130,7 +130,7 @@ expect_rejected_status "$(sed -n '1p' <<<"$attacker_version_response")" 'attacke
 anon_payload="$(jq -cn \
   --arg user_id "$OWNER_ID" \
   --arg name "$ANON_ADDON_NAME" \
-  '{user_id:$user_id,org_id:null,name:$name,repo:"https://github.com/aviorstudio/gdam-test-addon",editor_plugin:false}')"
+  '{user_id:$user_id,org_id:null,name:$name,repo:"https://github.com/aviorstudio/gdam-test-addon",editor:false}')"
 anon_response="$(rest_status POST "$SUPABASE_PUBLISHABLE_KEY" addons "$anon_payload")"
 expect_rejected_status "$(sed -n '1p' <<<"$anon_response")" 'anonymous addon insert'
 

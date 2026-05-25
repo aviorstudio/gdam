@@ -31,8 +31,7 @@ export const orgsProfilesDto = {
 };
 
 export type UsernameInsert = {
-  username_display: string;
-  username_normal: string;
+  name: string;
   user_id?: string | null;
   org_id?: string | null;
 };
@@ -41,11 +40,11 @@ export const usernamesDto = {
   insert: (client: SupabaseClient, payload: UsernameInsert) => client.from('usernames').insert(payload),
   getByUserId: (client: SupabaseClient, userId: string) => client.from('usernames').select('*').eq('user_id', userId),
   listByUserIds: (client: SupabaseClient, userIds: string[]) =>
-    client.from('usernames').select('username_display,user_id,org_id').in('user_id', userIds),
+    client.from('usernames').select('name,user_id,org_id').in('user_id', userIds),
   listByOrgIds: (client: SupabaseClient, orgIds: string[]) =>
-    client.from('usernames').select('username_display,user_id,org_id').in('org_id', orgIds),
-  getByUsernameNormal: (client: SupabaseClient, usernameNormal: string) =>
-    client.from('usernames').select('*').eq('username_normal', usernameNormal).maybeSingle(),
+    client.from('usernames').select('name,user_id,org_id').in('org_id', orgIds),
+  getByName: (client: SupabaseClient, username: string) =>
+    client.from('usernames').select('*').ilike('name', username).maybeSingle(),
 };
 
 export type AddonInsert = {
@@ -53,7 +52,7 @@ export type AddonInsert = {
   org_id?: string | null;
   name: string;
   repo: string;
-  editor_plugin?: boolean;
+  editor?: boolean;
 };
 
 export const addonsDto = {
@@ -63,7 +62,7 @@ export const addonsDto = {
   listAll: async (client: SupabaseClient) => {
     return client
       .from('addons')
-      .select('id,name,repo,editor_plugin,created_at,user_id,org_id')
+      .select('id,name,repo,editor,created_at,user_id,org_id')
       .order('created_at', { ascending: false });
   },
   listByUserId: (client: SupabaseClient, userId: string) =>

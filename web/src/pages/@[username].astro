@@ -14,7 +14,7 @@ import { formatSemverTripletFromNullable, parseSemverTriplet } from '../lib/semv
 import { supabase } from '../lib/supabase';
 
 type UsernameRecord = {
-  username_display: string | null;
+  name: string | null;
   user_id: string | null;
   org_id: string | null;
 };
@@ -27,7 +27,7 @@ type AddonRecord = {
   id: string;
   name: string | null;
   repo: string | null;
-  editor_plugin?: boolean | null;
+  editor?: boolean | null;
   created_at: string | null;
 };
 
@@ -127,7 +127,7 @@ if (!usernameNormal) {
   pageTone = 'not-found';
   pageStatus = 'That user could not be found.';
 } else {
-  const { data: usernameRow, error: usernameError } = await usernamesDto.getByUsernameNormal(supabase, usernameNormal);
+  const { data: usernameRow, error: usernameError } = await usernamesDto.getByName(supabase, usernameNormal);
 
   if (usernameError) {
     Astro.response.status = 500;
@@ -139,7 +139,7 @@ if (!usernameNormal) {
     pageStatus = 'That user could not be found.';
   } else {
     const usernameRecord = usernameRow as UsernameRecord;
-    const usernameDisplay = usernameRecord.username_display || usernameParam;
+    const usernameDisplay = usernameRecord.name || usernameParam;
 
     const ownerProfileId = usernameRecord.user_id;
     const ownerOrgId = usernameRecord.org_id;
@@ -202,7 +202,7 @@ if (!usernameNormal) {
           formVersion = String(formData.get('version') ?? '').trim();
           formReleaseTag = String(formData.get('tag') ?? '').trim();
           formAssetName = String(formData.get('asset') ?? '').trim();
-          formEditorPlugin = formData.get('editor_plugin') === 'on';
+          formEditorPlugin = formData.get('editor') === 'on';
 
           if (!formName || !formRepo || !formVersion) {
             createStatus = 'Addon name, repository, and version are required.';
@@ -251,7 +251,7 @@ if (!usernameNormal) {
                         ...addonOwnerPayload,
                         name: formName,
                         repo: formRepo,
-                        editor_plugin: formEditorPlugin,
+                        editor: formEditorPlugin,
                       });
 
                       if (addonError) {
@@ -394,7 +394,7 @@ if (!usernameNormal) {
               <input
                 class="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-600"
                 type="checkbox"
-                name="editor_plugin"
+                name="editor"
                 checked={formEditorPlugin}
               />
               <span class="flex flex-col gap-1">

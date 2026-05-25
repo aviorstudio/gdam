@@ -16,7 +16,7 @@ import { supabase } from '../../lib/supabase';
 const DELETE_CSRF_COOKIE = 'gdam-delete-csrf';
 
 type UsernameRecord = {
-  username_display: string | null;
+  name: string | null;
   user_id: string | null;
   org_id: string | null;
 };
@@ -29,7 +29,7 @@ type AddonRecord = {
   id: string;
   name: string | null;
   repo: string | null;
-  editor_plugin?: boolean | null;
+  editor?: boolean | null;
   created_at: string | null;
 };
 
@@ -115,7 +115,7 @@ const notFound = () => {
 if (!usernameNormal || !addonName) {
   notFound();
 } else {
-  const { data: usernameRow, error: usernameError } = await usernamesDto.getByUsernameNormal(supabase, usernameNormal);
+  const { data: usernameRow, error: usernameError } = await usernamesDto.getByName(supabase, usernameNormal);
 
   if (usernameError) {
     Astro.response.status = 500;
@@ -125,7 +125,7 @@ if (!usernameNormal || !addonName) {
     notFound();
   } else {
     const usernameRecord = usernameRow as UsernameRecord;
-    const usernameDisplay = usernameRecord.username_display || usernameParam;
+    const usernameDisplay = usernameRecord.name || usernameParam;
     ownerLabel = `@${usernameDisplay}`;
     ownerSlug = encodeURIComponent(usernameDisplay);
 
@@ -181,7 +181,7 @@ if (!usernameNormal || !addonName) {
           id: addonRecord.id,
           name: addonRecord.name ?? addonName,
           repo: addonRecord.repo ?? '',
-          editorPlugin: Boolean(addonRecord.editor_plugin),
+          editorPlugin: Boolean(addonRecord.editor),
           createdAt: addonRecord.created_at ?? '',
         };
 

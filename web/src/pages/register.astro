@@ -63,7 +63,7 @@ if (Astro.request.method === 'POST') {
         status = 'That username is reserved.';
         tone = 'error';
       } else {
-        const { data: existingUsername, error: existingUsernameError } = await usernamesDto.getByUsernameNormal(
+        const { data: existingUsername, error: existingUsernameError } = await usernamesDto.getByName(
           supabase,
           usernameNormal
         );
@@ -104,8 +104,7 @@ if (Astro.request.method === 'POST') {
                 tone = 'error';
               } else {
                 const { error: usernameError } = await usernamesDto.insert(supabase, {
-                  username_display: usernameDisplay,
-                  username_normal: usernameNormal,
+                  name: usernameDisplay,
                   user_id: userId,
                 });
                 if (usernameError) {
@@ -143,7 +142,7 @@ if (Astro.request.method === 'POST') {
         status = 'That username is reserved.';
         tone = 'error';
       } else {
-        const { data: existingUsername, error: existingUsernameError } = await usernamesDto.getByUsernameNormal(
+        const { data: existingUsername, error: existingUsernameError } = await usernamesDto.getByName(
           supabase,
           usernameNormal
         );
@@ -182,8 +181,7 @@ if (Astro.request.method === 'POST') {
                 tone = 'error';
               } else {
                 const { error: usernameError } = await usernamesDto.insert(supabase, {
-                  username_display: usernameDisplay,
-                  username_normal: usernameNormal,
+                  name: usernameDisplay,
                   user_id: userId,
                 });
                 if (usernameError) {

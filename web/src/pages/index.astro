@@ -29,7 +29,7 @@ type AddonVersionRecord = {
 };
 
 type UsernameRecord = {
-  username_display: string | null;
+  name: string | null;
   user_id: string | null;
   org_id: string | null;
 };
@@ -66,9 +66,9 @@ if (userIds.length > 0) {
   const { data: usernameRows, error: usernameError } = await usernamesDto.listByUserIds(supabase, userIds);
   if (!usernameError) {
     for (const row of (usernameRows as UsernameRecord[] | null) ?? []) {
-      if (!row.user_id || !row.username_display) continue;
+      if (!row.user_id || !row.name) continue;
       if (!usernameByUserId.has(row.user_id)) {
-        usernameByUserId.set(row.user_id, row.username_display);
+        usernameByUserId.set(row.user_id, row.name);
       }
     }
   }
@@ -79,9 +79,9 @@ if (orgIds.length > 0) {
   const { data: usernameRows, error: usernameError } = await usernamesDto.listByOrgIds(supabase, orgIds);
   if (!usernameError) {
     for (const row of (usernameRows as UsernameRecord[] | null) ?? []) {
-      if (!row.org_id || !row.username_display) continue;
+      if (!row.org_id || !row.name) continue;
       if (!usernameByOrgId.has(row.org_id)) {
-        usernameByOrgId.set(row.org_id, row.username_display);
+        usernameByOrgId.set(row.org_id, row.name);
       }
     }
   }

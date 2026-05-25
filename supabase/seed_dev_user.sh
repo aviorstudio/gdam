@@ -44,6 +44,35 @@ upsert_row() {
     >/dev/null
 }
 
+insert_row_ignore_duplicate() {
+  local table="$1"
+  local payload="$2"
+  local tmp status code
+
+  tmp="$(mktemp)"
+  status="$(curl -sS -o "$tmp" -w '%{http_code}' \
+    -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$payload" \
+    "$SUPABASE_URL/rest/v1/$table")"
+
+  if [[ "$status" =~ ^2 ]]; then
+    rm -f "$tmp"
+    return 0
+  fi
+
+  code="$(jq -r '.code // empty' "$tmp")"
+  if [[ "$code" == "23505" ]]; then
+    rm -f "$tmp"
+    return 0
+  fi
+
+  cat "$tmp" >&2
+  rm -f "$tmp"
+  return 1
+}
+
 require_cmd curl
 require_cmd jq
 
@@ -67,13 +96,12 @@ profile_payload="$(jq -cn \
   '{id:$id}')"
 
 username_payload="$(jq -cn \
-  --arg display "$DEV_USERNAME" \
-  --arg normal "$(tr '[:upper:]' '[:lower:]' <<<"$DEV_USERNAME")" \
+  --arg name "$DEV_USERNAME" \
   --arg user_id "$USER_ID" \
-  '{username_display:$display,username_normal:$normal,user_id:$user_id,org_id:null}')"
+  '{name:$name,user_id:$user_id,org_id:null}')"
 
 upsert_row profiles id "$profile_payload"
-upsert_row usernames username_normal "$username_payload"
+insert_row_ignore_duplicate usernames "$username_payload"
 
 printf 'Seeded local dev user:\n'
 printf '  email: %s\n' "$DEV_EMAIL"

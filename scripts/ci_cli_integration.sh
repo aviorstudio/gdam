@@ -66,15 +66,15 @@ api_upsert() {
 
 upsert_addon() {
   local name="$1"
-  local editor_plugin="$2"
+  local editor="$2"
   local payload name_encoded existing existing_id response
 
   payload="$(jq -cn \
     --arg user_id "$USER_ID" \
     --arg name "$name" \
     --arg repo "$ADDON_REPO" \
-    --argjson editor_plugin "$editor_plugin" \
-    '{user_id:$user_id,org_id:null,name:$name,repo:$repo,editor_plugin:$editor_plugin}')"
+    --argjson editor "$editor" \
+    '{user_id:$user_id,org_id:null,name:$name,repo:$repo,editor:$editor}')"
   name_encoded="$(jq -rn --arg value "$name" '$value|@uri')"
   existing="$(api_get "$SUPABASE_URL/rest/v1/addons?select=id&user_id=eq.$USER_ID&name=eq.$name_encoded&limit=1")"
   existing_id="$(jq -r '.[0].id // empty' <<<"$existing")"

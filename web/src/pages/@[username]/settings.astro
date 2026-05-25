@@ -11,7 +11,7 @@ import { orgsDto, orgsProfilesDto, usernamesDto } from '../../lib/dtoService';
 import { supabase } from '../../lib/supabase';
 
 type UsernameRecord = {
-  username_display: string | null;
+  name: string | null;
   user_id: string | null;
   org_id: string | null;
 };
@@ -54,7 +54,7 @@ if (!profileId || !usernameNormal) {
   return Astro.redirect(publicPath);
 }
 
-const { data: usernameRow, error: usernameError } = await usernamesDto.getByUsernameNormal(supabase, usernameNormal);
+const { data: usernameRow, error: usernameError } = await usernamesDto.getByName(supabase, usernameNormal);
 if (usernameError || !usernameRow) {
   return Astro.redirect(publicPath);
 }
@@ -65,7 +65,7 @@ if (!usernameRecord.user_id || usernameRecord.user_id !== profileId) {
 }
 
 const email = session.user?.email ?? '';
-const usernameDisplay = usernameRecord.username_display || usernameParam;
+const usernameDisplay = usernameRecord.name || usernameParam;
 
 let showCreateOrgDialog = Astro.url.searchParams.get('create_org') === '1';
 let createOrgStatus = '';
@@ -87,7 +87,7 @@ if (Astro.request.method === 'POST') {
     createOrgStatus = 'That username is reserved.';
     createOrgTone = 'error';
   } else {
-    const { data: existingUsername, error: existingUsernameError } = await usernamesDto.getByUsernameNormal(
+    const { data: existingUsername, error: existingUsernameError } = await usernamesDto.getByName(
       supabase,
       orgUsernameNormal
     );
@@ -118,8 +118,7 @@ if (Astro.request.method === 'POST') {
           createOrgTone = 'error';
         } else {
           const { error: createUsernameError } = await usernamesDto.insert(supabase, {
-            username_display: orgUsernameDisplay,
-            username_normal: orgUsernameNormal,
+            name: orgUsernameDisplay,
             org_id: createdOrg.id,
           });
 

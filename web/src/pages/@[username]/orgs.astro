@@ -9,7 +9,7 @@ import { orgsProfilesDto, usernamesDto } from '../../lib/dtoService';
 import { supabase } from '../../lib/supabase';
 
 type UsernameRecord = {
-  username_display: string | null;
+  name: string | null;
   user_id: string | null;
   org_id: string | null;
 };
@@ -46,7 +46,7 @@ if (!profileId || !usernameNormal) {
   return Astro.redirect(publicPath);
 }
 
-const { data: usernameRow, error: usernameError } = await usernamesDto.getByUsernameNormal(supabase, usernameNormal);
+const { data: usernameRow, error: usernameError } = await usernamesDto.getByName(supabase, usernameNormal);
 if (usernameError || !usernameRow) {
   return Astro.redirect(publicPath);
 }
@@ -56,7 +56,7 @@ if (!usernameRecord.user_id || usernameRecord.user_id !== profileId) {
   return Astro.redirect(publicPath);
 }
 
-const usernameDisplay = usernameRecord.username_display || usernameParam;
+const usernameDisplay = usernameRecord.name || usernameParam;
 
 let status = '';
 let tone: 'muted' | 'error' = 'muted';
@@ -83,9 +83,9 @@ if (membershipError) {
       tone = 'error';
     } else {
       for (const row of (usernameRows as UsernameRecord[] | null) ?? []) {
-        if (!row.org_id || !row.username_display) continue;
+        if (!row.org_id || !row.name) continue;
         if (!usernameByOrgId.has(row.org_id)) {
-          usernameByOrgId.set(row.org_id, row.username_display);
+          usernameByOrgId.set(row.org_id, row.name);
         }
       }
     }

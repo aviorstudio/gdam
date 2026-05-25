@@ -7,7 +7,7 @@ import orgsIcon from '../assets/icons/organization-24.svg?url';
 import settingsIcon from '../assets/icons/gear-24.svg?url';
 
 type UsernameRecord = {
-	username_display: string | null;
+	name: string | null;
 };
 
 type NavActionVariant = 'text' | 'icon' | 'primary';
@@ -54,8 +54,8 @@ let settingsHref = '/';
 if (profileId) {
 	const { data: usernameRows, error: usernameError } = await usernamesDto.getByUserId(supabase, profileId);
 	if (!usernameError) {
-		const usernameRecord = ((usernameRows as UsernameRecord[] | null) ?? []).find((row) => row.username_display);
-		usernameDisplayForProfile = usernameRecord?.username_display ?? '';
+		const usernameRecord = ((usernameRows as UsernameRecord[] | null) ?? []).find((row) => row.name);
+		usernameDisplayForProfile = usernameRecord?.name ?? '';
 	}
 }
 

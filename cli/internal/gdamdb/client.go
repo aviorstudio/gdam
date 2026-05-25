@@ -202,7 +202,7 @@ func (c *Client) ResolveAddon(ctx context.Context, username, addon, requestedVer
 }
 
 type usernameRow struct {
-	UsernameDisplay *string `json:"username_display"`
+	UsernameDisplay *string `json:"name"`
 	UserID          *string `json:"user_id"`
 	OrgID           *string `json:"org_id"`
 }
@@ -211,7 +211,7 @@ type addonRow struct {
 	ID           string  `json:"id"`
 	Name         *string `json:"name"`
 	Repo         string  `json:"repo"`
-	EditorPlugin *bool   `json:"editor_plugin"`
+	EditorPlugin *bool   `json:"editor"`
 	CreatedAt    *string `json:"created_at"`
 	UserID       *string `json:"user_id"`
 	OrgID        *string `json:"org_id"`
@@ -229,8 +229,8 @@ type versionRow struct {
 
 func (c *Client) getUsernameByNormal(ctx context.Context, usernameNormal string) (usernameRow, bool, error) {
 	q := url.Values{}
-	q.Set("select", "username_display,user_id,org_id")
-	q.Set("username_normal", "eq."+usernameNormal)
+	q.Set("select", "name,user_id,org_id")
+	q.Set("name", "ilike."+usernameNormal)
 	q.Set("limit", "2")
 
 	var rows []usernameRow
@@ -248,7 +248,7 @@ func (c *Client) getUsernameByNormal(ctx context.Context, usernameNormal string)
 
 func (c *Client) getAddonByOwnerAndName(ctx context.Context, userID, orgID *string, addonName string) (addonRow, bool, error) {
 	q := url.Values{}
-	q.Set("select", "id,name,repo,editor_plugin,created_at,user_id,org_id")
+	q.Set("select", "id,name,repo,editor,created_at,user_id,org_id")
 	q.Set("name", "eq."+addonName)
 	q.Set("limit", "2")
 
