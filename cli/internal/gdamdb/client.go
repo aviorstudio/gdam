@@ -115,12 +115,12 @@ type ResolvedPlugin struct {
 	Name string
 	Repo string
 
-	GitHubOwner  string
-	GitHubRepo   string
-	GitHubSubdir string
+	GitHubOwner string
+	GitHubRepo  string
 
 	Version    string
 	ReleaseTag string
+	AssetName  string
 
 	EditorPlugin bool
 }
@@ -174,20 +174,19 @@ func (c *Client) ResolvePlugin(ctx context.Context, username, plugin, requestedV
 			selected.Patch,
 		)
 	}
-
-	ghOwner, ghRepo, repoSubdir, err := ParseGitHubRepoURL(pluginRow.Repo)
-	if err != nil {
-		return ResolvedPlugin{}, err
+	assetName := strings.TrimSpace(selected.AssetName)
+	if assetName == "" {
+		return ResolvedPlugin{}, fmt.Errorf(
+			"selected version has no release asset name: %d.%d.%d",
+			selected.Major,
+			selected.Minor,
+			selected.Patch,
+		)
 	}
 
-	ghSubdir := repoSubdir
-	if pluginRow.Path != nil {
-		repoPath := strings.TrimSpace(*pluginRow.Path)
-		if repoPath != "" {
-			repoPath = strings.ReplaceAll(repoPath, "\\", "/")
-			repoPath = strings.Trim(repoPath, "/")
-			ghSubdir = repoPath
-		}
+	ghOwner, ghRepo, _, err := ParseGitHubRepoURL(pluginRow.Repo)
+	if err != nil {
+		return ResolvedPlugin{}, err
 	}
 
 	return ResolvedPlugin{
@@ -195,9 +194,9 @@ func (c *Client) ResolvePlugin(ctx context.Context, username, plugin, requestedV
 		Repo:         pluginRow.Repo,
 		GitHubOwner:  ghOwner,
 		GitHubRepo:   ghRepo,
-		GitHubSubdir: ghSubdir,
 		Version:      fmt.Sprintf("%d.%d.%d", selected.Major, selected.Minor, selected.Patch),
 		ReleaseTag:   releaseTag,
+		AssetName:    assetName,
 		EditorPlugin: pluginRow.EditorPlugin != nil && *pluginRow.EditorPlugin,
 	}, nil
 }
@@ -212,7 +211,6 @@ type pluginRow struct {
 	ID           string  `json:"id"`
 	Name         *string `json:"name"`
 	Repo         string  `json:"repo"`
-	Path         *string `json:"path"`
 	EditorPlugin *bool   `json:"editor_plugin"`
 	CreatedAt    *string `json:"created_at"`
 	UserID       *string `json:"user_id"`
@@ -225,6 +223,7 @@ type versionRow struct {
 	Minor      int     `json:"minor"`
 	Patch      int     `json:"patch"`
 	ReleaseTag string  `json:"release_tag"`
+	AssetName  string  `json:"asset_name"`
 	CreatedAt  *string `json:"created_at"`
 }
 
@@ -249,9 +248,7 @@ func (c *Client) getUsernameByNormal(ctx context.Context, usernameNormal string)
 
 func (c *Client) getPluginByOwnerAndName(ctx context.Context, userID, orgID *string, pluginName string) (pluginRow, bool, error) {
 	q := url.Values{}
-	selectWithPath := "id,name,repo,path,editor_plugin,created_at,user_id,org_id"
-	selectLegacy := "id,name,repo,created_at,user_id,org_id"
-	q.Set("select", selectWithPath)
+	q.Set("select", "id,name,repo,editor_plugin,created_at,user_id,org_id")
 	q.Set("name", "eq."+pluginName)
 	q.Set("limit", "2")
 
@@ -265,17 +262,7 @@ func (c *Client) getPluginByOwnerAndName(ctx context.Context, userID, orgID *str
 
 	var rows []pluginRow
 	if err := c.get(ctx, "plugins", q, &rows); err != nil {
-		errMsg := strings.ToLower(err.Error())
-		if (strings.Contains(errMsg, "path") || strings.Contains(errMsg, "editor_plugin")) &&
-			(strings.Contains(errMsg, "does not exist") || strings.Contains(errMsg, "could not find") || strings.Contains(errMsg, "schema cache")) {
-			q.Set("select", selectLegacy)
-			rows = nil
-			if err2 := c.get(ctx, "plugins", q, &rows); err2 != nil {
-				return pluginRow{}, false, err2
-			}
-		} else {
-			return pluginRow{}, false, err
-		}
+		return pluginRow{}, false, err
 	}
 	if len(rows) == 0 {
 		return pluginRow{}, false, nil
@@ -293,7 +280,7 @@ func (c *Client) listPluginVersions(ctx context.Context, pluginID string) ([]ver
 	}
 
 	q := url.Values{}
-	q.Set("select", "plugin_id,major,minor,patch,release_tag,created_at")
+	q.Set("select", "plugin_id,major,minor,patch,release_tag,asset_name,created_at")
 	q.Set("plugin_id", "eq."+pluginID)
 	q.Set("order", "major.desc,minor.desc,patch.desc,created_at.desc")
 	q.Set("limit", "100")

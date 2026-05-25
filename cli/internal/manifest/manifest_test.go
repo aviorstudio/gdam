@@ -33,6 +33,30 @@ func TestSave_DoesNotWriteSchemaVersion(t *testing.T) {
 	}
 }
 
+func TestLoadAndSave_PreservesAssetName(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "gdam.json")
+
+	m := New()
+	m = UpsertPlugin(m, "@user/plugin", Plugin{
+		Repo:      "https://example.com",
+		Version:   "1.2.3",
+		AssetName: "plugin-release.zip",
+	})
+
+	if err := Save(p, m); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	loaded, err := Load(p)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := loaded.Addons["@user/plugin"].AssetName; got != "plugin-release.zip" {
+		t.Fatalf("expected asset name plugin-release.zip, got %q", got)
+	}
+}
+
 func TestLoad_RejectsLinkInGdamJSON(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "gdam.json")

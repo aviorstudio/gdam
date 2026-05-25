@@ -6,7 +6,7 @@ import Splash from '../components/Splash.astro';
 import Title from '../components/Title.astro';
 import PluginList from '../components/PluginList.astro';
 import { pluginVersionsDto, pluginsDto, usernamesDto } from '../lib/dtoService';
-import { toGitHubTreeUrl, toRepoUrl } from '../lib/repo';
+import { toRepoUrl } from '../lib/repo';
 import { formatSemverTripletFromNullable } from '../lib/semver';
 import { supabase } from '../lib/supabase';
 
@@ -14,7 +14,6 @@ type PluginRecord = {
   id: string;
   name: string | null;
   repo: string | null;
-  path: string | null;
   created_at: string | null;
   user_id: string | null;
   org_id: string | null;
@@ -100,7 +99,7 @@ const pluginList = plugins.map((plugin) => {
   const latestRelease = latestReleaseByPluginId.get(plugin.id);
   const repoUrl = plugin.repo ? toRepoUrl(plugin.repo) : '';
   const versionLabel = latestRelease?.version ? latestRelease.version : 'No versions';
-  const treeUrl = latestRelease?.releaseTag ? toGitHubTreeUrl(repoUrl, latestRelease.releaseTag, plugin.path ?? undefined) : '';
+  const treeUrl = latestRelease?.releaseTag ? `${repoUrl}/releases/tag/${encodeURIComponent(latestRelease.releaseTag)}` : '';
 
   return {
     ownerLabel: ownerDisplay ? `@${ownerDisplay}` : undefined,

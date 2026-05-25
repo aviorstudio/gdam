@@ -27,7 +27,7 @@ type installCandidate struct {
 	ghOwner      string
 	ghRepo       string
 	ref          string
-	repoSubdir   string
+	assetName    string
 	prepRootDir  string
 }
 
@@ -87,9 +87,14 @@ func Install(ctx context.Context, opts InstallOptions) error {
 		if repoURL == "" {
 			return fmt.Errorf("%w: addon is not installed and has no repo: %s", ErrUserInput, pluginKey)
 		}
-		owner, repo, ref, repoSubdir, err := gdamdb.ParseGitHubTreeURLWithPath(repoURL)
+		owner, repo, ref, _, err := gdamdb.ParseGitHubTreeURLWithPath(repoURL)
 		if err != nil {
 			return fmt.Errorf("%w: invalid repo for %s: %v", ErrUserInput, pluginKey, err)
+		}
+
+		assetName := strings.TrimSpace(plugin.AssetName)
+		if assetName == "" {
+			assetName = releaseAssetName(owner, repo)
 		}
 
 		candidates = append(candidates, installCandidate{
@@ -101,7 +106,7 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			ghOwner:      owner,
 			ghRepo:       repo,
 			ref:          ref,
-			repoSubdir:   repoSubdir,
+			assetName:    assetName,
 		})
 	}
 
@@ -141,7 +146,7 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			return err
 		}
 
-		pkgRootDir, err := prepareGitHubPackageRoot(ctx, gh, candidates[i].ghOwner, candidates[i].ghRepo, candidates[i].ref, candidates[i].repoSubdir, pkgTmpDir)
+		pkgRootDir, err := prepareGitHubPackageRoot(ctx, gh, candidates[i].ghOwner, candidates[i].ghRepo, candidates[i].ref, candidates[i].assetName, pkgTmpDir)
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrUserInput, err)
 		}
@@ -150,10 +155,7 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			return fmt.Errorf("%w: %v", ErrUserInput, err)
 		} else if !ok {
 			expected := "res://" + path.Join("addons", candidates[i].addonDir, "plugin.cfg")
-			if strings.TrimSpace(candidates[i].repoSubdir) != "" {
-				return fmt.Errorf("%w: package is missing plugin.cfg at %s in repository (expected to install it to %s)", ErrUserInput, candidates[i].repoSubdir, expected)
-			}
-			return fmt.Errorf("%w: package is missing plugin.cfg at repository root (expected to install it to %s)", ErrUserInput, expected)
+			return fmt.Errorf("%w: package is missing plugin.cfg in release asset %s (expected to install it to %s)", ErrUserInput, candidates[i].assetName, expected)
 		}
 
 		if _, err := os.Lstat(candidates[i].dst); err == nil {

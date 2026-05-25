@@ -3,7 +3,6 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 export type ProfileUpsert = {
   id: string;
   name?: string | null;
-  contact_email?: string | null;
 };
 
 export const profilesDto = {
@@ -13,7 +12,6 @@ export const profilesDto = {
 
 export type OrgInsert = {
   name: string;
-  contact_email?: string | null;
 };
 
 export const orgsDto = {
@@ -60,7 +58,6 @@ export type PluginInsert = {
   org_id?: string | null;
   name: string;
   repo: string;
-  path?: string | null;
   editor_plugin?: boolean;
 };
 
@@ -68,20 +65,10 @@ export const pluginsDto = {
   insert: (client: SupabaseClient, payload: PluginInsert) =>
     client.from('plugins').insert(payload).select('*').maybeSingle(),
   listAll: async (client: SupabaseClient) => {
-    const withPath = await client
+    return client
       .from('plugins')
-      .select('id,name,repo,path,editor_plugin,created_at,user_id,org_id')
+      .select('id,name,repo,editor_plugin,created_at,user_id,org_id')
       .order('created_at', { ascending: false });
-    if (!withPath.error) return withPath;
-
-    const msg = (withPath.error.message ?? '').toLowerCase();
-    if (msg.includes('path') && (msg.includes('does not exist') || msg.includes('could not find') || msg.includes('schema cache'))) {
-      return client
-        .from('plugins')
-        .select('id,name,repo,created_at,user_id,org_id')
-        .order('created_at', { ascending: false });
-    }
-    return withPath;
   },
   listByUserId: (client: SupabaseClient, userId: string) =>
     client.from('plugins').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
@@ -94,7 +81,7 @@ export const pluginsDto = {
 };
 
 export const pluginVersionsDto = {
-  insert: (client: SupabaseClient, payload: { plugin_id: string; major: number; minor: number; patch: number; release_tag: string }) =>
+  insert: (client: SupabaseClient, payload: { plugin_id: string; major: number; minor: number; patch: number; release_tag: string; asset_name: string }) =>
     client.from('plugin_versions').insert(payload).select('*').maybeSingle(),
   listByPluginIds: (client: SupabaseClient, pluginIds: string[]) =>
     client

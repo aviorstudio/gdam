@@ -99,7 +99,6 @@ if (Astro.request.method === 'POST') {
               const { error: profileError } = await profilesDto.upsert(supabase, {
                 id: userId,
                 name: usernameDisplay,
-                contact_email: pendingEmail,
               });
               if (profileError) {
                 status = profileError.message;
@@ -179,7 +178,6 @@ if (Astro.request.method === 'POST') {
               const { error: profileError } = await profilesDto.upsert(supabase, {
                 id: userId,
                 name: usernameDisplay,
-                contact_email: formEmail,
               });
               if (profileError) {
                 status = profileError.message;

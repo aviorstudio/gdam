@@ -8,8 +8,8 @@ import PluginList from '../components/PluginList.astro';
 import Input from '../components/Input.astro';
 import { getSessionFromCookies, hasAuthCookies } from '../lib/auth';
 import { orgsProfilesDto, pluginVersionsDto, pluginsDto, usernamesDto } from '../lib/dtoService';
-import { findGitHubReleaseTag, releaseTagCandidates } from '../lib/github';
-import { parseGitHubOwnerRepo, toGitHubTreeUrl, toRepoUrl } from '../lib/repo';
+import { findGitHubReleaseTag, releaseHasAsset, releaseTagCandidates } from '../lib/github';
+import { parseGitHubOwnerRepo, toRepoUrl } from '../lib/repo';
 import { formatSemverTripletFromNullable, parseSemverTriplet } from '../lib/semver';
 import { supabase } from '../lib/supabase';
 
@@ -27,7 +27,6 @@ type PluginRecord = {
   id: string;
   name: string | null;
   repo: string | null;
-  path: string | null;
   editor_plugin?: boolean | null;
   created_at: string | null;
 };
@@ -38,6 +37,7 @@ type PluginVersionRecord = {
   minor: number | null;
   patch: number | null;
   release_tag: string | null;
+  asset_name: string | null;
   created_at: string | null;
 };
 
@@ -51,25 +51,7 @@ const safeDecodeURIComponent = (value: string) => {
 
 const normalizeUsername = (value: string) => value.trim().toLowerCase();
 
-const normalizeRepoPath = (value: string) => {
-  const raw = value.trim();
-  if (!raw) return { path: '' };
-  if (raw.startsWith('/')) return { path: '', error: 'Path must be a relative path (no leading /).' };
-
-  const normalized = raw
-    .replace(/\\/g, '/')
-    .replace(/^\.\//, '')
-    .replace(/\/{2,}/g, '/')
-    .replace(/\/+$/, '');
-  if (!normalized) return { path: '' };
-
-  const parts = normalized.split('/').filter(Boolean);
-  if (parts.length === 0) return { path: '' };
-  if (parts.some((part) => part === '.' || part === '..')) return { path: '', error: 'Path cannot include . or ..' };
-  return { path: parts.join('/') };
-};
-
-const normalizeGitHubRepo = (repoInput: string, pathInput: string) => {
+const normalizeGitHubRepo = (repoInput: string) => {
   const normalizedRepo = toRepoUrl(repoInput);
   if (!normalizedRepo) return { repo: '', path: '', error: 'Repository is required.' };
 
@@ -95,19 +77,12 @@ const normalizeGitHubRepo = (repoInput: string, pathInput: string) => {
     extra = extra.slice(2);
   }
 
-  let path = pathInput.trim();
-  if (extra.length > 0) {
-    if (path) {
-      return { repo, path: '', error: 'Repository should be the repo root; put the folder path in Path.' };
-    }
-    path = extra.join('/');
-  }
+  if (extra.length > 0) return { repo, path: '', error: 'Repository should be the repo root.' };
 
-  const { path: normalizedPath, error: pathError } = normalizeRepoPath(path);
-  if (pathError) return { repo, path: normalizedPath, error: pathError };
-
-  return { repo, path: normalizedPath };
+  return { repo, path: '' };
 };
+
+const defaultAssetName = (owner: string, repo: string) => `@${owner}_${repo}.zip`;
 
 const usernameParamRaw = Astro.params.username ?? '';
 const usernameParam = safeDecodeURIComponent(usernameParamRaw);
@@ -130,9 +105,9 @@ let createTone: 'muted' | 'error' | 'success' = 'muted';
 
 let formName = '';
 let formRepo = '';
-let formPath = '';
 let formVersion = '';
 let formReleaseTag = '';
+let formAssetName = '';
 let formEditorPlugin = false;
 
 if (showCreatePluginDialog && !session) {
@@ -224,9 +199,9 @@ if (!usernameNormal) {
           const formData = await Astro.request.formData();
           formName = String(formData.get('name') ?? '').trim();
           formRepo = String(formData.get('repo') ?? '').trim();
-          formPath = String(formData.get('path') ?? '').trim();
           formVersion = String(formData.get('version') ?? '').trim();
           formReleaseTag = String(formData.get('release_tag') ?? '').trim();
+          formAssetName = String(formData.get('asset_name') ?? '').trim();
           formEditorPlugin = formData.get('editor_plugin') === 'on';
 
           if (!formName || !formRepo || !formVersion) {
@@ -238,13 +213,12 @@ if (!usernameNormal) {
               createStatus = 'Version must be in MAJOR.MINOR.PATCH format.';
               createTone = 'error';
             } else {
-              const normalized = normalizeGitHubRepo(formRepo, formPath);
+              const normalized = normalizeGitHubRepo(formRepo);
               if (normalized.error) {
                 createStatus = normalized.error;
                 createTone = 'error';
               } else {
                 formRepo = normalized.repo;
-                formPath = normalized.path;
 
                 const githubRepo = parseGitHubOwnerRepo(formRepo);
                 if (!githubRepo) {
@@ -261,39 +235,47 @@ if (!usernameNormal) {
                     createTone = 'error';
                   } else {
                     formReleaseTag = releaseLookup.tag;
+                    if (!formAssetName) formAssetName = defaultAssetName(githubRepo.owner, githubRepo.repo);
 
-                    const pluginOwnerPayload = ownerOrgId
-                      ? { user_id: null, org_id: ownerOrgId }
-                      : { user_id: ownerProfileId, org_id: null };
-
-                    const { data: createdPlugin, error: pluginError } = await pluginsDto.insert(supabase, {
-                      ...pluginOwnerPayload,
-                      name: formName,
-                      repo: formRepo,
-                      editor_plugin: formEditorPlugin,
-                      ...(formPath ? { path: formPath } : {}),
-                    });
-
-                    if (pluginError) {
-                      createStatus = pluginError.message;
-                      createTone = 'error';
-                    } else if (!createdPlugin?.id) {
-                      createStatus = 'Addon created but no id returned.';
+                    const assetLookup = await releaseHasAsset(githubRepo.owner, githubRepo.repo, formReleaseTag, formAssetName);
+                    if (!assetLookup.ok) {
+                      createStatus = assetLookup.error ?? 'Matching GitHub Release asset was not found.';
                       createTone = 'error';
                     } else {
-                      const { error: versionError } = await pluginVersionsDto.insert(supabase, {
-                        plugin_id: createdPlugin.id,
-                        major: versionTriplet.major,
-                        minor: versionTriplet.minor,
-                        patch: versionTriplet.patch,
-                        release_tag: formReleaseTag,
+
+                      const pluginOwnerPayload = ownerOrgId
+                        ? { user_id: null, org_id: ownerOrgId }
+                        : { user_id: ownerProfileId, org_id: null };
+
+                      const { data: createdPlugin, error: pluginError } = await pluginsDto.insert(supabase, {
+                        ...pluginOwnerPayload,
+                        name: formName,
+                        repo: formRepo,
+                        editor_plugin: formEditorPlugin,
                       });
 
-                      if (versionError) {
-                        createStatus = versionError.message;
+                      if (pluginError) {
+                        createStatus = pluginError.message;
+                        createTone = 'error';
+                      } else if (!createdPlugin?.id) {
+                        createStatus = 'Addon created but no id returned.';
                         createTone = 'error';
                       } else {
-                        return Astro.redirect(`/@${encodeURIComponent(usernameDisplay)}/${encodeURIComponent(formName)}`);
+                        const { error: versionError } = await pluginVersionsDto.insert(supabase, {
+                          plugin_id: createdPlugin.id,
+                          major: versionTriplet.major,
+                          minor: versionTriplet.minor,
+                          patch: versionTriplet.patch,
+                          release_tag: formReleaseTag,
+                          asset_name: formAssetName,
+                        });
+
+                        if (versionError) {
+                          createStatus = versionError.message;
+                          createTone = 'error';
+                        } else {
+                          return Astro.redirect(`/@${encodeURIComponent(usernameDisplay)}/${encodeURIComponent(formName)}`);
+                        }
                       }
                     }
                   }
@@ -343,7 +325,7 @@ if (!usernameNormal) {
           const latestRelease = latestReleaseByPluginId.get(plugin.id);
           const repoUrl = plugin.repo ? toRepoUrl(plugin.repo) : '';
           const versionLabel = latestRelease?.version ? latestRelease.version : 'No versions';
-          const treeUrl = latestRelease?.releaseTag ? toGitHubTreeUrl(repoUrl, latestRelease.releaseTag, plugin.path ?? undefined) : '';
+          const treeUrl = latestRelease?.releaseTag ? `${repoUrl}/releases/tag/${encodeURIComponent(latestRelease.releaseTag)}` : '';
 
           return {
             pluginLabel: pluginSlug || 'Untitled addon',
@@ -408,14 +390,6 @@ if (!usernameNormal) {
 	            required
 	          />
 
-	          <Input
-	            label="Path (optional)"
-	            name="path"
-	            placeholder="path/to/addon"
-	            type="text"
-	            value={formPath}
-	          />
-
             <label class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
               <input
                 class="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-600"
@@ -445,6 +419,14 @@ if (!usernameNormal) {
 	              placeholder="v0.1.0"
 	              type="text"
 	              value={formReleaseTag}
+	            />
+
+	            <Input
+	              label="Asset name"
+	              name="asset_name"
+	              placeholder="@owner_repo.zip"
+	              type="text"
+	              value={formAssetName}
 	            />
 	          </div>
 

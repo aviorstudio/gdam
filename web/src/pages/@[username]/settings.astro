@@ -72,19 +72,16 @@ let createOrgStatus = '';
 let createOrgTone: 'muted' | 'error' | 'success' = 'muted';
 let formOrgUsername = '';
 let formOrgName = '';
-let formOrgContactEmail = email;
 
 if (Astro.request.method === 'POST') {
   showCreateOrgDialog = true;
   const formData = await Astro.request.formData();
   formOrgUsername = String(formData.get('org_username') ?? '').trim();
   formOrgName = String(formData.get('org_name') ?? '').trim();
-  formOrgContactEmail = String(formData.get('contact_email') ?? '').trim() || email;
 
   const orgUsernameDisplay = formOrgUsername;
   const orgUsernameNormal = normalizeUsername(orgUsernameDisplay);
   const orgName = formOrgName || orgUsernameDisplay;
-  const orgContactEmail = formOrgContactEmail || email;
 
   if (!orgUsernameNormal) {
     createOrgStatus = 'Organization username is required.';
@@ -107,7 +104,6 @@ if (Astro.request.method === 'POST') {
     } else {
       const { data: createdOrg, error: orgError } = await orgsDto.insert(supabase, {
         name: orgName,
-        ...(orgContactEmail ? { contact_email: orgContactEmail } : {}),
       });
       if (orgError) {
         createOrgStatus = orgError.message;
@@ -227,15 +223,6 @@ if (Astro.request.method === 'POST') {
       />
 
       <Input label="Org name" name="org_name" placeholder="My Awesome Studio" type="text" value={formOrgName} />
-
-      <Input
-        label="Contact email"
-        name="contact_email"
-        placeholder="team@example.com"
-        type="email"
-        autocomplete="email"
-        value={formOrgContactEmail}
-      />
 
       <p
         class:list={{

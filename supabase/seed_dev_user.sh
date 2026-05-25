@@ -65,8 +65,7 @@ fi
 profile_payload="$(jq -cn \
   --arg id "$USER_ID" \
   --arg name "$DEV_NAME" \
-  --arg email "$DEV_EMAIL" \
-  '{id:$id,name:$name,contact_email:$email}')"
+  '{id:$id,name:$name}')"
 
 username_payload="$(jq -cn \
   --arg display "$DEV_USERNAME" \

@@ -74,7 +74,7 @@ upsert_plugin() {
     --arg name "$name" \
     --arg repo "$ADDON_REPO" \
     --argjson editor_plugin "$editor_plugin" \
-    '{user_id:$user_id,org_id:null,name:$name,repo:$repo,path:null,editor_plugin:$editor_plugin}')"
+    '{user_id:$user_id,org_id:null,name:$name,repo:$repo,editor_plugin:$editor_plugin}')"
   name_encoded="$(jq -rn --arg value "$name" '$value|@uri')"
   existing="$(api_get "$SUPABASE_URL/rest/v1/plugins?select=id&user_id=eq.$USER_ID&name=eq.$name_encoded&limit=1")"
   existing_id="$(jq -r '.[0].id // empty' <<<"$existing")"
@@ -89,15 +89,15 @@ upsert_plugin() {
 
 upsert_version() {
   local plugin_id="$1"
-  local sha="$2"
-  local release_tag="$3"
+  local release_tag="$2"
+  local asset_name="$3"
   local payload
 
   payload="$(jq -cn \
     --arg plugin_id "$plugin_id" \
-    --arg sha "$sha" \
     --arg release_tag "$release_tag" \
-    '{plugin_id:$plugin_id,major:0,minor:1,patch:0,sha:$sha,release_tag:$release_tag}')"
+    --arg asset_name "$asset_name" \
+    '{plugin_id:$plugin_id,major:0,minor:1,patch:0,release_tag:$release_tag,asset_name:$asset_name}')"
   api_upsert "$SUPABASE_URL/rest/v1/plugin_versions?on_conflict=plugin_id,major,minor,patch" "$payload" >/dev/null
 }
 
@@ -159,8 +159,8 @@ fi
 ADDON_SHA="$(git -C "$ADDON_DIR" rev-parse HEAD)"
 PLUGIN_ID="$(upsert_plugin "$ADDON_NAME" true)"
 RUNTIME_PLUGIN_ID="$(upsert_plugin "$RUNTIME_ADDON_NAME" false)"
-upsert_version "$PLUGIN_ID" "$ADDON_SHA" "$ADDON_SHA"
-upsert_version "$RUNTIME_PLUGIN_ID" "$ADDON_SHA" "$ADDON_SHA"
+upsert_version "$PLUGIN_ID" "$ADDON_SHA" "@aviorstudio_gdam-test-addon.zip"
+upsert_version "$RUNTIME_PLUGIN_ID" "$ADDON_SHA" "@aviorstudio_gdam-test-addon.zip"
 
 cd "$GODOT_DIR"
 "$ROOT_DIR/cli/bin/gdam" init

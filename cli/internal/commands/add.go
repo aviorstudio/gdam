@@ -64,8 +64,9 @@ func Add(ctx context.Context, opts AddOptions) error {
 	}
 
 	if isLinked {
-		existing.Repo = gdamdb.GitHubTreeURLWithPath(resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, resolved.GitHubSubdir)
+		existing.Repo = gdamdb.GitHubTreeURLWithPath(resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, "")
 		existing.Version = resolved.Version
+		existing.AssetName = resolved.AssetName
 		existing.EditorPlugin = resolved.EditorPlugin
 		m = manifest.UpsertPlugin(m, pkg.Name(), existing)
 		if err := manifest.Save(manifestPath, m); err != nil {
@@ -82,7 +83,7 @@ func Add(ctx context.Context, opts AddOptions) error {
 	defer os.RemoveAll(tmpDir)
 
 	gh := githubapi.NewClient(os.Getenv("GITHUB_TOKEN"))
-	pkgRootDir, err := prepareGitHubPackageRoot(ctx, gh, resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, resolved.GitHubSubdir, tmpDir)
+	pkgRootDir, err := prepareGitHubPackageRoot(ctx, gh, resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, resolved.AssetName, tmpDir)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
@@ -105,10 +106,7 @@ func Add(ctx context.Context, opts AddOptions) error {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	} else if !ok {
 		expected := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
-		if strings.TrimSpace(resolved.GitHubSubdir) != "" {
-			return fmt.Errorf("%w: package is missing plugin.cfg at %s in repository (expected to install it to %s)", ErrUserInput, resolved.GitHubSubdir, expected)
-		}
-		return fmt.Errorf("%w: package is missing plugin.cfg at repository root (expected to install it to %s)", ErrUserInput, expected)
+		return fmt.Errorf("%w: package is missing plugin.cfg in release asset %s (expected to install it to %s)", ErrUserInput, resolved.AssetName, expected)
 	}
 
 	dst := filepath.Join(localAddonsDir, addonDirName)
@@ -141,8 +139,9 @@ func Add(ctx context.Context, opts AddOptions) error {
 		link = existing.Link
 	}
 	m = manifest.UpsertPlugin(m, pkg.Name(), manifest.Plugin{
-		Repo:         gdamdb.GitHubTreeURLWithPath(resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, resolved.GitHubSubdir),
+		Repo:         gdamdb.GitHubTreeURLWithPath(resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, ""),
 		Version:      resolved.Version,
+		AssetName:    resolved.AssetName,
 		EditorPlugin: resolved.EditorPlugin,
 		Link:         link,
 	})

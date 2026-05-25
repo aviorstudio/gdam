@@ -50,3 +50,23 @@ export const findGitHubReleaseTag = async (owner: string, repo: string, tags: st
 
   return { tag: '', error: `No GitHub Release found for ${tags.join(' or ')}` };
 };
+
+export const releaseHasAsset = async (owner: string, repo: string, tag: string, assetName: string) => {
+  const releaseTag = tag.trim();
+  const expectedAsset = assetName.trim();
+  if (!releaseTag || !expectedAsset) return { ok: false, error: 'Release tag and asset name are required.' };
+  if (allowLocalReleaseFixtures()) return { ok: true };
+
+  const url = `${apiBaseUrl}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/releases/tags/${encodeURIComponent(releaseTag)}`;
+  const response = await fetch(url, { headers: githubHeaders() });
+  if (!response.ok) {
+    const body = await response.text();
+    return { ok: false, error: `GitHub release lookup failed (${response.status}): ${body.trim()}` };
+  }
+
+  const payload = await response.json();
+  const assets = Array.isArray(payload?.assets) ? payload.assets : [];
+  const found = assets.some((asset) => String(asset?.name ?? '').trim() === expectedAsset);
+  if (!found) return { ok: false, error: `GitHub Release ${releaseTag} is missing asset ${expectedAsset}.` };
+  return { ok: true };
+};
