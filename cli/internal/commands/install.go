@@ -141,18 +141,7 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			return err
 		}
 
-		zipPath := filepath.Join(pkgTmpDir, "repo.zip")
-		if err := gh.DownloadZipball(ctx, candidates[i].ghOwner, candidates[i].ghRepo, candidates[i].ref, zipPath); err != nil {
-			return err
-		}
-
-		extractDir := filepath.Join(pkgTmpDir, "extract")
-		rootDir, err := fsutil.ExtractZip(zipPath, extractDir)
-		if err != nil {
-			return err
-		}
-
-		pkgRootDir, err := repoSubdirRoot(rootDir, candidates[i].repoSubdir)
+		pkgRootDir, err := prepareGitHubPackageRoot(ctx, gh, candidates[i].ghOwner, candidates[i].ghRepo, candidates[i].ref, candidates[i].repoSubdir, pkgTmpDir)
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrUserInput, err)
 		}

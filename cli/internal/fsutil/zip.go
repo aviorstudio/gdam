@@ -10,14 +10,41 @@ import (
 )
 
 func ExtractZip(zipPath, destDir string) (string, error) {
-	r, err := zip.OpenReader(zipPath)
+	rootDir, singleRoot, err := extractZip(zipPath, destDir)
 	if err != nil {
 		return "", err
+	}
+	if !singleRoot {
+		return "", fmt.Errorf("unexpected zip layout (expected single root dir)")
+	}
+	if info, err := os.Stat(rootDir); err != nil {
+		return "", err
+	} else if !info.IsDir() {
+		return "", fmt.Errorf("unexpected zip layout (expected single root dir)")
+	}
+	return rootDir, nil
+}
+
+func ExtractZipAllowRootFiles(zipPath, destDir string) (string, error) {
+	rootDir, _, err := extractZip(zipPath, destDir)
+	if err != nil {
+		return "", err
+	}
+	if info, err := os.Stat(rootDir); err == nil && !info.IsDir() {
+		return destDir, nil
+	}
+	return rootDir, err
+}
+
+func extractZip(zipPath, destDir string) (string, bool, error) {
+	r, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return "", false, err
 	}
 	defer r.Close()
 
 	if err := os.MkdirAll(destDir, 0o755); err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	roots := map[string]struct{}{}
@@ -32,18 +59,18 @@ func ExtractZip(zipPath, destDir string) (string, error) {
 		roots[root] = struct{}{}
 
 		if err := extractZipFile(f, destDir); err != nil {
-			return "", err
+			return "", false, err
 		}
 	}
 
 	if len(roots) != 1 {
-		return "", fmt.Errorf("unexpected zip layout (expected single root dir, got %d)", len(roots))
+		return destDir, false, nil
 	}
 	var rootName string
 	for k := range roots {
 		rootName = k
 	}
-	return filepath.Join(destDir, rootName), nil
+	return filepath.Join(destDir, rootName), true, nil
 }
 
 func extractZipFile(f *zip.File, destDir string) error {

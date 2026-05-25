@@ -18,6 +18,8 @@ import (
 
 const apiBaseURL = "https://api.github.com"
 
+var ErrReleaseAssetNotFound = errors.New("release asset not found")
+
 type Client struct {
 	httpClient *http.Client
 	token      string
@@ -101,6 +103,89 @@ func (c *Client) DownloadZipball(ctx context.Context, owner, repo, sha, destPath
 
 	_, err = io.Copy(f, resp.Body)
 	return err
+}
+
+func (c *Client) DownloadReleaseAsset(ctx context.Context, owner, repo, tag, assetName, destPath string) error {
+	tag = strings.TrimSpace(tag)
+	assetName = strings.TrimSpace(assetName)
+	if tag == "" || assetName == "" {
+		return ErrReleaseAssetNotFound
+	}
+
+	assetURL, err := c.releaseAssetAPIURL(ctx, owner, repo, tag, assetName)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, assetURL, nil)
+	if err != nil {
+		return err
+	}
+	c.addHeaders(req)
+	req.Header.Set("Accept", "application/octet-stream")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return ErrReleaseAssetNotFound
+	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 8<<10))
+		return fmt.Errorf("github release asset download failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(msg)))
+	}
+
+	f, err := os.Create(destPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = io.Copy(f, resp.Body)
+	return err
+}
+
+func (c *Client) releaseAssetAPIURL(ctx context.Context, owner, repo, tag, assetName string) (string, error) {
+	u := apiBaseURL + "/repos/" + path.Join(owner, repo) + "/releases/tags/" + url.PathEscape(tag)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return "", err
+	}
+	c.addHeaders(req)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return "", ErrReleaseAssetNotFound
+	}
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 8<<10))
+		return "", fmt.Errorf("github release lookup failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(msg)))
+	}
+
+	var out struct {
+		Assets []struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"assets"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return "", err
+	}
+
+	for _, asset := range out.Assets {
+		if strings.TrimSpace(asset.Name) == assetName && strings.TrimSpace(asset.URL) != "" {
+			return strings.TrimSpace(asset.URL), nil
+		}
+	}
+	return "", ErrReleaseAssetNotFound
 }
 
 func (c *Client) latestVersionRef(ctx context.Context, owner, repo string) (string, error) {

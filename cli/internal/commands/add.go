@@ -81,19 +81,8 @@ func Add(ctx context.Context, opts AddOptions) error {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	zipPath := filepath.Join(tmpDir, "repo.zip")
 	gh := githubapi.NewClient(os.Getenv("GITHUB_TOKEN"))
-	if err := gh.DownloadZipball(ctx, resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, zipPath); err != nil {
-		return err
-	}
-
-	extractDir := filepath.Join(tmpDir, "extract")
-	rootDir, err := fsutil.ExtractZip(zipPath, extractDir)
-	if err != nil {
-		return err
-	}
-
-	pkgRootDir, err := repoSubdirRoot(rootDir, resolved.GitHubSubdir)
+	pkgRootDir, err := prepareGitHubPackageRoot(ctx, gh, resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, resolved.GitHubSubdir, tmpDir)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
