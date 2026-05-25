@@ -4,10 +4,10 @@ export const prerender = false;
 import RootLayout from '../layouts/RootLayout.astro';
 import Dialog from '../components/Dialog.astro';
 import Title from '../components/Title.astro';
-import PluginList from '../components/PluginList.astro';
+import AddonList from '../components/AddonList.astro';
 import Input from '../components/Input.astro';
 import { getSessionFromCookies, hasAuthCookies } from '../lib/auth';
-import { orgsProfilesDto, pluginVersionsDto, pluginsDto, usernamesDto } from '../lib/dtoService';
+import { orgsProfilesDto, addonVersionsDto, addonsDto, usernamesDto } from '../lib/dtoService';
 import { findGitHubReleaseTag, releaseHasAsset, releaseTagCandidates } from '../lib/github';
 import { parseGitHubOwnerRepo, toRepoUrl } from '../lib/repo';
 import { formatSemverTripletFromNullable, parseSemverTriplet } from '../lib/semver';
@@ -23,7 +23,7 @@ type OrgsProfileRecord = {
   admin: boolean | null;
 };
 
-type PluginRecord = {
+type AddonRecord = {
   id: string;
   name: string | null;
   repo: string | null;
@@ -31,8 +31,8 @@ type PluginRecord = {
   created_at: string | null;
 };
 
-type PluginVersionRecord = {
-  plugin_id: string;
+type AddonVersionRecord = {
+  addon_id: string;
   major: number | null;
   minor: number | null;
   patch: number | null;
@@ -98,8 +98,8 @@ let entitySlug = '';
 let githubUserUrl = '';
 let githubUserLabel = '';
 
-let canCreatePlugin = false;
-let showCreatePluginDialog = Astro.url.searchParams.get('create') === '1';
+let canCreateAddon = false;
+let showCreateAddonDialog = Astro.url.searchParams.get('create') === '1';
 let createStatus = '';
 let createTone: 'muted' | 'error' | 'success' = 'muted';
 
@@ -110,13 +110,13 @@ let formReleaseTag = '';
 let formAssetName = '';
 let formEditorPlugin = false;
 
-if (showCreatePluginDialog && !session) {
+if (showCreateAddonDialog && !session) {
   return Astro.redirect('/signin');
 }
 
-let publishedPlugins: Array<{
-  pluginLabel: string;
-  pluginHref?: string;
+let publishedAddons: Array<{
+  addonLabel: string;
+  addonHref?: string;
   metaLabel?: string;
   metaHref?: string;
   date: string;
@@ -171,16 +171,16 @@ if (!usernameNormal) {
         }
       }
 
-      canCreatePlugin = Boolean(
+      canCreateAddon = Boolean(
         (ownerProfileId && profileId && ownerProfileId === profileId) ||
         (ownerOrgId && canPublishForOrg)
       );
 
-      if (showCreatePluginDialog && !canCreatePlugin) {
+      if (showCreateAddonDialog && !canCreateAddon) {
         Astro.response.status = 403;
         pageTone = 'error';
         pageStatus = 'You do not have permission to publish addons for this account.';
-        showCreatePluginDialog = false;
+        showCreateAddonDialog = false;
       }
 
       if (Astro.request.method === 'POST') {
@@ -188,9 +188,9 @@ if (!usernameNormal) {
           return Astro.redirect('/signin');
         }
 
-        showCreatePluginDialog = true;
+        showCreateAddonDialog = true;
 
-        if (!canCreatePlugin) {
+        if (!canCreateAddon) {
           Astro.response.status = 403;
           pageTone = 'error';
           createStatus = 'You do not have permission to publish addons for this account.';
@@ -243,26 +243,26 @@ if (!usernameNormal) {
                       createTone = 'error';
                     } else {
 
-                      const pluginOwnerPayload = ownerOrgId
+                      const addonOwnerPayload = ownerOrgId
                         ? { user_id: null, org_id: ownerOrgId }
                         : { user_id: ownerProfileId, org_id: null };
 
-                      const { data: createdPlugin, error: pluginError } = await pluginsDto.insert(supabase, {
-                        ...pluginOwnerPayload,
+                      const { data: createdAddon, error: addonError } = await addonsDto.insert(supabase, {
+                        ...addonOwnerPayload,
                         name: formName,
                         repo: formRepo,
                         editor_plugin: formEditorPlugin,
                       });
 
-                      if (pluginError) {
-                        createStatus = pluginError.message;
+                      if (addonError) {
+                        createStatus = addonError.message;
                         createTone = 'error';
-                      } else if (!createdPlugin?.id) {
+                      } else if (!createdAddon?.id) {
                         createStatus = 'Addon created but no id returned.';
                         createTone = 'error';
                       } else {
-                        const { error: versionError } = await pluginVersionsDto.insert(supabase, {
-                          plugin_id: createdPlugin.id,
+                        const { error: versionError } = await addonVersionsDto.insert(supabase, {
+                          addon_id: createdAddon.id,
                           major: versionTriplet.major,
                           minor: versionTriplet.minor,
                           patch: versionTriplet.patch,
@@ -286,30 +286,30 @@ if (!usernameNormal) {
         }
       }
 
-      const { data: pluginsData, error: pluginsError } = ownerOrgId
-        ? await pluginsDto.listByOrgId(supabase, ownerOrgId)
-        : await pluginsDto.listByUserId(supabase, ownerProfileId ?? '');
+      const { data: addonsData, error: addonsError } = ownerOrgId
+        ? await addonsDto.listByOrgId(supabase, ownerOrgId)
+        : await addonsDto.listByUserId(supabase, ownerProfileId ?? '');
 
-      if (pluginsError) {
+      if (addonsError) {
         Astro.response.status = 500;
         pageTone = 'error';
-        pageStatus = pluginsError.message;
+        pageStatus = addonsError.message;
       } else {
-        const plugins = (pluginsData as PluginRecord[] | null) ?? [];
+        const addons = (addonsData as AddonRecord[] | null) ?? [];
 
-        const latestReleaseByPluginId = new Map<string, { version: string; releaseTag: string; createdAt: string }>();
-        if (plugins.length > 0) {
-          const pluginIds = plugins.map((plugin) => plugin.id);
-          const { data: versionRows, error: versionError } = await pluginVersionsDto.listByPluginIds(
+        const latestReleaseByAddonId = new Map<string, { version: string; releaseTag: string; createdAt: string }>();
+        if (addons.length > 0) {
+          const addonIds = addons.map((addon) => addon.id);
+          const { data: versionRows, error: versionError } = await addonVersionsDto.listByAddonIds(
             supabase,
-            pluginIds
+            addonIds
           );
           if (versionError) {
-            pageStatus = pageStatus || 'Unable to load plugin versions.';
+            pageStatus = pageStatus || 'Unable to load addon versions.';
           } else {
-            for (const row of (versionRows as PluginVersionRecord[] | null) ?? []) {
-              if (!latestReleaseByPluginId.has(row.plugin_id)) {
-                latestReleaseByPluginId.set(row.plugin_id, {
+            for (const row of (versionRows as AddonVersionRecord[] | null) ?? []) {
+              if (!latestReleaseByAddonId.has(row.addon_id)) {
+                latestReleaseByAddonId.set(row.addon_id, {
                   version: formatSemverTripletFromNullable(row),
                   releaseTag: row.release_tag ?? '',
                   createdAt: row.created_at ?? '',
@@ -319,20 +319,20 @@ if (!usernameNormal) {
           }
         }
 
-        publishedPlugins = plugins.map((plugin) => {
-          const pluginSlug = plugin.name ?? '';
-          const pluginHref = pluginSlug ? `/@${entitySlug}/${encodeURIComponent(pluginSlug)}` : undefined;
-          const latestRelease = latestReleaseByPluginId.get(plugin.id);
-          const repoUrl = plugin.repo ? toRepoUrl(plugin.repo) : '';
+        publishedAddons = addons.map((addon) => {
+          const addonSlug = addon.name ?? '';
+          const addonHref = addonSlug ? `/@${entitySlug}/${encodeURIComponent(addonSlug)}` : undefined;
+          const latestRelease = latestReleaseByAddonId.get(addon.id);
+          const repoUrl = addon.repo ? toRepoUrl(addon.repo) : '';
           const versionLabel = latestRelease?.version ? latestRelease.version : 'No versions';
           const treeUrl = latestRelease?.releaseTag ? `${repoUrl}/releases/tag/${encodeURIComponent(latestRelease.releaseTag)}` : '';
 
           return {
-            pluginLabel: pluginSlug || 'Untitled addon',
-            pluginHref,
+            addonLabel: addonSlug || 'Untitled addon',
+            addonHref,
             metaLabel: versionLabel,
             metaHref: treeUrl || undefined,
-            date: latestRelease?.createdAt || plugin.created_at || '',
+            date: latestRelease?.createdAt || addon.created_at || '',
           };
         });
       }
@@ -350,11 +350,11 @@ if (!usernameNormal) {
     subtitleLink={pageTone !== 'not-found' && githubUserUrl
       ? { href: githubUserUrl, label: githubUserLabel, external: true }
       : undefined}
-    action={canCreatePlugin && pageTone === 'default' ? { href: '?create=1', label: 'Create addon' } : undefined}
+    action={canCreateAddon && pageTone === 'default' ? { href: '?create=1', label: 'Create addon' } : undefined}
   />
 
-  <PluginList
-    items={publishedPlugins}
+  <AddonList
+    items={publishedAddons}
     status={pageStatus}
     tone={pageTone === 'error' ? 'error' : 'muted'}
     hideBodyWhenError
@@ -365,8 +365,8 @@ if (!usernameNormal) {
   />
 
   {
-    canCreatePlugin && (
-      <Dialog id="create-plugin-dialog" open={showCreatePluginDialog} title="Create an addon" size="lg">
+    canCreateAddon && (
+      <Dialog id="create-addon-dialog" open={showCreateAddonDialog} title="Create an addon" size="lg">
         <Fragment slot="description">
           Add an addon name, repository, and initial release.
         </Fragment>

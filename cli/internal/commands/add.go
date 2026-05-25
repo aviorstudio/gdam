@@ -58,7 +58,7 @@ func Add(ctx context.Context, opts AddOptions) error {
 
 	db := gdamdb.NewDefaultClient()
 
-	resolved, err := db.ResolvePlugin(ctx, pkg.Owner, pkg.Repo, pkg.Version)
+	resolved, err := db.ResolveAddon(ctx, pkg.Owner, pkg.Repo, pkg.Version)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
@@ -68,7 +68,7 @@ func Add(ctx context.Context, opts AddOptions) error {
 		existing.Version = resolved.Version
 		existing.AssetName = resolved.AssetName
 		existing.EditorPlugin = resolved.EditorPlugin
-		m = manifest.UpsertPlugin(m, pkg.Name(), existing)
+		m = manifest.UpsertAddon(m, pkg.Name(), existing)
 		if err := manifest.Save(manifestPath, m); err != nil {
 			return err
 		}
@@ -110,7 +110,7 @@ func Add(ctx context.Context, opts AddOptions) error {
 	}
 
 	dst := filepath.Join(localAddonsDir, addonDirName)
-	if manifest.HasPlugin(m, pkg.Name()) {
+	if manifest.HasAddon(m, pkg.Name()) {
 		if err := fsutil.RemoveAll(dst); err != nil {
 			return err
 		}
@@ -138,7 +138,7 @@ func Add(ctx context.Context, opts AddOptions) error {
 	if hasExisting {
 		link = existing.Link
 	}
-	m = manifest.UpsertPlugin(m, pkg.Name(), manifest.Plugin{
+	m = manifest.UpsertAddon(m, pkg.Name(), manifest.Addon{
 		Repo:         gdamdb.GitHubTreeURLWithPath(resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, ""),
 		Version:      resolved.Version,
 		AssetName:    resolved.AssetName,

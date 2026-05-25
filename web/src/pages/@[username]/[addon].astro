@@ -4,10 +4,10 @@ export const prerender = false;
 import RootLayout from '../../layouts/RootLayout.astro';
 import Dialog from '../../components/Dialog.astro';
 import Title from '../../components/Title.astro';
-import PluginList from '../../components/PluginList.astro';
+import AddonList from '../../components/AddonList.astro';
 import Input from '../../components/Input.astro';
 import { getSessionFromCookies, hasAuthCookies } from '../../lib/auth';
-import { orgsProfilesDto, pluginVersionsDto, pluginsDto, usernamesDto } from '../../lib/dtoService';
+import { orgsProfilesDto, addonVersionsDto, addonsDto, usernamesDto } from '../../lib/dtoService';
 import { findGitHubReleaseTag, releaseHasAsset, releaseTagCandidates } from '../../lib/github';
 import { parseGitHubOwnerRepo, toGitHubRepoRootUrl, toRepoUrl } from '../../lib/repo';
 import { formatSemverTripletFromNullable, parseSemverTriplet } from '../../lib/semver';
@@ -23,7 +23,7 @@ type OrgsProfileRecord = {
   admin: boolean | null;
 };
 
-type PluginRecord = {
+type AddonRecord = {
   id: string;
   name: string | null;
   repo: string | null;
@@ -31,8 +31,8 @@ type PluginRecord = {
   created_at: string | null;
 };
 
-type PluginVersionRecord = {
-  plugin_id: string | null;
+type AddonVersionRecord = {
+  addon_id: string | null;
   major: number | null;
   minor: number | null;
   patch: number | null;
@@ -55,8 +55,8 @@ const usernameParamRaw = Astro.params.username ?? '';
 const usernameParam = safeDecodeURIComponent(usernameParamRaw);
 const usernameNormal = normalizeUsername(usernameParam);
 
-const pluginParamRaw = Astro.params.plugin ?? '';
-const pluginName = safeDecodeURIComponent(pluginParamRaw).trim();
+const addonParamRaw = Astro.params.addon ?? '';
+const addonName = safeDecodeURIComponent(addonParamRaw).trim();
 
 const session = hasAuthCookies(Astro.cookies) ? await getSessionFromCookies(Astro.cookies) : null;
 const profileId = session?.user?.id ?? '';
@@ -79,7 +79,7 @@ if (showCreateReleaseDialog && !session) {
   return Astro.redirect('/signin');
 }
 
-let plugin: {
+let addon: {
   id: string;
   name: string;
   repo: string;
@@ -102,7 +102,7 @@ const notFound = () => {
   pageStatus = 'That addon could not be found.';
 };
 
-if (!usernameNormal || !pluginName) {
+if (!usernameNormal || !addonName) {
   notFound();
 } else {
   const { data: usernameRow, error: usernameError } = await usernamesDto.getByUsernameNormal(supabase, usernameNormal);
@@ -154,25 +154,25 @@ if (!usernameNormal || !pluginName) {
     } else if (!ownerProfileId && !ownerOrgId) {
       notFound();
     } else {
-      const { data: pluginRow, error: pluginError } = ownerOrgId
-        ? await pluginsDto.getByOrgIdAndName(supabase, ownerOrgId, pluginName)
-        : await pluginsDto.getByUserIdAndName(supabase, ownerProfileId ?? '', pluginName);
+      const { data: addonRow, error: addonError } = ownerOrgId
+        ? await addonsDto.getByOrgIdAndName(supabase, ownerOrgId, addonName)
+        : await addonsDto.getByUserIdAndName(supabase, ownerProfileId ?? '', addonName);
 
-      if (pluginError) {
+      if (addonError) {
         Astro.response.status = 500;
         pageTone = 'error';
-        pageStatus = pluginError.message;
-      } else if (!pluginRow) {
+        pageStatus = addonError.message;
+      } else if (!addonRow) {
         notFound();
       } else {
-        const pluginRecord = pluginRow as PluginRecord;
+        const addonRecord = addonRow as AddonRecord;
 
-        plugin = {
-          id: pluginRecord.id,
-          name: pluginRecord.name ?? pluginName,
-          repo: pluginRecord.repo ?? '',
-          editorPlugin: Boolean(pluginRecord.editor_plugin),
-          createdAt: pluginRecord.created_at ?? '',
+        addon = {
+          id: addonRecord.id,
+          name: addonRecord.name ?? addonName,
+          repo: addonRecord.repo ?? '',
+          editorPlugin: Boolean(addonRecord.editor_plugin),
+          createdAt: addonRecord.created_at ?? '',
         };
 
         if (Astro.request.method === 'POST') {
@@ -202,7 +202,7 @@ if (!usernameNormal || !pluginName) {
                 createStatus = 'Version must be in MAJOR.MINOR.PATCH format.';
                 createTone = 'error';
               } else {
-                const githubRepo = parseGitHubOwnerRepo(plugin.repo);
+                const githubRepo = parseGitHubOwnerRepo(addon.repo);
                 if (!githubRepo) {
                   createStatus = 'Only GitHub repositories are supported (github.com/owner/repo).';
                   createTone = 'error';
@@ -223,8 +223,8 @@ if (!usernameNormal || !pluginName) {
                       createStatus = assetLookup.error ?? 'Matching GitHub Release asset was not found.';
                       createTone = 'error';
                     } else {
-                      const { error: versionError } = await pluginVersionsDto.insert(supabase, {
-                        plugin_id: plugin.id,
+                      const { error: versionError } = await addonVersionsDto.insert(supabase, {
+                        addon_id: addon.id,
                         major: versionTriplet.major,
                         minor: versionTriplet.minor,
                         patch: versionTriplet.patch,
@@ -246,13 +246,13 @@ if (!usernameNormal || !pluginName) {
           }
         }
 
-        const { data: versionRows, error: versionError } = await pluginVersionsDto.listByPluginId(supabase, plugin.id);
+        const { data: versionRows, error: versionError } = await addonVersionsDto.listByAddonId(supabase, addon.id);
         if (versionError) {
           Astro.response.status = 500;
           pageTone = 'error';
           pageStatus = versionError.message;
         } else {
-          versions = ((versionRows as PluginVersionRecord[] | null) ?? [])
+          versions = ((versionRows as AddonVersionRecord[] | null) ?? [])
             .map((row) => ({
               version: formatSemverTripletFromNullable(row),
               releaseTag: row.release_tag ?? '',
@@ -266,11 +266,11 @@ if (!usernameNormal || !pluginName) {
 }
 
 const ownerPath = `/@${ownerSlug}`;
-const repoUrl = plugin?.repo ? toGitHubRepoRootUrl(plugin.repo) || toRepoUrl(plugin.repo) : '';
+const repoUrl = addon?.repo ? toGitHubRepoRootUrl(addon.repo) || toRepoUrl(addon.repo) : '';
 const repoLabel = repoUrl ? repoUrl.replace(/^https?:\/\//i, '') : '';
 const versionList = versions.map((version) => ({
-  pluginLabel: version.version || 'Unknown version',
-  pluginHref: version.releaseTag ? `${repoUrl}/releases/tag/${encodeURIComponent(version.releaseTag)}` : undefined,
+  addonLabel: version.version || 'Unknown version',
+  addonHref: version.releaseTag ? `${repoUrl}/releases/tag/${encodeURIComponent(version.releaseTag)}` : undefined,
   date: version.createdAt,
 }));
 ---
@@ -281,19 +281,19 @@ const versionList = versions.map((version) => ({
     titleParts={pageTone !== 'not-found'
       ? [
           { label: ownerLabel || `@${usernameParam}`, href: ownerPath },
-          { label: plugin?.name || pluginName },
+          { label: addon?.name || addonName },
         ]
       : undefined}
     subtitle={pageTone === 'not-found'
       ? 'No addon matches that URL.'
-      : repoUrl ? (plugin?.editorPlugin ? 'Editor plugin' : 'Runtime addon') : 'No repository linked.'}
+      : repoUrl ? (addon?.editorPlugin ? 'Editor plugin' : 'Runtime addon') : 'No repository linked.'}
     subtitleLink={pageTone !== 'not-found' && repoUrl
-      ? { href: repoUrl, label: repoLabel || plugin?.repo || repoUrl, external: true }
+      ? { href: repoUrl, label: repoLabel || addon?.repo || repoUrl, external: true }
       : undefined}
     action={canCreateRelease && pageTone === 'default' ? { href: '?create=1', label: 'Create release' } : undefined}
   />
 
-  <PluginList
+  <AddonList
     items={versionList}
     status={pageStatus}
     tone={pageTone === 'error' ? 'error' : 'muted'}
@@ -301,7 +301,7 @@ const versionList = versions.map((version) => ({
     emptyTitle={pageTone === 'not-found' ? 'No matching addon' : 'No versions yet'}
     emptySubtitle={pageTone === 'not-found'
       ? 'Double-check the URL and try again.'
-      : 'This plugin has not published any versions.'}
+      : 'This addon has not published any versions.'}
   />
 
   {

@@ -3,7 +3,7 @@ export const prerender = false;
 
 import RootLayout from '../../layouts/RootLayout.astro';
 import Title from '../../components/Title.astro';
-import PluginList from '../../components/PluginList.astro';
+import AddonList from '../../components/AddonList.astro';
 import { getSessionFromCookies } from '../../lib/auth';
 import { orgsProfilesDto, usernamesDto } from '../../lib/dtoService';
 import { supabase } from '../../lib/supabase';
@@ -61,8 +61,8 @@ const usernameDisplay = usernameRecord.username_display || usernameParam;
 let status = '';
 let tone: 'muted' | 'error' = 'muted';
 let orgItems: Array<{
-  pluginLabel: string;
-  pluginHref?: string;
+  addonLabel: string;
+  addonHref?: string;
   metaLabel?: string;
   date?: string;
 }> = [];
@@ -99,8 +99,8 @@ if (membershipError) {
       const orgLabel = orgUsername ? `@${orgUsername}` : orgId;
       const orgHref = orgUsername ? `/@${encodeURIComponent(orgUsername)}` : undefined;
       return {
-        pluginLabel: orgLabel,
-        pluginHref: orgHref,
+        addonLabel: orgLabel,
+        addonHref: orgHref,
         metaLabel: membership.admin ? 'Admin' : 'Member',
         date: membership.created_at ?? undefined,
       };
@@ -111,7 +111,7 @@ if (membershipError) {
 <RootLayout>
   <Title title="Orgs" subtitle={`Organizations for @${usernameDisplay}.`} />
 
-  <PluginList
+  <AddonList
     items={orgItems}
     status={status}
     tone={tone}

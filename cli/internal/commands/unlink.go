@@ -54,11 +54,11 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 	}
 	pluginKey := pkg.Name()
 
-	plugin, ok := m.Addons[pluginKey]
+	addon, ok := m.Addons[pluginKey]
 	if !ok {
 		return fmt.Errorf("%w: addon not found in gdam.json: %s", ErrUserInput, pluginKey)
 	}
-	if !pluginLinkEnabled(plugin) {
+	if !pluginLinkEnabled(addon) {
 		return fmt.Errorf("%w: addon is not linked: %s", ErrUserInput, pluginKey)
 	}
 
@@ -68,18 +68,18 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 	}
 	dst := filepath.Join(projectDir, "addons", addonDirName)
 
-	linkedAbs, err := pluginAbsPath(projectDir, pluginLinkPath(plugin))
+	linkedAbs, err := pluginAbsPath(projectDir, pluginLinkPath(addon))
 	if err != nil {
 		return err
 	}
 
-	if plugin.Link != nil {
-		plugin.Link.Enabled = false
+	if addon.Link != nil {
+		addon.Link.Enabled = false
 	}
 
-	if strings.TrimSpace(plugin.Repo) == "" {
+	if strings.TrimSpace(addon.Repo) == "" {
 		projectGodotPath := filepath.Join(projectDir, "project.godot")
-		if plugin.EditorPlugin {
+		if addon.EditorPlugin {
 			if _, err := os.Stat(projectGodotPath); err == nil {
 				pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
 				if linkedAbs != "" {
@@ -103,7 +103,7 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 			return err
 		}
 
-		m = manifest.UpsertPlugin(m, pluginKey, plugin)
+		m = manifest.UpsertAddon(m, pluginKey, addon)
 		if err := manifest.Save(manifestPath, m); err != nil {
 			return err
 		}
@@ -111,7 +111,7 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 		return nil
 	}
 
-	ghOwner, ghRepo, ref, repoSubdir, err := gdamdb.ParseGitHubTreeURLWithPath(plugin.Repo)
+	ghOwner, ghRepo, ref, repoSubdir, err := gdamdb.ParseGitHubTreeURLWithPath(addon.Repo)
 	if err != nil {
 		return err
 	}
@@ -170,13 +170,13 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 		return fmt.Errorf("%w: installed addon is missing plugin.cfg at %s", ErrUserInput, filepath.Join(dst, "plugin.cfg"))
 	}
 
-	m = manifest.UpsertPlugin(m, pluginKey, plugin)
+	m = manifest.UpsertAddon(m, pluginKey, addon)
 	if err := manifest.Save(manifestPath, m); err != nil {
 		return err
 	}
 
 	projectGodotPath := filepath.Join(projectDir, "project.godot")
-	if plugin.EditorPlugin {
+	if addon.EditorPlugin {
 		if _, err := os.Stat(projectGodotPath); err == nil {
 			pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
 			if linkedAbs != "" {

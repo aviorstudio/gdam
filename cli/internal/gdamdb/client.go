@@ -111,7 +111,7 @@ func NewClient(baseURL, apiKey string) *Client {
 	}
 }
 
-type ResolvedPlugin struct {
+type ResolvedAddon struct {
 	Name string
 	Repo string
 
@@ -125,49 +125,49 @@ type ResolvedPlugin struct {
 	EditorPlugin bool
 }
 
-func (c *Client) ResolvePlugin(ctx context.Context, username, plugin, requestedVersion string) (ResolvedPlugin, error) {
+func (c *Client) ResolveAddon(ctx context.Context, username, addon, requestedVersion string) (ResolvedAddon, error) {
 	usernameNormal := strings.ToLower(strings.TrimSpace(username))
-	pluginName := strings.TrimSpace(plugin)
-	if usernameNormal == "" || pluginName == "" {
-		return ResolvedPlugin{}, fmt.Errorf("invalid addon spec")
+	addonName := strings.TrimSpace(addon)
+	if usernameNormal == "" || addonName == "" {
+		return ResolvedAddon{}, fmt.Errorf("invalid addon spec")
 	}
 
 	userRow, ok, err := c.getUsernameByNormal(ctx, usernameNormal)
 	if err != nil {
-		return ResolvedPlugin{}, err
+		return ResolvedAddon{}, err
 	}
 	if !ok {
-		return ResolvedPlugin{}, fmt.Errorf("owner not found: @%s", usernameNormal)
+		return ResolvedAddon{}, fmt.Errorf("owner not found: @%s", usernameNormal)
 	}
 	if userRow.UserID != nil && userRow.OrgID != nil {
-		return ResolvedPlugin{}, fmt.Errorf("username is assigned to multiple owners: @%s", usernameNormal)
+		return ResolvedAddon{}, fmt.Errorf("username is assigned to multiple owners: @%s", usernameNormal)
 	}
 	if userRow.UserID == nil && userRow.OrgID == nil {
-		return ResolvedPlugin{}, fmt.Errorf("owner not found: @%s", usernameNormal)
+		return ResolvedAddon{}, fmt.Errorf("owner not found: @%s", usernameNormal)
 	}
 
-	pluginRow, ok, err := c.getPluginByOwnerAndName(ctx, userRow.UserID, userRow.OrgID, pluginName)
+	addonRow, ok, err := c.getAddonByOwnerAndName(ctx, userRow.UserID, userRow.OrgID, addonName)
 	if err != nil {
-		return ResolvedPlugin{}, err
+		return ResolvedAddon{}, err
 	}
 	if !ok {
-		return ResolvedPlugin{}, fmt.Errorf("addon not found: @%s/%s", usernameNormal, pluginName)
+		return ResolvedAddon{}, fmt.Errorf("addon not found: @%s/%s", usernameNormal, addonName)
 	}
-	if strings.TrimSpace(pluginRow.Repo) == "" {
-		return ResolvedPlugin{}, fmt.Errorf("addon has no repository set: @%s/%s", usernameNormal, pluginName)
+	if strings.TrimSpace(addonRow.Repo) == "" {
+		return ResolvedAddon{}, fmt.Errorf("addon has no repository set: @%s/%s", usernameNormal, addonName)
 	}
 
-	versionRows, err := c.listPluginVersions(ctx, pluginRow.ID)
+	versionRows, err := c.listAddonVersions(ctx, addonRow.ID)
 	if err != nil {
-		return ResolvedPlugin{}, err
+		return ResolvedAddon{}, err
 	}
 	selected, ok := selectVersion(versionRows, requestedVersion)
 	if !ok {
-		return ResolvedPlugin{}, fmt.Errorf("version not found: %s", requestedVersion)
+		return ResolvedAddon{}, fmt.Errorf("version not found: %s", requestedVersion)
 	}
 	releaseTag := strings.TrimSpace(selected.ReleaseTag)
 	if releaseTag == "" {
-		return ResolvedPlugin{}, fmt.Errorf(
+		return ResolvedAddon{}, fmt.Errorf(
 			"selected version has no release tag: %d.%d.%d",
 			selected.Major,
 			selected.Minor,
@@ -176,7 +176,7 @@ func (c *Client) ResolvePlugin(ctx context.Context, username, plugin, requestedV
 	}
 	assetName := strings.TrimSpace(selected.AssetName)
 	if assetName == "" {
-		return ResolvedPlugin{}, fmt.Errorf(
+		return ResolvedAddon{}, fmt.Errorf(
 			"selected version has no release asset name: %d.%d.%d",
 			selected.Major,
 			selected.Minor,
@@ -184,20 +184,20 @@ func (c *Client) ResolvePlugin(ctx context.Context, username, plugin, requestedV
 		)
 	}
 
-	ghOwner, ghRepo, _, err := ParseGitHubRepoURL(pluginRow.Repo)
+	ghOwner, ghRepo, _, err := ParseGitHubRepoURL(addonRow.Repo)
 	if err != nil {
-		return ResolvedPlugin{}, err
+		return ResolvedAddon{}, err
 	}
 
-	return ResolvedPlugin{
-		Name:         "@" + usernameNormal + "/" + pluginName,
-		Repo:         pluginRow.Repo,
+	return ResolvedAddon{
+		Name:         "@" + usernameNormal + "/" + addonName,
+		Repo:         addonRow.Repo,
 		GitHubOwner:  ghOwner,
 		GitHubRepo:   ghRepo,
 		Version:      fmt.Sprintf("%d.%d.%d", selected.Major, selected.Minor, selected.Patch),
 		ReleaseTag:   releaseTag,
 		AssetName:    assetName,
-		EditorPlugin: pluginRow.EditorPlugin != nil && *pluginRow.EditorPlugin,
+		EditorPlugin: addonRow.EditorPlugin != nil && *addonRow.EditorPlugin,
 	}, nil
 }
 
@@ -207,7 +207,7 @@ type usernameRow struct {
 	OrgID           *string `json:"org_id"`
 }
 
-type pluginRow struct {
+type addonRow struct {
 	ID           string  `json:"id"`
 	Name         *string `json:"name"`
 	Repo         string  `json:"repo"`
@@ -218,7 +218,7 @@ type pluginRow struct {
 }
 
 type versionRow struct {
-	PluginID   *string `json:"plugin_id"`
+	AddonID    *string `json:"addon_id"`
 	Major      int     `json:"major"`
 	Minor      int     `json:"minor"`
 	Patch      int     `json:"patch"`
@@ -246,10 +246,10 @@ func (c *Client) getUsernameByNormal(ctx context.Context, usernameNormal string)
 	return rows[0], true, nil
 }
 
-func (c *Client) getPluginByOwnerAndName(ctx context.Context, userID, orgID *string, pluginName string) (pluginRow, bool, error) {
+func (c *Client) getAddonByOwnerAndName(ctx context.Context, userID, orgID *string, addonName string) (addonRow, bool, error) {
 	q := url.Values{}
 	q.Set("select", "id,name,repo,editor_plugin,created_at,user_id,org_id")
-	q.Set("name", "eq."+pluginName)
+	q.Set("name", "eq."+addonName)
 	q.Set("limit", "2")
 
 	if orgID != nil && strings.TrimSpace(*orgID) != "" {
@@ -257,36 +257,36 @@ func (c *Client) getPluginByOwnerAndName(ctx context.Context, userID, orgID *str
 	} else if userID != nil && strings.TrimSpace(*userID) != "" {
 		q.Set("user_id", "eq."+strings.TrimSpace(*userID))
 	} else {
-		return pluginRow{}, false, fmt.Errorf("owner has no id")
+		return addonRow{}, false, fmt.Errorf("owner has no id")
 	}
 
-	var rows []pluginRow
-	if err := c.get(ctx, "plugins", q, &rows); err != nil {
-		return pluginRow{}, false, err
+	var rows []addonRow
+	if err := c.get(ctx, "addons", q, &rows); err != nil {
+		return addonRow{}, false, err
 	}
 	if len(rows) == 0 {
-		return pluginRow{}, false, nil
+		return addonRow{}, false, nil
 	}
 	if len(rows) > 1 {
-		return pluginRow{}, false, fmt.Errorf("addon is not unique: %s", pluginName)
+		return addonRow{}, false, fmt.Errorf("addon is not unique: %s", addonName)
 	}
 	return rows[0], true, nil
 }
 
-func (c *Client) listPluginVersions(ctx context.Context, pluginID string) ([]versionRow, error) {
-	pluginID = strings.TrimSpace(pluginID)
-	if pluginID == "" {
-		return nil, fmt.Errorf("missing plugin id")
+func (c *Client) listAddonVersions(ctx context.Context, addonID string) ([]versionRow, error) {
+	addonID = strings.TrimSpace(addonID)
+	if addonID == "" {
+		return nil, fmt.Errorf("missing addon id")
 	}
 
 	q := url.Values{}
-	q.Set("select", "plugin_id,major,minor,patch,release_tag,asset_name,created_at")
-	q.Set("plugin_id", "eq."+pluginID)
+	q.Set("select", "addon_id,major,minor,patch,release_tag,asset_name,created_at")
+	q.Set("addon_id", "eq."+addonID)
 	q.Set("order", "major.desc,minor.desc,patch.desc,created_at.desc")
 	q.Set("limit", "100")
 
 	var rows []versionRow
-	if err := c.get(ctx, "plugin_versions", q, &rows); err != nil {
+	if err := c.get(ctx, "addon_versions", q, &rows); err != nil {
 		return nil, err
 	}
 	if rows == nil {

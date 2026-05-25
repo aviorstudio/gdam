@@ -27,13 +27,13 @@ func TestLink_ReplacesLegacyEditorPluginEntryForSameLocalPath(t *testing.T) {
 	}
 
 	m := manifest.New()
-	m = manifest.UpsertPlugin(m, "@local_plugin", manifest.Plugin{
+	m = manifest.UpsertAddon(m, "@local_plugin", manifest.Addon{
 		Link: &manifest.Link{
 			Enabled: true,
 			Path:    pluginDir,
 		},
 	})
-	m = manifest.UpsertPlugin(m, "@user/plugin", manifest.Plugin{EditorPlugin: true})
+	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{EditorPlugin: true})
 	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestLink_ReplacesLegacyEditorPluginEntryForSameLocalPath(t *testing.T) {
 	}
 
 	if err := Link(context.Background(), LinkOptions{
-		Spec: "@user/plugin",
+		Spec: "@user/addon",
 		Path: pluginDir,
 	}); err != nil {
 		t.Fatalf("link: %v", err)
@@ -74,7 +74,7 @@ func TestLink_ReplacesLegacyEditorPluginEntryForSameLocalPath(t *testing.T) {
 	if !strings.Contains(out, "res://addons/other/plugin.cfg") {
 		t.Fatalf("expected unrelated enabled entry retained, got:\n%s", out)
 	}
-	if !strings.Contains(out, "res://addons/@user_plugin/plugin.cfg") {
+	if !strings.Contains(out, "res://addons/@user_addon/plugin.cfg") {
 		t.Fatalf("expected new enabled entry added, got:\n%s", out)
 	}
 }
@@ -99,7 +99,7 @@ func TestLink_OverwritesExistingAddonsDirWhenNotInManifest(t *testing.T) {
 		t.Fatalf("write gdam.json: %v", err)
 	}
 
-	addonDirName, err := addonDirNameForPluginKey("@user/plugin")
+	addonDirName, err := addonDirNameForPluginKey("@user/addon")
 	if err != nil {
 		t.Fatalf("addonDirNameForPluginKey: %v", err)
 	}
@@ -123,7 +123,7 @@ func TestLink_OverwritesExistingAddonsDirWhenNotInManifest(t *testing.T) {
 	}
 
 	if err := Link(context.Background(), LinkOptions{
-		Spec: "@user/plugin",
+		Spec: "@user/addon",
 		Path: pluginDir,
 	}); err != nil {
 		t.Fatalf("link: %v", err)
@@ -140,7 +140,7 @@ func TestLink_OverwritesExistingAddonsDirWhenNotInManifest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read gdam.json: %v", err)
 	}
-	if _, ok := m2.Addons["@user/plugin"]; !ok {
+	if _, ok := m2.Addons["@user/addon"]; !ok {
 		t.Fatalf("expected addon entry to exist in gdam.json")
 	}
 
@@ -157,9 +157,9 @@ func TestLink_OverwritesExistingAddonsDirWhenNotInManifest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read gdam.link.json: %v", err)
 	}
-	link, ok := lm.Addons["@user/plugin"]
+	link, ok := lm.Addons["@user/addon"]
 	if !ok {
-		t.Fatalf("expected gdam.link.json entry for @user/plugin")
+		t.Fatalf("expected gdam.link.json entry for @user/addon")
 	}
 	if got := link.Path; got != pluginDir {
 		t.Fatalf("expected gdam.link.json path %q, got %q", pluginDir, got)
@@ -181,7 +181,7 @@ func TestLink_DisablesLegacyEditorPluginEntryDerivedFromPath(t *testing.T) {
 	}
 
 	m := manifest.New()
-	m = manifest.UpsertPlugin(m, "@aviorstudio/gd-playwright", manifest.Plugin{EditorPlugin: true})
+	m = manifest.UpsertAddon(m, "@aviorstudio/gd-playwright", manifest.Addon{EditorPlugin: true})
 	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}
@@ -246,7 +246,7 @@ func TestLink_UsesStoredPathWhenNoPathProvided(t *testing.T) {
 	}
 
 	m := manifest.New()
-	m = manifest.UpsertPlugin(m, "@user/plugin", manifest.Plugin{
+	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{
 		Link: &manifest.Link{
 			Enabled: false,
 			Path:    pluginDir,
@@ -268,12 +268,12 @@ func TestLink_UsesStoredPathWhenNoPathProvided(t *testing.T) {
 	}
 
 	if err := Link(context.Background(), LinkOptions{
-		Spec: "@user/plugin",
+		Spec: "@user/addon",
 	}); err != nil {
 		t.Fatalf("link: %v", err)
 	}
 
-	addonDirName, err := addonDirNameForPluginKey("@user/plugin")
+	addonDirName, err := addonDirNameForPluginKey("@user/addon")
 	if err != nil {
 		t.Fatalf("addonDirNameForPluginKey: %v", err)
 	}
@@ -300,7 +300,7 @@ func TestLink_UsesStoredPathWhenNoPathProvided(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read gdam.json: %v", err)
 	}
-	if _, ok := m2.Addons["@user/plugin"]; !ok {
+	if _, ok := m2.Addons["@user/addon"]; !ok {
 		t.Fatalf("expected addon entry to exist in gdam.json")
 	}
 
@@ -317,9 +317,9 @@ func TestLink_UsesStoredPathWhenNoPathProvided(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read gdam.link.json: %v", err)
 	}
-	link, ok := lm.Addons["@user/plugin"]
+	link, ok := lm.Addons["@user/addon"]
 	if !ok {
-		t.Fatalf("expected gdam.link.json entry for @user/plugin")
+		t.Fatalf("expected gdam.link.json entry for @user/addon")
 	}
 	if got := link.Path; got != pluginDir {
 		t.Fatalf("expected gdam.link.json path %q, got %q", pluginDir, got)
@@ -333,7 +333,7 @@ func TestLink_RequiresPathWhenNoStoredPath(t *testing.T) {
 	projectDir := t.TempDir()
 
 	m := manifest.New()
-	m = manifest.UpsertPlugin(m, "@user/plugin", manifest.Plugin{
+	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{
 		Link: &manifest.Link{
 			Enabled: false,
 		},
@@ -354,7 +354,7 @@ func TestLink_RequiresPathWhenNoStoredPath(t *testing.T) {
 	}
 
 	if err := Link(context.Background(), LinkOptions{
-		Spec: "@user/plugin",
+		Spec: "@user/addon",
 	}); err == nil {
 		t.Fatalf("expected error")
 	}

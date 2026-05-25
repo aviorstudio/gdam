@@ -33,8 +33,8 @@ func UnlinkAll(ctx context.Context, opts UnlinkAllOptions) error {
 	}
 
 	pluginKeys := make([]string, 0, len(m.Addons))
-	for key, plugin := range m.Addons {
-		if !pluginLinkEnabled(plugin) {
+	for key, addon := range m.Addons {
+		if !pluginLinkEnabled(addon) {
 			continue
 		}
 		pluginKeys = append(pluginKeys, key)

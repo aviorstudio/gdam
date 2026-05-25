@@ -12,12 +12,12 @@ func TestSave_DoesNotWriteSchemaVersion(t *testing.T) {
 	p := filepath.Join(dir, "gdam.json")
 
 	m := New()
-	m = UpsertPlugin(m, "@user/plugin", Plugin{
+	m = UpsertAddon(m, "@user/addon", Addon{
 		Repo:    "https://example.com",
 		Version: "1.2.3",
 		Link: &Link{
 			Enabled: true,
-			Path:    "~/dev/plugin",
+			Path:    "~/dev/addon",
 		},
 	})
 
@@ -38,10 +38,10 @@ func TestLoadAndSave_PreservesAssetName(t *testing.T) {
 	p := filepath.Join(dir, "gdam.json")
 
 	m := New()
-	m = UpsertPlugin(m, "@user/plugin", Plugin{
+	m = UpsertAddon(m, "@user/addon", Addon{
 		Repo:      "https://example.com",
 		Version:   "1.2.3",
-		AssetName: "plugin-release.zip",
+		AssetName: "addon-release.zip",
 	})
 
 	if err := Save(p, m); err != nil {
@@ -52,15 +52,15 @@ func TestLoadAndSave_PreservesAssetName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if got := loaded.Addons["@user/plugin"].AssetName; got != "plugin-release.zip" {
-		t.Fatalf("expected asset name plugin-release.zip, got %q", got)
+	if got := loaded.Addons["@user/addon"].AssetName; got != "addon-release.zip" {
+		t.Fatalf("expected asset name addon-release.zip, got %q", got)
 	}
 }
 
 func TestLoad_RejectsLinkInGdamJSON(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "gdam.json")
-	if err := os.WriteFile(p, []byte(`{"addons":{"@user/plugin":{"repo":"https://example.com","version":"1.2.3","link":{"enabled":true,"path":"~/dev/plugin"}}}}`), 0o644); err != nil {
+	if err := os.WriteFile(p, []byte(`{"addons":{"@user/addon":{"repo":"https://example.com","version":"1.2.3","link":{"enabled":true,"path":"~/dev/addon"}}}}`), 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 
@@ -86,7 +86,7 @@ func TestLoad_RejectsSchemaVersion(t *testing.T) {
 func TestLoad_RejectsLegacyPathField(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "gdam.json")
-	if err := os.WriteFile(p, []byte(`{"addons":{"@user/plugin":{"repo":"https://example.com","version":"1.2.3","path":"~/dev/plugin"}}}`), 0o644); err != nil {
+	if err := os.WriteFile(p, []byte(`{"addons":{"@user/addon":{"repo":"https://example.com","version":"1.2.3","path":"~/dev/addon"}}}`), 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 
@@ -98,7 +98,7 @@ func TestLoad_RejectsLegacyPathField(t *testing.T) {
 func TestLoadLinkManifest_RejectsUnknownLinkField(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, LinkFilename)
-	if err := os.WriteFile(p, []byte(`{"addons":{"@user/plugin":{"enabled":true,"path":"~/dev/plugin","extra":true}}}`), 0o644); err != nil {
+	if err := os.WriteFile(p, []byte(`{"addons":{"@user/addon":{"enabled":true,"path":"~/dev/addon","extra":true}}}`), 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 
@@ -110,7 +110,7 @@ func TestLoadLinkManifest_RejectsUnknownLinkField(t *testing.T) {
 func TestLoadLinkManifest_RejectsLinkEnabledWithoutPath(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, LinkFilename)
-	if err := os.WriteFile(p, []byte(`{"addons":{"@user/plugin":{"enabled":true}}}`), 0o644); err != nil {
+	if err := os.WriteFile(p, []byte(`{"addons":{"@user/addon":{"enabled":true}}}`), 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 
@@ -122,7 +122,7 @@ func TestLoadLinkManifest_RejectsLinkEnabledWithoutPath(t *testing.T) {
 func TestLoadLinkManifest_RejectsLinkMissingEnabled(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, LinkFilename)
-	if err := os.WriteFile(p, []byte(`{"addons":{"@user/plugin":{"path":"~/dev/plugin"}}}`), 0o644); err != nil {
+	if err := os.WriteFile(p, []byte(`{"addons":{"@user/addon":{"path":"~/dev/addon"}}}`), 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 
@@ -136,12 +136,12 @@ func TestSave_WritesLinksToLinkManifestAndOmitsFromGdamJSON(t *testing.T) {
 	manifestPath := filepath.Join(dir, "gdam.json")
 
 	m := New()
-	m = UpsertPlugin(m, "@user/plugin", Plugin{
+	m = UpsertAddon(m, "@user/addon", Addon{
 		Repo:    "https://example.com",
 		Version: "1.2.3",
 		Link: &Link{
 			Enabled: true,
-			Path:    "~/dev/plugin",
+			Path:    "~/dev/addon",
 		},
 	})
 
@@ -162,15 +162,15 @@ func TestSave_WritesLinksToLinkManifestAndOmitsFromGdamJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadLinkManifest: %v", err)
 	}
-	link, ok := lm.Addons["@user/plugin"]
+	link, ok := lm.Addons["@user/addon"]
 	if !ok {
-		t.Fatalf("expected gdam.link.json entry for @user/plugin")
+		t.Fatalf("expected gdam.link.json entry for @user/addon")
 	}
 	if link.Enabled != true {
 		t.Fatalf("expected enabled=true, got %v", link.Enabled)
 	}
-	if link.Path != "~/dev/plugin" {
-		t.Fatalf("expected path=~/dev/plugin, got %q", link.Path)
+	if link.Path != "~/dev/addon" {
+		t.Fatalf("expected path=~/dev/addon, got %q", link.Path)
 	}
 }
 
@@ -179,10 +179,10 @@ func TestLoad_MergesLinkManifest(t *testing.T) {
 	manifestPath := filepath.Join(dir, "gdam.json")
 	linkPath := filepath.Join(dir, LinkFilename)
 
-	if err := os.WriteFile(manifestPath, []byte(`{"addons":{"@user/plugin":{"repo":"https://example.com","version":"1.2.3"}}}`), 0o644); err != nil {
+	if err := os.WriteFile(manifestPath, []byte(`{"addons":{"@user/addon":{"repo":"https://example.com","version":"1.2.3"}}}`), 0o644); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}
-	if err := os.WriteFile(linkPath, []byte(`{"addons":{"@user/plugin":{"enabled":true,"path":"~/dev/plugin"}}}`), 0o644); err != nil {
+	if err := os.WriteFile(linkPath, []byte(`{"addons":{"@user/addon":{"enabled":true,"path":"~/dev/addon"}}}`), 0o644); err != nil {
 		t.Fatalf("write gdam.link.json: %v", err)
 	}
 
@@ -190,13 +190,13 @@ func TestLoad_MergesLinkManifest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if m.Addons["@user/plugin"].Link == nil {
+	if m.Addons["@user/addon"].Link == nil {
 		t.Fatalf("expected link to be merged into manifest")
 	}
-	if got := m.Addons["@user/plugin"].Link.Path; got != "~/dev/plugin" {
-		t.Fatalf("expected link.path=~/dev/plugin, got %q", got)
+	if got := m.Addons["@user/addon"].Link.Path; got != "~/dev/addon" {
+		t.Fatalf("expected link.path=~/dev/addon, got %q", got)
 	}
-	if got := m.Addons["@user/plugin"].Link.Enabled; got != true {
+	if got := m.Addons["@user/addon"].Link.Enabled; got != true {
 		t.Fatalf("expected link.enabled=true, got %v", got)
 	}
 }

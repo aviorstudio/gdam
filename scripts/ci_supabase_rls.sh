@@ -92,50 +92,50 @@ if [[ -z "$OWNER_TOKEN" || "$OWNER_TOKEN" == "null" || -z "$ATTACKER_TOKEN" || "
 fi
 
 RUN_ID="${GDAM_RLS_TEST_RUN_ID:-$(date +%s)}"
-OWNER_PLUGIN_NAME="rls-owner-addon-$RUN_ID"
-ATTACKER_PLUGIN_NAME="rls-attacker-addon-$RUN_ID"
-STOLEN_PLUGIN_NAME="rls-stolen-addon-$RUN_ID"
-ANON_PLUGIN_NAME="rls-anon-addon-$RUN_ID"
+OWNER_ADDON_NAME="rls-owner-addon-$RUN_ID"
+ATTACKER_ADDON_NAME="rls-attacker-addon-$RUN_ID"
+STOLEN_ADDON_NAME="rls-stolen-addon-$RUN_ID"
+ANON_ADDON_NAME="rls-anon-addon-$RUN_ID"
 
-owner_plugin_payload="$(jq -cn \
+owner_addon_payload="$(jq -cn \
   --arg user_id "$OWNER_ID" \
-  --arg name "$OWNER_PLUGIN_NAME" \
+  --arg name "$OWNER_ADDON_NAME" \
   '{user_id:$user_id,org_id:null,name:$name,repo:"https://github.com/aviorstudio/gdam-test-addon",editor_plugin:false}')"
-owner_plugin_response="$(rest_status POST "$OWNER_TOKEN" plugins "$owner_plugin_payload")"
-owner_plugin_status="$(sed -n '1p' <<<"$owner_plugin_response")"
-owner_plugin_body="$(sed -n '2,$p' <<<"$owner_plugin_response")"
-expect_status 201 "$owner_plugin_status" 'owner plugin insert'
-OWNER_PLUGIN_ID="$(jq -r '.[0].id' <<<"$owner_plugin_body")"
+owner_addon_response="$(rest_status POST "$OWNER_TOKEN" addons "$owner_addon_payload")"
+owner_addon_status="$(sed -n '1p' <<<"$owner_addon_response")"
+owner_addon_body="$(sed -n '2,$p' <<<"$owner_addon_response")"
+expect_status 201 "$owner_addon_status" 'owner addon insert'
+OWNER_ADDON_ID="$(jq -r '.[0].id' <<<"$owner_addon_body")"
 
 attacker_own_payload="$(jq -cn \
   --arg user_id "$ATTACKER_ID" \
-  --arg name "$ATTACKER_PLUGIN_NAME" \
+  --arg name "$ATTACKER_ADDON_NAME" \
   '{user_id:$user_id,org_id:null,name:$name,repo:"https://github.com/aviorstudio/gdam-test-addon",editor_plugin:false}')"
-attacker_own_response="$(rest_status POST "$ATTACKER_TOKEN" plugins "$attacker_own_payload")"
-expect_status 201 "$(sed -n '1p' <<<"$attacker_own_response")" 'attacker own plugin insert'
+attacker_own_response="$(rest_status POST "$ATTACKER_TOKEN" addons "$attacker_own_payload")"
+expect_status 201 "$(sed -n '1p' <<<"$attacker_own_response")" 'attacker own addon insert'
 
 attacker_owner_payload="$(jq -cn \
   --arg user_id "$OWNER_ID" \
-  --arg name "$STOLEN_PLUGIN_NAME" \
+  --arg name "$STOLEN_ADDON_NAME" \
   '{user_id:$user_id,org_id:null,name:$name,repo:"https://github.com/aviorstudio/gdam-test-addon",editor_plugin:false}')"
-attacker_owner_response="$(rest_status POST "$ATTACKER_TOKEN" plugins "$attacker_owner_payload")"
-expect_rejected_status "$(sed -n '1p' <<<"$attacker_owner_response")" 'attacker plugin insert for owner'
+attacker_owner_response="$(rest_status POST "$ATTACKER_TOKEN" addons "$attacker_owner_payload")"
+expect_rejected_status "$(sed -n '1p' <<<"$attacker_owner_response")" 'attacker addon insert for owner'
 
 attacker_version_payload="$(jq -cn \
-  --arg plugin_id "$OWNER_PLUGIN_ID" \
-  '{plugin_id:$plugin_id,major:9,minor:9,patch:9,release_tag:"v9.9.9",asset_name:"addon.zip"}')"
-attacker_version_response="$(rest_status POST "$ATTACKER_TOKEN" plugin_versions "$attacker_version_payload")"
-expect_rejected_status "$(sed -n '1p' <<<"$attacker_version_response")" 'attacker version insert for owner plugin'
+  --arg addon_id "$OWNER_ADDON_ID" \
+  '{addon_id:$addon_id,major:9,minor:9,patch:9,release_tag:"v9.9.9",asset_name:"addon.zip"}')"
+attacker_version_response="$(rest_status POST "$ATTACKER_TOKEN" addon_versions "$attacker_version_payload")"
+expect_rejected_status "$(sed -n '1p' <<<"$attacker_version_response")" 'attacker version insert for owner addon'
 
 anon_payload="$(jq -cn \
   --arg user_id "$OWNER_ID" \
-  --arg name "$ANON_PLUGIN_NAME" \
+  --arg name "$ANON_ADDON_NAME" \
   '{user_id:$user_id,org_id:null,name:$name,repo:"https://github.com/aviorstudio/gdam-test-addon",editor_plugin:false}')"
-anon_response="$(rest_status POST "$SUPABASE_PUBLISHABLE_KEY" plugins "$anon_payload")"
-expect_rejected_status "$(sed -n '1p' <<<"$anon_response")" 'anonymous plugin insert'
+anon_response="$(rest_status POST "$SUPABASE_PUBLISHABLE_KEY" addons "$anon_payload")"
+expect_rejected_status "$(sed -n '1p' <<<"$anon_response")" 'anonymous addon insert'
 
-public_response="$(rest_status GET "$SUPABASE_PUBLISHABLE_KEY" "plugins?select=id,name&name=eq.$OWNER_PLUGIN_NAME")"
-expect_status 200 "$(sed -n '1p' <<<"$public_response")" 'public plugin select'
-jq -e --arg name "$OWNER_PLUGIN_NAME" 'length == 1 and .[0].name == $name' >/dev/null <<<"$(sed -n '2,$p' <<<"$public_response")"
+public_response="$(rest_status GET "$SUPABASE_PUBLISHABLE_KEY" "addons?select=id,name&name=eq.$OWNER_ADDON_NAME")"
+expect_status 200 "$(sed -n '1p' <<<"$public_response")" 'public addon select'
+jq -e --arg name "$OWNER_ADDON_NAME" 'length == 1 and .[0].name == $name' >/dev/null <<<"$(sed -n '2,$p' <<<"$public_response")"
 
 printf 'Supabase RLS integration passed\n'

@@ -13,12 +13,12 @@ func TestInstall_SkipsExistingAddonWithoutRepo(t *testing.T) {
 	projectDir := t.TempDir()
 
 	m := manifest.New()
-	m = manifest.UpsertPlugin(m, "@user/plugin", manifest.Plugin{})
+	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{})
 	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}
 
-	addonDirName, err := addonDirNameForPluginKey("@user/plugin")
+	addonDirName, err := addonDirNameForPluginKey("@user/addon")
 	if err != nil {
 		t.Fatalf("addonDirNameForPluginKey: %v", err)
 	}
@@ -54,7 +54,7 @@ func TestInstall_ErrorsWhenAddonMissingAndRepoMissing(t *testing.T) {
 	projectDir := t.TempDir()
 
 	m := manifest.New()
-	m = manifest.UpsertPlugin(m, "@user/plugin", manifest.Plugin{})
+	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{})
 	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}
@@ -85,19 +85,19 @@ func TestInstall_DoesNotRemoveExistingAddonsWhenNoInstallsNeeded(t *testing.T) {
 	projectDir := t.TempDir()
 
 	m := manifest.New()
-	m = manifest.UpsertPlugin(m, "@user/plugin", manifest.Plugin{})
+	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{})
 	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}
 
-	pluginAddonDirName, err := addonDirNameForPluginKey("@user/plugin")
+	pluginAddonDirName, err := addonDirNameForPluginKey("@user/addon")
 	if err != nil {
 		t.Fatalf("addonDirNameForPluginKey: %v", err)
 	}
 
 	pluginAddonDir := filepath.Join(projectDir, "addons", pluginAddonDirName)
 	if err := os.MkdirAll(pluginAddonDir, 0o755); err != nil {
-		t.Fatalf("mkdir plugin addon: %v", err)
+		t.Fatalf("mkdir addon addon: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(pluginAddonDir, "keep.txt"), []byte("keep"), 0o644); err != nil {
 		t.Fatalf("write keep file: %v", err)
@@ -141,7 +141,7 @@ func TestInstall_DoesNotRemoveExistingAddonsWhenNoInstallsNeeded(t *testing.T) {
 	}
 
 	if _, err := os.Stat(filepath.Join(pluginAddonDir, "keep.txt")); err != nil {
-		t.Fatalf("expected plugin addon to be kept: %v", err)
+		t.Fatalf("expected addon addon to be kept: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(oldAddonDir, "old.txt")); err != nil {
 		t.Fatalf("expected managed addon to be kept: %v", err)

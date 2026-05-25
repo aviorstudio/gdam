@@ -54,15 +54,15 @@ func Link(ctx context.Context, opts LinkOptions) error {
 		return err
 	}
 
-	plugin, pluginExists := m.Addons[pluginKey]
+	addon, pluginExists := m.Addons[pluginKey]
 
 	pathInput := strings.TrimSpace(opts.Path)
 	usingStoredPath := false
 	if pathInput == "" {
-		if !pluginExists || plugin.Link == nil || strings.TrimSpace(plugin.Link.Path) == "" {
+		if !pluginExists || addon.Link == nil || strings.TrimSpace(addon.Link.Path) == "" {
 			return fmt.Errorf("%w: missing local path (run `gdam link %s <local_path>`)", ErrUserInput, pluginKey)
 		}
-		pathInput = plugin.Link.Path
+		pathInput = addon.Link.Path
 		usingStoredPath = true
 	}
 
@@ -135,20 +135,20 @@ func Link(ctx context.Context, opts LinkOptions) error {
 		}
 	}
 
-	if plugin.Link == nil {
-		plugin.Link = &manifest.Link{}
+	if addon.Link == nil {
+		addon.Link = &manifest.Link{}
 	}
-	plugin.Link.Enabled = true
+	addon.Link.Enabled = true
 	if !usingStoredPath {
-		plugin.Link.Path = storedPath
+		addon.Link.Path = storedPath
 	}
-	m = manifest.UpsertPlugin(m, pluginKey, plugin)
+	m = manifest.UpsertAddon(m, pluginKey, addon)
 	if err := manifest.Save(manifestPath, m); err != nil {
 		return err
 	}
 
 	projectGodotPath := filepath.Join(projectDir, "project.godot")
-	if plugin.EditorPlugin {
+	if addon.EditorPlugin {
 		if _, err := os.Stat(projectGodotPath); err == nil {
 			pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
 			if err := disableEditorPluginAliases(projectGodotPath, projectDir, m, pluginKey, addonDirName, abs); err != nil {

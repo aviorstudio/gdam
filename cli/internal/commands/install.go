@@ -68,8 +68,8 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			return err
 		}
 
-		plugin := m.Addons[pluginKey]
-		if pluginLinkEnabled(plugin) {
+		addon := m.Addons[pluginKey]
+		if pluginLinkEnabled(addon) {
 			continue
 		}
 
@@ -83,7 +83,7 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			return err
 		}
 
-		repoURL := strings.TrimSpace(plugin.Repo)
+		repoURL := strings.TrimSpace(addon.Repo)
 		if repoURL == "" {
 			return fmt.Errorf("%w: addon is not installed and has no repo: %s", ErrUserInput, pluginKey)
 		}
@@ -92,7 +92,7 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			return fmt.Errorf("%w: invalid repo for %s: %v", ErrUserInput, pluginKey, err)
 		}
 
-		assetName := strings.TrimSpace(plugin.AssetName)
+		assetName := strings.TrimSpace(addon.AssetName)
 		if assetName == "" {
 			assetName = releaseAssetName(owner, repo)
 		}
@@ -101,8 +101,8 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			pluginKey:    pluginKey,
 			addonDir:     addonDirName,
 			dst:          dst,
-			version:      strings.TrimSpace(plugin.Version),
-			editorPlugin: plugin.EditorPlugin,
+			version:      strings.TrimSpace(addon.Version),
+			editorPlugin: addon.EditorPlugin,
 			ghOwner:      owner,
 			ghRepo:       repo,
 			ref:          ref,

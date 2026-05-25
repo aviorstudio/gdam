@@ -6,16 +6,16 @@ import (
 	"github.com/aviorstudio/gdam/cli/internal/manifest"
 )
 
-func pluginLinkEnabled(plugin manifest.Plugin) bool {
-	if plugin.Link == nil || !plugin.Link.Enabled {
+func pluginLinkEnabled(addon manifest.Addon) bool {
+	if addon.Link == nil || !addon.Link.Enabled {
 		return false
 	}
-	return strings.TrimSpace(plugin.Link.Path) != ""
+	return strings.TrimSpace(addon.Link.Path) != ""
 }
 
-func pluginLinkPath(plugin manifest.Plugin) string {
-	if plugin.Link == nil {
+func pluginLinkPath(addon manifest.Addon) string {
+	if addon.Link == nil {
 		return ""
 	}
-	return strings.TrimSpace(plugin.Link.Path)
+	return strings.TrimSpace(addon.Link.Path)
 }

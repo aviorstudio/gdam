@@ -64,7 +64,7 @@ api_upsert() {
     "$url"
 }
 
-upsert_plugin() {
+upsert_addon() {
   local name="$1"
   local editor_plugin="$2"
   local payload name_encoded existing existing_id response
@@ -76,29 +76,29 @@ upsert_plugin() {
     --argjson editor_plugin "$editor_plugin" \
     '{user_id:$user_id,org_id:null,name:$name,repo:$repo,editor_plugin:$editor_plugin}')"
   name_encoded="$(jq -rn --arg value "$name" '$value|@uri')"
-  existing="$(api_get "$SUPABASE_URL/rest/v1/plugins?select=id&user_id=eq.$USER_ID&name=eq.$name_encoded&limit=1")"
+  existing="$(api_get "$SUPABASE_URL/rest/v1/addons?select=id&user_id=eq.$USER_ID&name=eq.$name_encoded&limit=1")"
   existing_id="$(jq -r '.[0].id // empty' <<<"$existing")"
   if [[ -n "$existing_id" ]]; then
-    response="$(api_patch "$SUPABASE_URL/rest/v1/plugins?id=eq.$existing_id" "$payload")"
+    response="$(api_patch "$SUPABASE_URL/rest/v1/addons?id=eq.$existing_id" "$payload")"
   else
-    response="$(api_post "$SUPABASE_URL/rest/v1/plugins" "$payload")"
+    response="$(api_post "$SUPABASE_URL/rest/v1/addons" "$payload")"
   fi
 
   jq -r '.[0].id' <<<"$response"
 }
 
 upsert_version() {
-  local plugin_id="$1"
+  local addon_id="$1"
   local release_tag="$2"
   local asset_name="$3"
   local payload
 
   payload="$(jq -cn \
-    --arg plugin_id "$plugin_id" \
+    --arg addon_id "$addon_id" \
     --arg release_tag "$release_tag" \
     --arg asset_name "$asset_name" \
-    '{plugin_id:$plugin_id,major:0,minor:1,patch:0,release_tag:$release_tag,asset_name:$asset_name}')"
-  api_upsert "$SUPABASE_URL/rest/v1/plugin_versions?on_conflict=plugin_id,major,minor,patch" "$payload" >/dev/null
+    '{addon_id:$addon_id,major:0,minor:1,patch:0,release_tag:$release_tag,asset_name:$asset_name}')"
+  api_upsert "$SUPABASE_URL/rest/v1/addon_versions?on_conflict=addon_id,major,minor,patch" "$payload" >/dev/null
 }
 
 assert_project_has_plugin() {
@@ -157,10 +157,10 @@ if [[ ! -f "$ADDON_DIR/plugin.cfg" ]]; then
 fi
 
 ADDON_SHA="$(git -C "$ADDON_DIR" rev-parse HEAD)"
-PLUGIN_ID="$(upsert_plugin "$ADDON_NAME" true)"
-RUNTIME_PLUGIN_ID="$(upsert_plugin "$RUNTIME_ADDON_NAME" false)"
-upsert_version "$PLUGIN_ID" "$ADDON_SHA" "@aviorstudio_gdam-test-addon.zip"
-upsert_version "$RUNTIME_PLUGIN_ID" "$ADDON_SHA" "@aviorstudio_gdam-test-addon.zip"
+ADDON_ID="$(upsert_addon "$ADDON_NAME" true)"
+RUNTIME_ADDON_ID="$(upsert_addon "$RUNTIME_ADDON_NAME" false)"
+upsert_version "$ADDON_ID" "$ADDON_SHA" "@aviorstudio_gdam-test-addon.zip"
+upsert_version "$RUNTIME_ADDON_ID" "$ADDON_SHA" "@aviorstudio_gdam-test-addon.zip"
 
 cd "$GODOT_DIR"
 "$ROOT_DIR/cli/bin/gdam" init

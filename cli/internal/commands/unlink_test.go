@@ -27,7 +27,7 @@ func TestUnlink_RemovesSymlinkWhenNoRepo(t *testing.T) {
 	}
 
 	m := manifest.New()
-	m = manifest.UpsertPlugin(m, "@user/plugin", manifest.Plugin{
+	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{
 		EditorPlugin: true,
 		Link: &manifest.Link{
 			Enabled: true,
@@ -38,7 +38,7 @@ func TestUnlink_RemovesSymlinkWhenNoRepo(t *testing.T) {
 		t.Fatalf("write gdam.json: %v", err)
 	}
 
-	addonDirName, err := addonDirNameForPluginKey("@user/plugin")
+	addonDirName, err := addonDirNameForPluginKey("@user/addon")
 	if err != nil {
 		t.Fatalf("addonDirNameForPluginKey: %v", err)
 	}
@@ -51,7 +51,7 @@ func TestUnlink_RemovesSymlinkWhenNoRepo(t *testing.T) {
 	}
 
 	projectGodotPath := filepath.Join(projectDir, "project.godot")
-	in := "config_version=5\n\n[editor_plugins]\nenabled=PackedStringArray(\"res://addons/@user_plugin/plugin.cfg\")\n"
+	in := "config_version=5\n\n[editor_plugins]\nenabled=PackedStringArray(\"res://addons/@user_addon/plugin.cfg\")\n"
 	if err := os.WriteFile(projectGodotPath, []byte(in), 0o644); err != nil {
 		t.Fatalf("write project.godot: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestUnlink_RemovesSymlinkWhenNoRepo(t *testing.T) {
 	}
 
 	if err := Unlink(context.Background(), UnlinkOptions{
-		Spec: "@user/plugin",
+		Spec: "@user/addon",
 	}); err != nil {
 		t.Fatalf("unlink: %v", err)
 	}
@@ -84,8 +84,8 @@ func TestUnlink_RemovesSymlinkWhenNoRepo(t *testing.T) {
 		t.Fatalf("read project.godot: %v", err)
 	}
 	out := string(outBytes)
-	if strings.Contains(out, "res://addons/@user_plugin/plugin.cfg") {
-		t.Fatalf("expected plugin to be disabled in project.godot, got:\n%s", out)
+	if strings.Contains(out, "res://addons/@user_addon/plugin.cfg") {
+		t.Fatalf("expected addon to be disabled in project.godot, got:\n%s", out)
 	}
 
 	gdamPath := filepath.Join(projectDir, "gdam.json")
@@ -93,8 +93,8 @@ func TestUnlink_RemovesSymlinkWhenNoRepo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read gdam.json: %v", err)
 	}
-	if _, ok := m2.Addons["@user/plugin"]; !ok {
-		t.Fatalf("expected plugin to remain in gdam.json")
+	if _, ok := m2.Addons["@user/addon"]; !ok {
+		t.Fatalf("expected addon to remain in gdam.json")
 	}
 
 	gdamBytes, err := os.ReadFile(gdamPath)
@@ -110,9 +110,9 @@ func TestUnlink_RemovesSymlinkWhenNoRepo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read gdam.link.json: %v", err)
 	}
-	link, ok := lm.Addons["@user/plugin"]
+	link, ok := lm.Addons["@user/addon"]
 	if !ok {
-		t.Fatalf("expected gdam.link.json entry for @user/plugin")
+		t.Fatalf("expected gdam.link.json entry for @user/addon")
 	}
 	if link.Enabled {
 		t.Fatalf("expected gdam.link.json enabled=false, got true")

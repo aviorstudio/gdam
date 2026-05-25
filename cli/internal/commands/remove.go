@@ -53,7 +53,7 @@ func Remove(ctx context.Context, opts RemoveOptions) error {
 		return fmt.Errorf("%w: remove does not take a version (use @username/addon)", ErrUserInput)
 	}
 
-	plugin, ok := m.Addons[pkg.Name()]
+	addon, ok := m.Addons[pkg.Name()]
 	if !ok {
 		return fmt.Errorf("%w: addon not found in gdam.json: %s", ErrUserInput, pkg.Name())
 	}
@@ -66,7 +66,7 @@ func Remove(ctx context.Context, opts RemoveOptions) error {
 	dst := filepath.Join(projectDir, "addons", addonDirName)
 
 	projectGodotPath := filepath.Join(projectDir, "project.godot")
-	if plugin.EditorPlugin {
+	if addon.EditorPlugin {
 		if _, err := os.Stat(projectGodotPath); err == nil {
 			pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
 			updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, false)
@@ -85,7 +85,7 @@ func Remove(ctx context.Context, opts RemoveOptions) error {
 		return err
 	}
 
-	m = manifest.RemovePlugin(m, pkg.Name())
+	m = manifest.RemoveAddon(m, pkg.Name())
 	if err := manifest.Save(manifestPath, m); err != nil {
 		return err
 	}

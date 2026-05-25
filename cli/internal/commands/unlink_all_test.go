@@ -38,14 +38,14 @@ func TestUnlinkAll_RemovesSymlinksWhenNoRepo(t *testing.T) {
 	pluginKeyB := "@user/plugin_b"
 
 	m := manifest.New()
-	m = manifest.UpsertPlugin(m, pluginKeyA, manifest.Plugin{
+	m = manifest.UpsertAddon(m, pluginKeyA, manifest.Addon{
 		EditorPlugin: true,
 		Link: &manifest.Link{
 			Enabled: true,
 			Path:    pluginDirA,
 		},
 	})
-	m = manifest.UpsertPlugin(m, pluginKeyB, manifest.Plugin{
+	m = manifest.UpsertAddon(m, pluginKeyB, manifest.Addon{
 		EditorPlugin: true,
 		Link: &manifest.Link{
 			Enabled: true,
@@ -130,10 +130,10 @@ func TestUnlinkAll_RemovesSymlinksWhenNoRepo(t *testing.T) {
 		t.Fatalf("read gdam.json: %v", err)
 	}
 	if _, ok := m2.Addons[pluginKeyA]; !ok {
-		t.Fatalf("expected plugin A to remain in gdam.json")
+		t.Fatalf("expected addon A to remain in gdam.json")
 	}
 	if _, ok := m2.Addons[pluginKeyB]; !ok {
-		t.Fatalf("expected plugin B to remain in gdam.json")
+		t.Fatalf("expected addon B to remain in gdam.json")
 	}
 
 	gdamBytes, err := os.ReadFile(gdamPath)

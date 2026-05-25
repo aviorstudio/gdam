@@ -4,13 +4,13 @@ export const prerender = false;
 import RootLayout from '../layouts/RootLayout.astro';
 import Splash from '../components/Splash.astro';
 import Title from '../components/Title.astro';
-import PluginList from '../components/PluginList.astro';
-import { pluginVersionsDto, pluginsDto, usernamesDto } from '../lib/dtoService';
+import AddonList from '../components/AddonList.astro';
+import { addonVersionsDto, addonsDto, usernamesDto } from '../lib/dtoService';
 import { toRepoUrl } from '../lib/repo';
 import { formatSemverTripletFromNullable } from '../lib/semver';
 import { supabase } from '../lib/supabase';
 
-type PluginRecord = {
+type AddonRecord = {
   id: string;
   name: string | null;
   repo: string | null;
@@ -19,8 +19,8 @@ type PluginRecord = {
   org_id: string | null;
 };
 
-type PluginVersionRecord = {
-  plugin_id: string;
+type AddonVersionRecord = {
+  addon_id: string;
   major: number | null;
   minor: number | null;
   patch: number | null;
@@ -34,21 +34,21 @@ type UsernameRecord = {
   org_id: string | null;
 };
 
-let pluginsStatus = '';
+let addonsStatus = '';
 
-const { data: pluginsData, error: pluginsError } = await pluginsDto.listAll(supabase);
-if (pluginsError) pluginsStatus = pluginsError.message;
+const { data: addonsData, error: addonsError } = await addonsDto.listAll(supabase);
+if (addonsError) addonsStatus = addonsError.message;
 
-const plugins = (pluginsData as PluginRecord[] | null) ?? [];
+const addons = (addonsData as AddonRecord[] | null) ?? [];
 
-const latestReleaseByPluginId = new Map<string, { version: string; releaseTag: string; createdAt: string }>();
-if (plugins.length > 0) {
-  const pluginIds = plugins.map((plugin) => plugin.id);
-  const { data: versionRows, error: versionError } = await pluginVersionsDto.listByPluginIds(supabase, pluginIds);
+const latestReleaseByAddonId = new Map<string, { version: string; releaseTag: string; createdAt: string }>();
+if (addons.length > 0) {
+  const addonIds = addons.map((addon) => addon.id);
+  const { data: versionRows, error: versionError } = await addonVersionsDto.listByAddonIds(supabase, addonIds);
   if (!versionError) {
-    for (const row of (versionRows as PluginVersionRecord[] | null) ?? []) {
-      if (!latestReleaseByPluginId.has(row.plugin_id)) {
-        latestReleaseByPluginId.set(row.plugin_id, {
+    for (const row of (versionRows as AddonVersionRecord[] | null) ?? []) {
+      if (!latestReleaseByAddonId.has(row.addon_id)) {
+        latestReleaseByAddonId.set(row.addon_id, {
           version: formatSemverTripletFromNullable(row),
           releaseTag: row.release_tag ?? '',
           createdAt: row.created_at ?? '',
@@ -58,8 +58,8 @@ if (plugins.length > 0) {
   }
 }
 
-const userIds = Array.from(new Set(plugins.map((plugin) => plugin.user_id).filter(Boolean) as string[]));
-const orgIds = Array.from(new Set(plugins.map((plugin) => plugin.org_id).filter(Boolean) as string[]));
+const userIds = Array.from(new Set(addons.map((addon) => addon.user_id).filter(Boolean) as string[]));
+const orgIds = Array.from(new Set(addons.map((addon) => addon.org_id).filter(Boolean) as string[]));
 
 const usernameByUserId = new Map<string, string>();
 if (userIds.length > 0) {
@@ -87,28 +87,28 @@ if (orgIds.length > 0) {
   }
 }
 
-const pluginList = plugins.map((plugin) => {
-  const ownerDisplay = plugin.user_id
-    ? usernameByUserId.get(plugin.user_id) ?? ''
-    : plugin.org_id
-      ? usernameByOrgId.get(plugin.org_id) ?? ''
+const addonList = addons.map((addon) => {
+  const ownerDisplay = addon.user_id
+    ? usernameByUserId.get(addon.user_id) ?? ''
+    : addon.org_id
+      ? usernameByOrgId.get(addon.org_id) ?? ''
       : '';
   const ownerPath = ownerDisplay ? `/@${encodeURIComponent(ownerDisplay)}` : '';
-  const pluginSlug = plugin.name ?? '';
-  const pluginPath = ownerDisplay && pluginSlug ? `${ownerPath}/${encodeURIComponent(pluginSlug)}` : '';
-  const latestRelease = latestReleaseByPluginId.get(plugin.id);
-  const repoUrl = plugin.repo ? toRepoUrl(plugin.repo) : '';
+  const addonSlug = addon.name ?? '';
+  const addonPath = ownerDisplay && addonSlug ? `${ownerPath}/${encodeURIComponent(addonSlug)}` : '';
+  const latestRelease = latestReleaseByAddonId.get(addon.id);
+  const repoUrl = addon.repo ? toRepoUrl(addon.repo) : '';
   const versionLabel = latestRelease?.version ? latestRelease.version : 'No versions';
   const treeUrl = latestRelease?.releaseTag ? `${repoUrl}/releases/tag/${encodeURIComponent(latestRelease.releaseTag)}` : '';
 
   return {
     ownerLabel: ownerDisplay ? `@${ownerDisplay}` : undefined,
     ownerHref: ownerPath || undefined,
-    pluginLabel: pluginSlug || 'Untitled addon',
-    pluginHref: pluginPath || undefined,
+    addonLabel: addonSlug || 'Untitled addon',
+    addonHref: addonPath || undefined,
     metaLabel: versionLabel,
     metaHref: treeUrl || undefined,
-    date: latestRelease?.createdAt || plugin.created_at || '',
+    date: latestRelease?.createdAt || addon.created_at || '',
   };
 });
 ---
@@ -116,10 +116,10 @@ const pluginList = plugins.map((plugin) => {
 <RootLayout>
   <Splash title="Godot Addon Manager" subtitle="Addons simplified" />
   <Title title="All addons" subtitle="Browse all addons" />
-  <PluginList
-    items={pluginList}
-    status={pluginsStatus}
-    tone={pluginsStatus ? 'error' : 'muted'}
+  <AddonList
+    items={addonList}
+    status={addonsStatus}
+    tone={addonsStatus ? 'error' : 'muted'}
     emptyTitle="No addons yet"
     emptySubtitle="Be the first to publish a Godot add-on."
   />

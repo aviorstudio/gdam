@@ -14,10 +14,10 @@ import (
 const LinkFilename = "gdam.link.json"
 
 type Manifest struct {
-	Addons map[string]Plugin `json:"addons"`
+	Addons map[string]Addon `json:"addons"`
 }
 
-type Plugin struct {
+type Addon struct {
 	Repo         string `json:"repo,omitempty"`
 	Version      string `json:"version,omitempty"`
 	AssetName    string `json:"asset_name,omitempty"`
@@ -83,7 +83,7 @@ func (l *Link) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (p *Plugin) UnmarshalJSON(data []byte) error {
+func (p *Addon) UnmarshalJSON(data []byte) error {
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
@@ -108,7 +108,7 @@ func (p *Plugin) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	*p = Plugin{
+	*p = Addon{
 		Repo:         tmp.Repo,
 		Version:      tmp.Version,
 		AssetName:    tmp.AssetName,
@@ -119,7 +119,7 @@ func (p *Plugin) UnmarshalJSON(data []byte) error {
 
 func New() Manifest {
 	return Manifest{
-		Addons: map[string]Plugin{},
+		Addons: map[string]Addon{},
 	}
 }
 
@@ -136,7 +136,7 @@ func Load(path string) (Manifest, error) {
 		return Manifest{}, err
 	}
 	if m.Addons == nil {
-		m.Addons = map[string]Plugin{}
+		m.Addons = map[string]Addon{}
 	}
 
 	linkPath := filepath.Join(filepath.Dir(path), LinkFilename)
@@ -148,13 +148,13 @@ func Load(path string) (Manifest, error) {
 		return m, nil
 	}
 	for name, link := range lm.Addons {
-		plugin, ok := m.Addons[name]
+		addon, ok := m.Addons[name]
 		if !ok {
 			continue
 		}
 		l := link
-		plugin.Link = &l
-		m.Addons[name] = plugin
+		addon.Link = &l
+		m.Addons[name] = addon
 	}
 
 	return m, nil
@@ -162,18 +162,18 @@ func Load(path string) (Manifest, error) {
 
 func Save(path string, m Manifest) error {
 	if m.Addons == nil {
-		m.Addons = map[string]Plugin{}
+		m.Addons = map[string]Addon{}
 	}
 
 	linkPath := filepath.Join(filepath.Dir(path), LinkFilename)
 	links := LinkManifest{Addons: map[string]Link{}}
-	outManifest := Manifest{Addons: map[string]Plugin{}}
-	for name, plugin := range m.Addons {
-		if plugin.Link != nil {
-			links.Addons[name] = *plugin.Link
+	outManifest := Manifest{Addons: map[string]Addon{}}
+	for name, addon := range m.Addons {
+		if addon.Link != nil {
+			links.Addons[name] = *addon.Link
 		}
-		plugin.Link = nil
-		outManifest.Addons[name] = plugin
+		addon.Link = nil
+		outManifest.Addons[name] = addon
 	}
 
 	if len(links.Addons) != 0 {
@@ -224,20 +224,20 @@ func SaveLinkManifest(path string, m LinkManifest) error {
 	return fsutil.WriteFileAtomic(path, out, 0o644)
 }
 
-func HasPlugin(m Manifest, name string) bool {
+func HasAddon(m Manifest, name string) bool {
 	_, ok := m.Addons[name]
 	return ok
 }
 
-func UpsertPlugin(m Manifest, name string, plugin Plugin) Manifest {
+func UpsertAddon(m Manifest, name string, addon Addon) Manifest {
 	if m.Addons == nil {
-		m.Addons = map[string]Plugin{}
+		m.Addons = map[string]Addon{}
 	}
-	m.Addons[name] = plugin
+	m.Addons[name] = addon
 	return m
 }
 
-func RemovePlugin(m Manifest, name string) Manifest {
+func RemoveAddon(m Manifest, name string) Manifest {
 	delete(m.Addons, name)
 	return m
 }

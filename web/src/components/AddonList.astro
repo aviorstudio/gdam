@@ -1,22 +1,22 @@
 ---
 import Card from './Card.astro';
 
-export type PluginListItem = {
+export type AddonListItem = {
   ownerLabel?: string;
   ownerHref?: string;
-  pluginLabel: string;
-  pluginHref?: string;
+  addonLabel: string;
+  addonHref?: string;
   metaLabel?: string;
   metaHref?: string;
   date?: string;
 };
 
-export type PluginListTone = 'muted' | 'error';
+export type AddonListTone = 'muted' | 'error';
 
 export type Props = {
-  items: PluginListItem[];
+  items: AddonListItem[];
   status?: string;
-  tone?: PluginListTone;
+  tone?: AddonListTone;
   emptyTitle?: string;
   emptySubtitle?: string;
   hideBodyWhenError?: boolean;
@@ -86,17 +86,17 @@ const shouldRenderBody = !(hideBodyWhenError && tone === 'error');
                         </a>
                       ) : (
                         <span class="text-slate-900">{item.ownerLabel}</span>
-                      ))}<span class="text-slate-400">/</span>{(item.pluginHref ? (
+                      ))}<span class="text-slate-400">/</span>{(item.addonHref ? (
                         <a
                           class="text-slate-900 hover:underline"
-                          href={item.pluginHref}
-                          target={isExternalHref(item.pluginHref) ? '_blank' : undefined}
-                          rel={isExternalHref(item.pluginHref) ? 'noopener noreferrer' : undefined}
+                          href={item.addonHref}
+                          target={isExternalHref(item.addonHref) ? '_blank' : undefined}
+                          rel={isExternalHref(item.addonHref) ? 'noopener noreferrer' : undefined}
                         >
-                          {item.pluginLabel}
+                          {item.addonLabel}
                         </a>
                       ) : (
-                        <span class="text-slate-900">{item.pluginLabel}</span>
+                        <span class="text-slate-900">{item.addonLabel}</span>
                       ))}
                       {item.metaLabel && (
                         <>
@@ -116,17 +116,17 @@ const shouldRenderBody = !(hideBodyWhenError && tone === 'error');
                         </>
                       )}
                     </p>
-                  ) : item.pluginHref ? (
+                  ) : item.addonHref ? (
                     <a
                       class="break-words text-sm font-semibold text-slate-900 hover:underline"
-                      href={item.pluginHref}
-                      target={isExternalHref(item.pluginHref) ? '_blank' : undefined}
-                      rel={isExternalHref(item.pluginHref) ? 'noopener noreferrer' : undefined}
+                      href={item.addonHref}
+                      target={isExternalHref(item.addonHref) ? '_blank' : undefined}
+                      rel={isExternalHref(item.addonHref) ? 'noopener noreferrer' : undefined}
                     >
-                      {item.pluginLabel}
+                      {item.addonLabel}
                     </a>
                   ) : (
-                    <p class="break-words text-sm font-semibold text-slate-900">{item.pluginLabel}</p>
+                    <p class="break-words text-sm font-semibold text-slate-900">{item.addonLabel}</p>
                   )}
 
                   {item.metaLabel && !item.ownerLabel &&
