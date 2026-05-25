@@ -89,6 +89,9 @@ let addon: {
 
 let versions: Array<{
   version: string;
+  major: number;
+  minor: number;
+  patch: number;
   releaseTag: string;
   assetName: string;
   createdAt: string;
@@ -180,15 +183,43 @@ if (!usernameNormal || !addonName) {
             return Astro.redirect('/signin');
           }
 
-          showCreateReleaseDialog = true;
+          const formData = await Astro.request.formData();
+          const action = String(formData.get('action') ?? 'create-release');
 
           if (!canCreateRelease) {
             Astro.response.status = 403;
             pageTone = 'error';
             createStatus = 'You do not have permission to publish releases for this addon.';
             createTone = 'error';
+          } else if (action === 'delete-addon') {
+            const { error: deleteError } = await addonsDto.deleteById(supabase, addon.id);
+            if (deleteError) {
+              Astro.response.status = 500;
+              pageTone = 'error';
+              pageStatus = deleteError.message;
+            } else {
+              return Astro.redirect(`/@${ownerSlug}`);
+            }
+          } else if (action === 'delete-version') {
+            const major = Number(String(formData.get('major') ?? ''));
+            const minor = Number(String(formData.get('minor') ?? ''));
+            const patch = Number(String(formData.get('patch') ?? ''));
+            if (!Number.isInteger(major) || !Number.isInteger(minor) || !Number.isInteger(patch)) {
+              Astro.response.status = 400;
+              pageTone = 'error';
+              pageStatus = 'Invalid version selected.';
+            } else {
+              const { error: deleteError } = await addonVersionsDto.deleteByVersion(supabase, addon.id, major, minor, patch);
+              if (deleteError) {
+                Astro.response.status = 500;
+                pageTone = 'error';
+                pageStatus = deleteError.message;
+              } else {
+                return Astro.redirect(Astro.url.pathname);
+              }
+            }
           } else {
-            const formData = await Astro.request.formData();
+            showCreateReleaseDialog = true;
             formVersion = String(formData.get('version') ?? '').trim();
             formReleaseTag = String(formData.get('release_tag') ?? '').trim();
             formAssetName = String(formData.get('asset_name') ?? '').trim();
@@ -255,6 +286,9 @@ if (!usernameNormal || !addonName) {
           versions = ((versionRows as AddonVersionRecord[] | null) ?? [])
             .map((row) => ({
               version: formatSemverTripletFromNullable(row),
+              major: row.major ?? -1,
+              minor: row.minor ?? -1,
+              patch: row.patch ?? -1,
               releaseTag: row.release_tag ?? '',
               assetName: row.asset_name ?? '',
               createdAt: row.created_at ?? '',
@@ -272,6 +306,16 @@ const versionList = versions.map((version) => ({
   addonLabel: version.version || 'Unknown version',
   addonHref: version.releaseTag ? `${repoUrl}/releases/tag/${encodeURIComponent(version.releaseTag)}` : undefined,
   date: version.createdAt,
+  deleteForm: canCreateRelease && version.major >= 0 && version.minor >= 0 && version.patch >= 0 ? {
+    label: 'Delete',
+    fields: {
+      action: 'delete-version',
+      major: String(version.major),
+      minor: String(version.minor),
+      patch: String(version.patch),
+    },
+    confirm: `Delete version ${version.version}?`,
+  } : undefined,
 }));
 ---
 
@@ -368,4 +412,32 @@ const versionList = versions.map((version) => ({
       </Dialog>
     )
   }
+
+  {
+    canCreateRelease && pageTone === 'default' && addon && (
+      <form
+        method="post"
+        action={Astro.url.pathname}
+        class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5"
+        onsubmit={`return confirm(${JSON.stringify(`Delete ${addon.name}? This cannot be undone.`)})`}
+      >
+        <input type="hidden" name="action" value="delete-addon" />
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm font-semibold text-red-900">Delete addon</p>
+            <p class="text-sm text-red-700">Delete this addon and all of its versions from the registry.</p>
+          </div>
+          <button
+            class="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+            type="submit"
+            name="action"
+            value="delete-addon"
+          >
+            Delete addon
+          </button>
+        </div>
+      </form>
+    )
+  }
+
 </RootLayout>

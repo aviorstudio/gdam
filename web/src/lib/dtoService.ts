@@ -64,6 +64,7 @@ export type AddonInsert = {
 export const addonsDto = {
   insert: (client: SupabaseClient, payload: AddonInsert) =>
     client.from('addons').insert(payload).select('*').maybeSingle(),
+  deleteById: (client: SupabaseClient, id: string) => client.from('addons').delete().eq('id', id),
   listAll: async (client: SupabaseClient) => {
     return client
       .from('addons')
@@ -83,6 +84,14 @@ export const addonsDto = {
 export const addonVersionsDto = {
   insert: (client: SupabaseClient, payload: { addon_id: string; major: number; minor: number; patch: number; release_tag: string; asset_name: string }) =>
     client.from('addon_versions').insert(payload).select('*').maybeSingle(),
+  deleteByVersion: (client: SupabaseClient, addonId: string, major: number, minor: number, patch: number) =>
+    client
+      .from('addon_versions')
+      .delete()
+      .eq('addon_id', addonId)
+      .eq('major', major)
+      .eq('minor', minor)
+      .eq('patch', patch),
   listByAddonIds: (client: SupabaseClient, addonIds: string[]) =>
     client
       .from('addon_versions')

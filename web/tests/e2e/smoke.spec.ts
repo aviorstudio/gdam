@@ -87,6 +87,30 @@ test('signed-in user can publish a new release', async ({ page }) => {
   await expect(page.getByRole('link', { name: '0.2.0' })).toBeVisible();
 });
 
+test('signed-in user can delete releases and addons they own', async ({ page }) => {
+  await signInAsDev(page);
+
+  const addon = `delete-${Date.now().toString(36)}`;
+  await publishAddon(page, { name: addon, editorPlugin: false });
+
+  await page.getByRole('link', { name: 'Create release' }).click();
+  await page.getByLabel('Version').fill('0.2.0');
+  await page.getByLabel('Release tag (optional)').fill('v0.2.0');
+  await page.getByRole('button', { name: 'Create release' }).click();
+  await expect(page.getByRole('link', { name: '0.2.0' })).toBeVisible();
+
+  page.once('dialog', async (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Delete', exact: true }).first().click();
+  await expect(page).toHaveURL(`/@dev/${addon}`);
+  await expect(page.getByRole('link', { name: '0.2.0' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: '0.1.0' })).toBeVisible();
+
+  page.once('dialog', async (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Delete addon' }).click();
+  await expect(page).toHaveURL('/@dev');
+  await expect(page.getByRole('link', { name: addon })).toHaveCount(0);
+});
+
 test('signed-in user can create an org and publish under it', async ({ page }) => {
   await signInAsDev(page);
 

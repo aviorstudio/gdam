@@ -9,6 +9,11 @@ export type AddonListItem = {
   metaLabel?: string;
   metaHref?: string;
   date?: string;
+  deleteForm?: {
+    label: string;
+    fields: Record<string, string>;
+    confirm?: string;
+  };
 };
 
 export type AddonListTone = 'muted' | 'error';
@@ -143,11 +148,32 @@ const shouldRenderBody = !(hideBodyWhenError && tone === 'error');
                       <p class="text-xs font-semibold text-slate-600">{item.metaLabel}</p>
                     ))}
                 </div>
-                {item.date && (
+                {(item.date || item.deleteForm) && (
                   <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                    {item.deleteForm && (
+                      <form
+                        method="post"
+                        action={Astro.url.pathname}
+                        onsubmit={item.deleteForm.confirm ? `return confirm(${JSON.stringify(item.deleteForm.confirm)})` : undefined}
+                      >
+                        {Object.entries(item.deleteForm.fields).map(([name, value]) => (
+                          <input type="hidden" name={name} value={value} />
+                        ))}
+                        <button
+                          class="rounded-full border border-red-200 bg-white px-3 py-1 font-semibold text-red-600 transition hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+                          type="submit"
+                          name="action"
+                          value={item.deleteForm.fields.action}
+                        >
+                          {item.deleteForm.label}
+                        </button>
+                      </form>
+                    )}
+                    {item.date && (
                     <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-700">
                       <time datetime={item.date}>{formatDate(item.date)}</time>
                     </span>
+                    )}
                   </div>
                 )}
               </li>
