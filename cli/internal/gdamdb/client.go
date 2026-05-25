@@ -222,8 +222,8 @@ type versionRow struct {
 	Major      int     `json:"major"`
 	Minor      int     `json:"minor"`
 	Patch      int     `json:"patch"`
-	ReleaseTag string  `json:"release_tag"`
-	AssetName  string  `json:"asset_name"`
+	ReleaseTag string  `json:"tag"`
+	AssetName  string  `json:"asset"`
 	CreatedAt  *string `json:"created_at"`
 }
 
@@ -280,7 +280,7 @@ func (c *Client) listAddonVersions(ctx context.Context, addonID string) ([]versi
 	}
 
 	q := url.Values{}
-	q.Set("select", "addon_id,major,minor,patch,release_tag,asset_name,created_at")
+	q.Set("select", "addon_id,major,minor,patch,tag,asset,created_at")
 	q.Set("addon_id", "eq."+addonID)
 	q.Set("order", "major.desc,minor.desc,patch.desc,created_at.desc")
 	q.Set("limit", "100")

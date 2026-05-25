@@ -71,17 +71,14 @@ let showCreateOrgDialog = Astro.url.searchParams.get('create_org') === '1';
 let createOrgStatus = '';
 let createOrgTone: 'muted' | 'error' | 'success' = 'muted';
 let formOrgUsername = '';
-let formOrgName = '';
 
 if (Astro.request.method === 'POST') {
   showCreateOrgDialog = true;
   const formData = await Astro.request.formData();
   formOrgUsername = String(formData.get('org_username') ?? '').trim();
-  formOrgName = String(formData.get('org_name') ?? '').trim();
 
   const orgUsernameDisplay = formOrgUsername;
   const orgUsernameNormal = normalizeUsername(orgUsernameDisplay);
-  const orgName = formOrgName || orgUsernameDisplay;
 
   if (!orgUsernameNormal) {
     createOrgStatus = 'Organization username is required.';
@@ -102,9 +99,7 @@ if (Astro.request.method === 'POST') {
       createOrgStatus = 'That username is already taken.';
       createOrgTone = 'error';
     } else {
-      const { data: createdOrg, error: orgError } = await orgsDto.insert(supabase, {
-        name: orgName,
-      });
+      const { data: createdOrg, error: orgError } = await orgsDto.insert(supabase);
       if (orgError) {
         createOrgStatus = orgError.message;
         createOrgTone = 'error';
@@ -114,7 +109,7 @@ if (Astro.request.method === 'POST') {
       } else {
         const { error: membershipError } = await orgsProfilesDto.insert(supabase, {
           org_id: createdOrg.id,
-          user_id: profileId,
+          profile_id: profileId,
           admin: true,
         });
 
@@ -221,8 +216,6 @@ if (Astro.request.method === 'POST') {
         maxlength="32"
         required
       />
-
-      <Input label="Org name" name="org_name" placeholder="My Awesome Studio" type="text" value={formOrgName} />
 
       <p
         class:list={{

@@ -2,7 +2,6 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type ProfileUpsert = {
   id: string;
-  name?: string | null;
 };
 
 export const profilesDto = {
@@ -10,27 +9,23 @@ export const profilesDto = {
   upsert: (client: SupabaseClient, payload: ProfileUpsert) => client.from('profiles').upsert(payload),
 };
 
-export type OrgInsert = {
-  name: string;
-};
-
 export const orgsDto = {
-  insert: (client: SupabaseClient, payload: OrgInsert) => client.from('orgs').insert(payload).select('*').maybeSingle(),
+  insert: (client: SupabaseClient) => client.from('orgs').insert({}).select('*').maybeSingle(),
 };
 
 export type OrgProfileInsert = {
   org_id: string;
-  user_id: string;
+  profile_id: string;
   admin?: boolean;
 };
 
 export const orgsProfilesDto = {
   insert: (client: SupabaseClient, payload: OrgProfileInsert) =>
     client.from('orgs_profiles').insert(payload).select('*').maybeSingle(),
-  getByOrgIdAndUserId: (client: SupabaseClient, orgId: string, userId: string) =>
-    client.from('orgs_profiles').select('*').eq('org_id', orgId).eq('user_id', userId).maybeSingle(),
-  listByUserId: (client: SupabaseClient, userId: string) =>
-    client.from('orgs_profiles').select('org_id,admin,created_at').eq('user_id', userId).order('created_at', {
+  getByOrgIdAndProfileId: (client: SupabaseClient, orgId: string, profileId: string) =>
+    client.from('orgs_profiles').select('*').eq('org_id', orgId).eq('profile_id', profileId).maybeSingle(),
+  listByProfileId: (client: SupabaseClient, profileId: string) =>
+    client.from('orgs_profiles').select('org_id,admin,created_at').eq('profile_id', profileId).order('created_at', {
       ascending: false,
     }),
 };
@@ -82,7 +77,7 @@ export const addonsDto = {
 };
 
 export const addonVersionsDto = {
-  insert: (client: SupabaseClient, payload: { addon_id: string; major: number; minor: number; patch: number; release_tag: string; asset_name: string }) =>
+  insert: (client: SupabaseClient, payload: { addon_id: string; major: number; minor: number; patch: number; tag: string; asset: string }) =>
     client.from('addon_versions').insert(payload).select('*').maybeSingle(),
   deleteByVersion: (client: SupabaseClient, addonId: string, major: number, minor: number, patch: number) =>
     client

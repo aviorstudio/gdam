@@ -24,7 +24,7 @@ type AddonVersionRecord = {
   major: number | null;
   minor: number | null;
   patch: number | null;
-  release_tag: string | null;
+  tag: string | null;
   created_at: string | null;
 };
 
@@ -50,7 +50,7 @@ if (addons.length > 0) {
       if (!latestReleaseByAddonId.has(row.addon_id)) {
         latestReleaseByAddonId.set(row.addon_id, {
           version: formatSemverTripletFromNullable(row),
-          releaseTag: row.release_tag ?? '',
+          releaseTag: row.tag ?? '',
           createdAt: row.created_at ?? '',
         });
       }

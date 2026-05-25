@@ -38,8 +38,8 @@ type AddonVersionRecord = {
   major: number | null;
   minor: number | null;
   patch: number | null;
-  release_tag: string | null;
-  asset_name: string | null;
+  tag: string | null;
+  asset: string | null;
   created_at: string | null;
 };
 
@@ -134,7 +134,7 @@ if (!usernameNormal || !addonName) {
 
     let canPublishForOrg = false;
     if (ownerOrgId && profileId) {
-      const { data: membershipRow, error: membershipError } = await orgsProfilesDto.getByOrgIdAndUserId(
+      const { data: membershipRow, error: membershipError } = await orgsProfilesDto.getByOrgIdAndProfileId(
         supabase,
         ownerOrgId,
         profileId
@@ -238,8 +238,8 @@ if (!usernameNormal || !addonName) {
           } else {
             showCreateReleaseDialog = true;
             formVersion = String(formData.get('version') ?? '').trim();
-            formReleaseTag = String(formData.get('release_tag') ?? '').trim();
-            formAssetName = String(formData.get('asset_name') ?? '').trim();
+            formReleaseTag = String(formData.get('tag') ?? '').trim();
+            formAssetName = String(formData.get('asset') ?? '').trim();
 
             if (!formVersion) {
               createStatus = 'Version is required.';
@@ -276,8 +276,8 @@ if (!usernameNormal || !addonName) {
                         major: versionTriplet.major,
                         minor: versionTriplet.minor,
                         patch: versionTriplet.patch,
-                        release_tag: formReleaseTag,
-                        asset_name: formAssetName,
+                        tag: formReleaseTag,
+                        asset: formAssetName,
                       });
 
                       if (versionError) {
@@ -306,8 +306,8 @@ if (!usernameNormal || !addonName) {
               major: row.major ?? -1,
               minor: row.minor ?? -1,
               patch: row.patch ?? -1,
-              releaseTag: row.release_tag ?? '',
-              assetName: row.asset_name ?? '',
+              releaseTag: row.tag ?? '',
+              assetName: row.asset ?? '',
               createdAt: row.created_at ?? '',
             }));
         }
@@ -386,7 +386,7 @@ const versionList = versions.map((version) => ({
 
 	            <Input
 	              label="Release tag (optional)"
-	              name="release_tag"
+	              name="tag"
 	              placeholder="v0.1.0"
 	              type="text"
 	              value={formReleaseTag}
@@ -394,7 +394,7 @@ const versionList = versions.map((version) => ({
 
 	            <Input
 	              label="Asset name"
-	              name="asset_name"
+	              name="asset"
 	              placeholder="@owner_repo.zip"
 	              type="text"
 	              value={formAssetName}

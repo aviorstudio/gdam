@@ -67,7 +67,7 @@ let orgItems: Array<{
   date?: string;
 }> = [];
 
-const { data: membershipRows, error: membershipError } = await orgsProfilesDto.listByUserId(supabase, profileId);
+const { data: membershipRows, error: membershipError } = await orgsProfilesDto.listByProfileId(supabase, profileId);
 if (membershipError) {
   status = membershipError.message;
   tone = 'error';

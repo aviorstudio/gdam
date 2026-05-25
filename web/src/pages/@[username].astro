@@ -36,8 +36,8 @@ type AddonVersionRecord = {
   major: number | null;
   minor: number | null;
   patch: number | null;
-  release_tag: string | null;
-  asset_name: string | null;
+  tag: string | null;
+  asset: string | null;
   created_at: string | null;
 };
 
@@ -160,7 +160,7 @@ if (!usernameNormal) {
 
       let canPublishForOrg = false;
       if (ownerOrgId && profileId) {
-        const { data: membershipRow, error: membershipError } = await orgsProfilesDto.getByOrgIdAndUserId(
+        const { data: membershipRow, error: membershipError } = await orgsProfilesDto.getByOrgIdAndProfileId(
           supabase,
           ownerOrgId,
           profileId
@@ -200,8 +200,8 @@ if (!usernameNormal) {
           formName = String(formData.get('name') ?? '').trim();
           formRepo = String(formData.get('repo') ?? '').trim();
           formVersion = String(formData.get('version') ?? '').trim();
-          formReleaseTag = String(formData.get('release_tag') ?? '').trim();
-          formAssetName = String(formData.get('asset_name') ?? '').trim();
+          formReleaseTag = String(formData.get('tag') ?? '').trim();
+          formAssetName = String(formData.get('asset') ?? '').trim();
           formEditorPlugin = formData.get('editor_plugin') === 'on';
 
           if (!formName || !formRepo || !formVersion) {
@@ -266,8 +266,8 @@ if (!usernameNormal) {
                           major: versionTriplet.major,
                           minor: versionTriplet.minor,
                           patch: versionTriplet.patch,
-                          release_tag: formReleaseTag,
-                          asset_name: formAssetName,
+                          tag: formReleaseTag,
+                          asset: formAssetName,
                         });
 
                         if (versionError) {
@@ -311,7 +311,7 @@ if (!usernameNormal) {
               if (!latestReleaseByAddonId.has(row.addon_id)) {
                 latestReleaseByAddonId.set(row.addon_id, {
                   version: formatSemverTripletFromNullable(row),
-                  releaseTag: row.release_tag ?? '',
+                  releaseTag: row.tag ?? '',
                   createdAt: row.created_at ?? '',
                 });
               }
@@ -415,7 +415,7 @@ if (!usernameNormal) {
 
 	            <Input
 	              label="Release tag (optional)"
-	              name="release_tag"
+	              name="tag"
 	              placeholder="v0.1.0"
 	              type="text"
 	              value={formReleaseTag}
@@ -423,7 +423,7 @@ if (!usernameNormal) {
 
 	            <Input
 	              label="Asset name"
-	              name="asset_name"
+	              name="asset"
 	              placeholder="@owner_repo.zip"
 	              type="text"
 	              value={formAssetName}

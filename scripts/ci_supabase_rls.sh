@@ -123,7 +123,7 @@ expect_rejected_status "$(sed -n '1p' <<<"$attacker_owner_response")" 'attacker 
 
 attacker_version_payload="$(jq -cn \
   --arg addon_id "$OWNER_ADDON_ID" \
-  '{addon_id:$addon_id,major:9,minor:9,patch:9,release_tag:"v9.9.9",asset_name:"addon.zip"}')"
+  '{addon_id:$addon_id,major:9,minor:9,patch:9,tag:"v9.9.9",asset:"addon.zip"}')"
 attacker_version_response="$(rest_status POST "$ATTACKER_TOKEN" addon_versions "$attacker_version_payload")"
 expect_rejected_status "$(sed -n '1p' <<<"$attacker_version_response")" 'attacker version insert for owner addon'
 

@@ -98,7 +98,6 @@ if (Astro.request.method === 'POST') {
             } else {
               const { error: profileError } = await profilesDto.upsert(supabase, {
                 id: userId,
-                name: usernameDisplay,
               });
               if (profileError) {
                 status = profileError.message;
@@ -177,7 +176,6 @@ if (Astro.request.method === 'POST') {
             } else {
               const { error: profileError } = await profilesDto.upsert(supabase, {
                 id: userId,
-                name: usernameDisplay,
               });
               if (profileError) {
                 status = profileError.message;

@@ -118,7 +118,6 @@ test('signed-in user can create an org and publish under it', async ({ page }) =
   await page.goto('/@dev/settings?create_org=1');
   await expect(page.getByRole('heading', { name: 'Create an org' })).toBeVisible();
   await page.getByLabel('Org username').fill(org);
-  await page.getByLabel('Org name').fill(`Org ${org}`);
   await page.getByRole('button', { name: 'Create org' }).click();
   await expect(page).toHaveURL(`/@${org}`);
 

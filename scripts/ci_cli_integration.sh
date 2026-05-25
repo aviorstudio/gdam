@@ -89,15 +89,15 @@ upsert_addon() {
 
 upsert_version() {
   local addon_id="$1"
-  local release_tag="$2"
-  local asset_name="$3"
+  local tag="$2"
+  local asset="$3"
   local payload
 
   payload="$(jq -cn \
     --arg addon_id "$addon_id" \
-    --arg release_tag "$release_tag" \
-    --arg asset_name "$asset_name" \
-    '{addon_id:$addon_id,major:0,minor:1,patch:0,release_tag:$release_tag,asset_name:$asset_name}')"
+    --arg tag "$tag" \
+    --arg asset "$asset" \
+    '{addon_id:$addon_id,major:0,minor:1,patch:0,tag:$tag,asset:$asset}')"
   api_upsert "$SUPABASE_URL/rest/v1/addon_versions?on_conflict=addon_id,major,minor,patch" "$payload" >/dev/null
 }
 
