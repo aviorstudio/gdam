@@ -244,8 +244,8 @@ if (!usernameNormal) {
                     } else {
 
                       const addonOwnerPayload = ownerOrgId
-                        ? { user_id: null, org_id: ownerOrgId }
-                        : { user_id: ownerProfileId, org_id: null };
+                        ? { profile_id: null, org_id: ownerOrgId }
+                        : { profile_id: ownerProfileId, org_id: null };
 
                       const { data: createdAddon, error: addonError } = await addonsDto.insert(supabase, {
                         ...addonOwnerPayload,
@@ -288,7 +288,7 @@ if (!usernameNormal) {
 
       const { data: addonsData, error: addonsError } = ownerOrgId
         ? await addonsDto.listByOrgId(supabase, ownerOrgId)
-        : await addonsDto.listByUserId(supabase, ownerProfileId ?? '');
+        : await addonsDto.listByProfileId(supabase, ownerProfileId ?? '');
 
       if (addonsError) {
         Astro.response.status = 500;

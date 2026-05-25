@@ -15,7 +15,7 @@ type AddonRecord = {
   name: string | null;
   repo: string | null;
   created_at: string | null;
-  user_id: string | null;
+  profile_id: string | null;
   org_id: string | null;
 };
 
@@ -58,7 +58,7 @@ if (addons.length > 0) {
   }
 }
 
-const userIds = Array.from(new Set(addons.map((addon) => addon.user_id).filter(Boolean) as string[]));
+const userIds = Array.from(new Set(addons.map((addon) => addon.profile_id).filter(Boolean) as string[]));
 const orgIds = Array.from(new Set(addons.map((addon) => addon.org_id).filter(Boolean) as string[]));
 
 const usernameByUserId = new Map<string, string>();
@@ -88,8 +88,8 @@ if (orgIds.length > 0) {
 }
 
 const addonList = addons.map((addon) => {
-  const ownerDisplay = addon.user_id
-    ? usernameByUserId.get(addon.user_id) ?? ''
+  const ownerDisplay = addon.profile_id
+    ? usernameByUserId.get(addon.profile_id) ?? ''
     : addon.org_id
       ? usernameByOrgId.get(addon.org_id) ?? ''
       : '';

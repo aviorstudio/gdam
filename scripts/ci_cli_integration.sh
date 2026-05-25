@@ -70,13 +70,13 @@ upsert_addon() {
   local payload name_encoded existing existing_id response
 
   payload="$(jq -cn \
-    --arg user_id "$USER_ID" \
+    --arg profile_id "$USER_ID" \
     --arg name "$name" \
     --arg repo "$ADDON_REPO" \
     --argjson editor "$editor" \
-    '{user_id:$user_id,org_id:null,name:$name,repo:$repo,editor:$editor}')"
+    '{profile_id:$profile_id,org_id:null,name:$name,repo:$repo,editor:$editor}')"
   name_encoded="$(jq -rn --arg value "$name" '$value|@uri')"
-  existing="$(api_get "$SUPABASE_URL/rest/v1/addons?select=id&user_id=eq.$USER_ID&name=eq.$name_encoded&limit=1")"
+  existing="$(api_get "$SUPABASE_URL/rest/v1/addons?select=id&profile_id=eq.$USER_ID&name=eq.$name_encoded&limit=1")"
   existing_id="$(jq -r '.[0].id // empty' <<<"$existing")"
   if [[ -n "$existing_id" ]]; then
     response="$(api_patch "$SUPABASE_URL/rest/v1/addons?id=eq.$existing_id" "$payload")"

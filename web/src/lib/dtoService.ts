@@ -48,7 +48,7 @@ export const usernamesDto = {
 };
 
 export type AddonInsert = {
-  user_id?: string | null;
+  profile_id?: string | null;
   org_id?: string | null;
   name: string;
   repo: string;
@@ -62,15 +62,15 @@ export const addonsDto = {
   listAll: async (client: SupabaseClient) => {
     return client
       .from('addons')
-      .select('id,name,repo,editor,created_at,user_id,org_id')
+      .select('id,name,repo,editor,created_at,profile_id,org_id')
       .order('created_at', { ascending: false });
   },
-  listByUserId: (client: SupabaseClient, userId: string) =>
-    client.from('addons').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+  listByProfileId: (client: SupabaseClient, profileId: string) =>
+    client.from('addons').select('*').eq('profile_id', profileId).order('created_at', { ascending: false }),
   listByOrgId: (client: SupabaseClient, orgId: string) =>
     client.from('addons').select('*').eq('org_id', orgId).order('created_at', { ascending: false }),
-  getByUserIdAndName: (client: SupabaseClient, userId: string, name: string) =>
-    client.from('addons').select('*').eq('user_id', userId).eq('name', name).maybeSingle(),
+  getByProfileIdAndName: (client: SupabaseClient, profileId: string, name: string) =>
+    client.from('addons').select('*').eq('profile_id', profileId).eq('name', name).maybeSingle(),
   getByOrgIdAndName: (client: SupabaseClient, orgId: string, name: string) =>
     client.from('addons').select('*').eq('org_id', orgId).eq('name', name).maybeSingle(),
 };

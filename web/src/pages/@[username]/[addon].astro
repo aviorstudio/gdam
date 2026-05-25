@@ -166,7 +166,7 @@ if (!usernameNormal || !addonName) {
     } else {
       const { data: addonRow, error: addonError } = ownerOrgId
         ? await addonsDto.getByOrgIdAndName(supabase, ownerOrgId, addonName)
-        : await addonsDto.getByUserIdAndName(supabase, ownerProfileId ?? '', addonName);
+        : await addonsDto.getByProfileIdAndName(supabase, ownerProfileId ?? '', addonName);
 
       if (addonError) {
         Astro.response.status = 500;

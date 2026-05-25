@@ -213,7 +213,7 @@ type addonRow struct {
 	Repo         string  `json:"repo"`
 	EditorPlugin *bool   `json:"editor"`
 	CreatedAt    *string `json:"created_at"`
-	UserID       *string `json:"user_id"`
+	ProfileID    *string `json:"profile_id"`
 	OrgID        *string `json:"org_id"`
 }
 
@@ -246,16 +246,16 @@ func (c *Client) getUsernameByNormal(ctx context.Context, usernameNormal string)
 	return rows[0], true, nil
 }
 
-func (c *Client) getAddonByOwnerAndName(ctx context.Context, userID, orgID *string, addonName string) (addonRow, bool, error) {
+func (c *Client) getAddonByOwnerAndName(ctx context.Context, profileID, orgID *string, addonName string) (addonRow, bool, error) {
 	q := url.Values{}
-	q.Set("select", "id,name,repo,editor,created_at,user_id,org_id")
+	q.Set("select", "id,name,repo,editor,created_at,profile_id,org_id")
 	q.Set("name", "eq."+addonName)
 	q.Set("limit", "2")
 
 	if orgID != nil && strings.TrimSpace(*orgID) != "" {
 		q.Set("org_id", "eq."+strings.TrimSpace(*orgID))
-	} else if userID != nil && strings.TrimSpace(*userID) != "" {
-		q.Set("user_id", "eq."+strings.TrimSpace(*userID))
+	} else if profileID != nil && strings.TrimSpace(*profileID) != "" {
+		q.Set("profile_id", "eq."+strings.TrimSpace(*profileID))
 	} else {
 		return addonRow{}, false, fmt.Errorf("owner has no id")
 	}
