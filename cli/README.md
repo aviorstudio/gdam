@@ -12,9 +12,27 @@ From `cli/`:
 go build ./cmd/gdam
 ```
 
+## Install
+
+macOS and Linux users can install the latest GitHub Release with:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/aviorstudio/gdam/main/scripts/install_cli.sh | sh
+```
+
+Install a specific CLI release with:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/aviorstudio/gdam/main/scripts/install_cli.sh | VERSION=0.1.0 sh
+```
+
+The installer tries `/usr/local/bin` first and falls back to `$HOME/.local/bin`.
+Windows builds are published as `.zip` files on GitHub Releases.
+
 ## Usage
 
 ```sh
+gdam --version
 gdam init
 gdam add @username/addon@1.2.3
 gdam add @username/addon

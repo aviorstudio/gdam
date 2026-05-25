@@ -96,7 +96,7 @@ func defaultSupabasePublishableKey() string {
 	if value := strings.TrimSpace(os.Getenv("SUPABASE_PUBLISHABLE_KEY")); value != "" {
 		return value
 	}
-	return ""
+	return strings.TrimSpace(DefaultSupabasePublishableKey)
 }
 
 func NewClient(baseURL, apiKey string) *Client {
