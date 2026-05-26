@@ -197,7 +197,7 @@ expect_failure env GDAM_SECRET_KEY="$GDAM_SECRET_KEY" "$ROOT_DIR/cli/bin/gdam" p
 
 "$ROOT_DIR/cli/bin/gdam" add "@dev/$ADDON_NAME@0.1.0"
 test -f "addons/@dev_${ADDON_NAME}/plugin.cfg"
-jq -e --arg addon "@dev/$ADDON_NAME" '.addons[$addon].editor_plugin == true' gdam.json >/dev/null
+jq -e --arg addon "@dev/$ADDON_NAME" '.addons[$addon].version == "0.1.0" and (.addons[$addon] | has("repo") | not) and (.addons[$addon] | has("asset_name") | not) and (.addons[$addon] | has("editor_plugin") | not)' gdam.json >/dev/null
 assert_project_has_plugin "$ADDON_NAME"
 
 rm -rf "addons/@dev_${ADDON_NAME}"
@@ -207,7 +207,7 @@ assert_project_has_plugin "$ADDON_NAME"
 
 "$ROOT_DIR/cli/bin/gdam" add "@dev/$RUNTIME_ADDON_NAME@0.1.0"
 test -f "addons/@dev_${RUNTIME_ADDON_NAME}/plugin.cfg"
-jq -e --arg addon "@dev/$RUNTIME_ADDON_NAME" '.addons[$addon].editor_plugin != true' gdam.json >/dev/null
+jq -e --arg addon "@dev/$RUNTIME_ADDON_NAME" '.addons[$addon].version == "0.1.0" and (.addons[$addon] | has("repo") | not) and (.addons[$addon] | has("asset_name") | not) and (.addons[$addon] | has("editor_plugin") | not)' gdam.json >/dev/null
 assert_project_lacks_plugin "$RUNTIME_ADDON_NAME"
 
 rm -rf "addons/@dev_${RUNTIME_ADDON_NAME}"

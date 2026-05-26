@@ -7,10 +7,8 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/aviorstudio/gdam/cli/internal/fsutil"
-	"github.com/aviorstudio/gdam/cli/internal/gdamdb"
 	"github.com/aviorstudio/gdam/cli/internal/githubapi"
 	"github.com/aviorstudio/gdam/cli/internal/manifest"
 	"github.com/aviorstudio/gdam/cli/internal/project"
@@ -83,30 +81,21 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			return err
 		}
 
-		repoURL := strings.TrimSpace(addon.Repo)
-		if repoURL == "" {
-			return fmt.Errorf("%w: addon is not installed and has no repo: %s", ErrUserInput, pluginKey)
-		}
-		owner, repo, ref, _, err := gdamdb.ParseGitHubTreeURLWithPath(repoURL)
+		resolved, err := resolveManifestAddon(ctx, pluginKey, addon.Version)
 		if err != nil {
-			return fmt.Errorf("%w: invalid repo for %s: %v", ErrUserInput, pluginKey, err)
-		}
-
-		assetName := strings.TrimSpace(addon.AssetName)
-		if assetName == "" {
-			assetName = releaseAssetName(owner, repo)
+			return fmt.Errorf("%w: unable to resolve %s: %v", ErrUserInput, pluginKey, err)
 		}
 
 		candidates = append(candidates, installCandidate{
 			pluginKey:    pluginKey,
 			addonDir:     addonDirName,
 			dst:          dst,
-			version:      strings.TrimSpace(addon.Version),
-			editorPlugin: addon.EditorPlugin,
-			ghOwner:      owner,
-			ghRepo:       repo,
-			ref:          ref,
-			assetName:    assetName,
+			version:      resolved.Version,
+			editorPlugin: resolved.EditorPlugin,
+			ghOwner:      resolved.GitHubOwner,
+			ghRepo:       resolved.GitHubRepo,
+			ref:          resolved.ReleaseTag,
+			assetName:    resolved.AssetName,
 		})
 	}
 

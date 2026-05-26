@@ -39,14 +39,12 @@ func TestUnlinkAll_RemovesSymlinksWhenNoRepo(t *testing.T) {
 
 	m := manifest.New()
 	m = manifest.UpsertAddon(m, pluginKeyA, manifest.Addon{
-		EditorPlugin: true,
 		Link: &manifest.Link{
 			Enabled: true,
 			Path:    pluginDirA,
 		},
 	})
 	m = manifest.UpsertAddon(m, pluginKeyB, manifest.Addon{
-		EditorPlugin: true,
 		Link: &manifest.Link{
 			Enabled: true,
 			Path:    pluginDirB,
