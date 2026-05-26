@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   release:
-    if: startsWith(github.event.release.tag_name, 'cli/v')
+    if: startsWith(github.event.release.tag_name, 'cli-v')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,9 +28,9 @@ jobs:
           TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
-          VERSION="${TAG#cli/v}"
+          VERSION="${TAG#cli-v}"
           if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
-            echo 'Release tag must look like cli/v0.1.0 or cli/v0.1.0-rc.1.' >&2
+            echo 'Release tag must look like cli-v0.1.0 or cli-v0.1.0-rc.1.' >&2
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
