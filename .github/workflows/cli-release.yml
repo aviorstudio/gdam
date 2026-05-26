@@ -1,15 +1,24 @@
 name: CLI Release
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 permissions:
   contents: write
 
+concurrency: release-${{ github.repository }}-cli
+
 jobs:
   release:
-    if: startsWith(github.event.release.tag_name, 'cli-v')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,15 +31,33 @@ jobs:
         with:
           go-version-file: cli/go.mod
 
-      - name: Validate release input
+      - name: Determine release version
         id: release
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          BUMP: ${{ inputs.bump }}
         run: |
           set -euo pipefail
-          VERSION="${TAG#cli-v}"
-          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
-            echo 'Release tag must look like cli-v0.1.0 or cli-v0.1.0-rc.1.' >&2
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo 'Run releases from the main branch.' >&2
+            exit 1
+          fi
+          git fetch --tags --force
+          latest="$(git tag --list 'cli-v[0-9]*' | sed -E 's/^cli-v//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
+          if [ -z "$latest" ]; then
+            VERSION="0.0.1"
+          else
+            IFS=. read -r major minor patch <<< "$latest"
+            case "$BUMP" in
+              major) major=$((major + 1)); minor=0; patch=0 ;;
+              minor) minor=$((minor + 1)); patch=0 ;;
+              patch) patch=$((patch + 1)) ;;
+              *) echo "Unsupported bump: $BUMP" >&2; exit 1 ;;
+            esac
+            VERSION="${major}.${minor}.${patch}"
+          fi
+          TAG="cli-v${VERSION}"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "Tag already exists: $TAG" >&2
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
@@ -95,10 +122,10 @@ jobs:
 
           (cd dist && sha256sum *.tar.gz *.zip > checksums.txt)
 
-      - name: Upload release artifacts
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.release.outputs.tag }}
         run: |
           set -euo pipefail
-          gh release upload "$TAG" dist/*.tar.gz dist/*.zip dist/checksums.txt --clobber
+          gh release create "$TAG" dist/*.tar.gz dist/*.zip dist/checksums.txt --target "$GITHUB_SHA" --title "$TAG" --notes "Release $TAG"
