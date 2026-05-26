@@ -169,7 +169,7 @@ func (c *Client) ResolveAddon(ctx context.Context, username, addon, requestedVer
 		return ResolvedAddon{}, fmt.Errorf("addon has no repository set: @%s/%s", usernameNormal, addonName)
 	}
 
-	versionRows, err := c.listAddonVersions(ctx, addonRow.ID)
+	versionRows, err := c.listReleases(ctx, addonRow.ID)
 	if err != nil {
 		return ResolvedAddon{}, err
 	}
@@ -229,7 +229,7 @@ type addonRow struct {
 	OrgID        *string `json:"org_id"`
 }
 
-type versionRow struct {
+type releaseRow struct {
 	AddonID    *string `json:"addon_id"`
 	Major      int     `json:"major"`
 	Minor      int     `json:"minor"`
@@ -285,7 +285,7 @@ func (c *Client) getAddonByOwnerAndName(ctx context.Context, profileID, orgID *s
 	return rows[0], true, nil
 }
 
-func (c *Client) listAddonVersions(ctx context.Context, addonID string) ([]versionRow, error) {
+func (c *Client) listReleases(ctx context.Context, addonID string) ([]releaseRow, error) {
 	addonID = strings.TrimSpace(addonID)
 	if addonID == "" {
 		return nil, fmt.Errorf("missing addon id")
@@ -297,12 +297,12 @@ func (c *Client) listAddonVersions(ctx context.Context, addonID string) ([]versi
 	q.Set("order", "major.desc,minor.desc,patch.desc,created_at.desc")
 	q.Set("limit", "100")
 
-	var rows []versionRow
-	if err := c.get(ctx, "addon_versions", q, &rows); err != nil {
+	var rows []releaseRow
+	if err := c.get(ctx, "releases", q, &rows); err != nil {
 		return nil, err
 	}
 	if rows == nil {
-		rows = []versionRow{}
+		rows = []releaseRow{}
 	}
 	return rows, nil
 }
@@ -318,7 +318,7 @@ func (c *Client) PublishRelease(ctx context.Context, input PublishReleaseInput) 
 		"release_tag":   strings.TrimSpace(input.ReleaseTag),
 		"asset_name":    strings.TrimSpace(input.AssetName),
 	}
-	return c.postRPC(ctx, "publish_addon_version_with_secret_key", payload)
+	return c.postRPC(ctx, "publish_release_with_secret_key", payload)
 }
 
 func (c *Client) postRPC(ctx context.Context, fn string, payload any) error {

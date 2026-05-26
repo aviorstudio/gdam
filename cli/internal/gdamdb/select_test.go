@@ -3,7 +3,7 @@ package gdamdb
 import "testing"
 
 func TestSelectVersionRequested(t *testing.T) {
-	rows := []versionRow{
+	rows := []releaseRow{
 		{Major: 0, Minor: 1, Patch: 0, ReleaseTag: "v0.1.0"},
 		{Major: 0, Minor: 2, Patch: 0, ReleaseTag: "release-0.2.0"},
 	}
@@ -18,7 +18,7 @@ func TestSelectVersionRequested(t *testing.T) {
 }
 
 func TestSelectVersionLatestSemver(t *testing.T) {
-	rows := []versionRow{
+	rows := []releaseRow{
 		{Major: 0, Minor: 1, Patch: 0, ReleaseTag: "v0.1.0"},
 		{Major: 0, Minor: 2, Patch: 0, ReleaseTag: "v0.2.0"},
 		{Major: 0, Minor: 10, Patch: 0, ReleaseTag: "stable-0.10.0"},

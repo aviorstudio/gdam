@@ -7,7 +7,7 @@ import Title from '../../../components/Title.astro';
 import Button from '../../../components/Button.astro';
 import Input from '../../../components/Input.astro';
 import { getSessionFromCookies } from '../../../lib/auth';
-import { orgsProfilesDto, addonVersionsDto, addonsDto, usernamesDto } from '../../../lib/dtoService';
+import { orgsProfilesDto, releasesDto, addonsDto, usernamesDto } from '../../../lib/dtoService';
 import { findGitHubReleaseTag, releaseHasAsset } from '../../../lib/github';
 import { parseGitHubOwnerRepo } from '../../../lib/repo';
 import { parseSemverTriplet } from '../../../lib/semver';
@@ -140,7 +140,7 @@ if (Astro.request.method === 'POST' && canCreateRelease) {
             status = assetLookup.error ?? 'Matching GitHub Release asset was not found.';
             tone = 'error';
           } else {
-            const { error: versionError } = await addonVersionsDto.insert(supabase, {
+            const { error: versionError } = await releasesDto.insert(supabase, {
               addon_id: addon.id,
               major: versionTriplet.major,
               minor: versionTriplet.minor,

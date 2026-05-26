@@ -7,7 +7,7 @@ import Title from '../../components/Title.astro';
 import Button from '../../components/Button.astro';
 import Input from '../../components/Input.astro';
 import { getSessionFromCookies } from '../../lib/auth';
-import { orgsProfilesDto, addonVersionsDto, addonsDto, usernamesDto } from '../../lib/dtoService';
+import { orgsProfilesDto, releasesDto, addonsDto, usernamesDto } from '../../lib/dtoService';
 import { findGitHubReleaseTag, releaseHasAsset } from '../../lib/github';
 import { parseGitHubOwnerRepo, toRepoUrl } from '../../lib/repo';
 import { parseSemverTriplet } from '../../lib/semver';
@@ -191,7 +191,7 @@ if (Astro.request.method === 'POST' && targetOwner) {
                 status = 'Addon created but no id returned.';
                 tone = 'error';
               } else {
-                const { error: versionError } = await addonVersionsDto.insert(supabase, {
+                const { error: versionError } = await releasesDto.insert(supabase, {
                   addon_id: createdAddon.id,
                   major: versionTriplet.major,
                   minor: versionTriplet.minor,

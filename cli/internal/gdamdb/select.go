@@ -6,12 +6,12 @@ import (
 	"github.com/aviorstudio/gdam/cli/internal/semver"
 )
 
-func selectVersion(rows []versionRow, requested string) (versionRow, bool) {
+func selectVersion(rows []releaseRow, requested string) (releaseRow, bool) {
 	requested = strings.TrimSpace(requested)
 	if requested != "" {
 		reqVer, ok := semver.Parse(requested)
 		if !ok || len(reqVer.Pre) > 0 {
-			return versionRow{}, false
+			return releaseRow{}, false
 		}
 		for _, row := range rows {
 			if strings.TrimSpace(row.ReleaseTag) == "" {
@@ -21,10 +21,10 @@ func selectVersion(rows []versionRow, requested string) (versionRow, bool) {
 				return row, true
 			}
 		}
-		return versionRow{}, false
+		return releaseRow{}, false
 	}
 
-	var best versionRow
+	var best releaseRow
 	var bestSet bool
 
 	for _, row := range rows {
@@ -50,10 +50,10 @@ func selectVersion(rows []versionRow, requested string) (versionRow, bool) {
 		return row, true
 	}
 
-	return versionRow{}, false
+	return releaseRow{}, false
 }
 
-func compareVersion(a, b versionRow) int {
+func compareVersion(a, b releaseRow) int {
 	if a.Major != b.Major {
 		return cmpInt(a.Major, b.Major)
 	}

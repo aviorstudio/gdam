@@ -224,7 +224,7 @@ if (Astro.request.method === 'POST') {
       const { data: secretKeyRow, error: secretKeyError } = await secretKeysDto.insert(supabaseClient, {
         name: formSecretKeyName,
         token_hash: hashSecretKey(createdSecretKey),
-        created_by: profileId,
+        profile_id: profileId,
       });
       if (secretKeyError || !secretKeyRow?.id) {
         createdSecretKey = '';
@@ -329,7 +329,7 @@ if (Astro.request.method === 'POST') {
 }
 
 if (isProfileSettings) {
-  const secretKeyResult = await secretKeysDto.listByCreatedBy(supabaseClient, profileId);
+  const secretKeyResult = await secretKeysDto.listByProfileId(supabaseClient, profileId);
   if (secretKeyResult.error) {
     settingsStatus = settingsStatus || secretKeyResult.error.message;
     settingsTone = settingsTone === 'muted' ? 'error' : settingsTone;

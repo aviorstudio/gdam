@@ -5,7 +5,7 @@ import RootLayout from '../../layouts/RootLayout.astro';
 import Title from '../../components/Title.astro';
 import AddonList from '../../components/AddonList.astro';
 import { getSessionFromCookies, hasAuthCookies } from '../../lib/auth';
-import { orgsProfilesDto, addonVersionsDto, addonsDto, usernamesDto } from '../../lib/dtoService';
+import { orgsProfilesDto, releasesDto, addonsDto, usernamesDto } from '../../lib/dtoService';
 import { toGitHubRepoRootUrl, toRepoUrl } from '../../lib/repo';
 import { formatSemverTripletFromNullable } from '../../lib/semver';
 import { supabase } from '../../lib/supabase';
@@ -30,7 +30,7 @@ type AddonRecord = {
   created_at: string | null;
 };
 
-type AddonVersionRecord = {
+type ReleaseRecord = {
   addon_id: string | null;
   major: number | null;
   minor: number | null;
@@ -202,7 +202,7 @@ if (!usernameNormal || !addonName) {
               pageTone = 'error';
               pageStatus = 'Invalid version selected.';
             } else {
-              const { error: deleteError } = await addonVersionsDto.deleteByVersion(supabase, addon.id, major, minor, patch);
+              const { error: deleteError } = await releasesDto.deleteByVersion(supabase, addon.id, major, minor, patch);
               if (deleteError) {
                 Astro.response.status = 500;
                 pageTone = 'error';
@@ -214,13 +214,13 @@ if (!usernameNormal || !addonName) {
           }
         }
 
-        const { data: versionRows, error: versionError } = await addonVersionsDto.listByAddonId(supabase, addon.id);
+        const { data: versionRows, error: versionError } = await releasesDto.listByAddonId(supabase, addon.id);
         if (versionError) {
           Astro.response.status = 500;
           pageTone = 'error';
           pageStatus = versionError.message;
         } else {
-          versions = ((versionRows as AddonVersionRecord[] | null) ?? [])
+          versions = ((versionRows as ReleaseRecord[] | null) ?? [])
             .map((row) => ({
               version: formatSemverTripletFromNullable(row),
               major: row.major ?? -1,

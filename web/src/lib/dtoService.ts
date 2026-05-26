@@ -42,7 +42,7 @@ export const orgsProfilesDto = {
 export type SecretKeyInsert = {
   name: string;
   token_hash: string;
-  created_by: string;
+  profile_id: string;
 };
 
 export type SecretKeyScopeInsert = {
@@ -55,11 +55,11 @@ export const secretKeysDto = {
   insert: (client: SupabaseClient, payload: SecretKeyInsert) =>
     client.from('secret_keys').insert(payload).select('id').maybeSingle(),
   deleteById: (client: SupabaseClient, id: string) => client.from('secret_keys').delete().eq('id', id),
-  listByCreatedBy: (client: SupabaseClient, profileId: string) =>
+  listByProfileId: (client: SupabaseClient, profileId: string) =>
     client
       .from('secret_keys')
       .select('id,name,created_at,last_used_at')
-      .eq('created_by', profileId)
+      .eq('profile_id', profileId)
       .order('created_at', { ascending: false }),
 };
 
@@ -119,12 +119,12 @@ export const addonsDto = {
     client.from('addons').select('*').eq('org_id', orgId).eq('name', name).maybeSingle(),
 };
 
-export const addonVersionsDto = {
+export const releasesDto = {
   insert: (client: SupabaseClient, payload: { addon_id: string; major: number; minor: number; patch: number; tag: string; asset: string }) =>
-    client.from('addon_versions').insert(payload).select('*').maybeSingle(),
+    client.from('releases').insert(payload).select('*').maybeSingle(),
   deleteByVersion: (client: SupabaseClient, addonId: string, major: number, minor: number, patch: number) =>
     client
-      .from('addon_versions')
+      .from('releases')
       .delete()
       .eq('addon_id', addonId)
       .eq('major', major)
@@ -132,10 +132,10 @@ export const addonVersionsDto = {
       .eq('patch', patch),
   listByAddonIds: (client: SupabaseClient, addonIds: string[]) =>
     client
-      .from('addon_versions')
+      .from('releases')
       .select('*')
       .in('addon_id', addonIds)
       .order('created_at', { ascending: false }),
   listByAddonId: (client: SupabaseClient, addonId: string) =>
-    client.from('addon_versions').select('*').eq('addon_id', addonId).order('created_at', { ascending: false }),
+    client.from('releases').select('*').eq('addon_id', addonId).order('created_at', { ascending: false }),
 };

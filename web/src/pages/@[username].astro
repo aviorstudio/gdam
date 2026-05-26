@@ -5,7 +5,7 @@ import RootLayout from '../layouts/RootLayout.astro';
 import Title from '../components/Title.astro';
 import AddonList from '../components/AddonList.astro';
 import { getSessionFromCookies, hasAuthCookies } from '../lib/auth';
-import { orgsDto, orgsProfilesDto, profilesDto, addonVersionsDto, addonsDto, usernamesDto } from '../lib/dtoService';
+import { orgsDto, orgsProfilesDto, profilesDto, releasesDto, addonsDto, usernamesDto } from '../lib/dtoService';
 import { toRepoUrl } from '../lib/repo';
 import { formatSemverTripletFromNullable } from '../lib/semver';
 import { supabase } from '../lib/supabase';
@@ -42,7 +42,7 @@ type AddonRecord = {
   created_at: string | null;
 };
 
-type AddonVersionRecord = {
+type ReleaseRecord = {
   addon_id: string;
   major: number | null;
   minor: number | null;
@@ -192,14 +192,14 @@ if (!usernameNormal) {
         const latestReleaseByAddonId = new Map<string, { version: string; releaseTag: string; createdAt: string }>();
         if (addons.length > 0) {
           const addonIds = addons.map((addon) => addon.id);
-          const { data: versionRows, error: versionError } = await addonVersionsDto.listByAddonIds(
+          const { data: versionRows, error: versionError } = await releasesDto.listByAddonIds(
             supabase,
             addonIds
           );
           if (versionError) {
             pageStatus = pageStatus || 'Unable to load addon versions.';
           } else {
-            for (const row of (versionRows as AddonVersionRecord[] | null) ?? []) {
+            for (const row of (versionRows as ReleaseRecord[] | null) ?? []) {
               if (!latestReleaseByAddonId.has(row.addon_id)) {
                 latestReleaseByAddonId.set(row.addon_id, {
                   version: formatSemverTripletFromNullable(row),
