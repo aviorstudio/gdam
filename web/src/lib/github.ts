@@ -16,15 +16,6 @@ const githubHeaders = () => {
   return headers;
 };
 
-export const releaseTagCandidates = (version: string, explicitTag: string) => {
-  const tag = explicitTag.trim();
-  if (tag) return [tag];
-
-  const normalizedVersion = version.trim().replace(/^[vV]/, '');
-  if (!normalizedVersion) return [];
-  return [`v${normalizedVersion}`, normalizedVersion];
-};
-
 export const findGitHubReleaseTag = async (owner: string, repo: string, tags: string[]) => {
   if (allowLocalReleaseFixtures()) {
     const tag = tags.map((candidate) => candidate.trim()).find(Boolean) ?? '';

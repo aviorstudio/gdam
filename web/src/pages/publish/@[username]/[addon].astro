@@ -1,0 +1,197 @@
+---
+export const prerender = false;
+
+import RootLayout from '../../../layouts/RootLayout.astro';
+import Card from '../../../components/Card.astro';
+import Title from '../../../components/Title.astro';
+import Button from '../../../components/Button.astro';
+import Input from '../../../components/Input.astro';
+import { getSessionFromCookies } from '../../../lib/auth';
+import { orgsProfilesDto, addonVersionsDto, addonsDto, usernamesDto } from '../../../lib/dtoService';
+import { findGitHubReleaseTag, releaseHasAsset } from '../../../lib/github';
+import { parseGitHubOwnerRepo } from '../../../lib/repo';
+import { parseSemverTriplet } from '../../../lib/semver';
+import { supabase } from '../../../lib/supabase';
+
+type UsernameRecord = {
+  name: string | null;
+  user_id: string | null;
+  org_id: string | null;
+};
+
+type OrgsProfileRecord = {
+  admin: boolean | null;
+};
+
+type AddonRecord = {
+  id: string;
+  name: string | null;
+  repo: string | null;
+};
+
+const safeDecodeURIComponent = (value: string) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
+const normalizeUsername = (value: string) => value.trim().toLowerCase();
+const defaultAssetName = (owner: string, repo: string) => `@${owner}_${repo}.zip`;
+
+const usernameParam = safeDecodeURIComponent(Astro.params.username ?? '');
+const usernameNormal = normalizeUsername(usernameParam);
+const addonName = safeDecodeURIComponent(Astro.params.addon ?? '').trim();
+const addonPath = usernameParam && addonName ? `/@${encodeURIComponent(usernameParam)}/${encodeURIComponent(addonName)}` : '/';
+
+const session = await getSessionFromCookies(Astro.cookies);
+if (!session) return Astro.redirect('/signin');
+
+const profileId = session.user?.id ?? '';
+if (!profileId || !usernameNormal || !addonName) return Astro.redirect(addonPath);
+
+let status = '';
+let tone: 'muted' | 'error' | 'success' = 'muted';
+let formVersion = '';
+let formReleaseTag = '';
+let formAssetName = '';
+let canCreateRelease = false;
+let addon: { id: string; name: string; repo: string } | null = null;
+
+const { data: usernameRow, error: usernameError } = await usernamesDto.getByName(supabase, usernameNormal);
+if (usernameError || !usernameRow) {
+  return Astro.redirect(addonPath);
+}
+
+const usernameRecord = usernameRow as UsernameRecord;
+const usernameDisplay = usernameRecord.name || usernameParam;
+const ownerProfileId = usernameRecord.user_id;
+const ownerOrgId = usernameRecord.org_id;
+
+let canPublishForOrg = false;
+if (ownerOrgId) {
+  const { data: membershipRow, error: membershipError } = await orgsProfilesDto.getByOrgIdAndProfileId(
+    supabase,
+    ownerOrgId,
+    profileId
+  );
+  if (!membershipError && membershipRow) {
+    const membershipRecord = membershipRow as OrgsProfileRecord;
+    canPublishForOrg = Boolean(membershipRecord.admin);
+  }
+}
+
+canCreateRelease = Boolean(
+  (ownerProfileId && ownerProfileId === profileId) ||
+  (ownerOrgId && canPublishForOrg)
+);
+
+if (!canCreateRelease) {
+  Astro.response.status = 403;
+  status = 'You do not have permission to publish releases for this addon.';
+  tone = 'error';
+}
+
+const { data: addonRow, error: addonError } = ownerOrgId
+  ? await addonsDto.getByOrgIdAndName(supabase, ownerOrgId, addonName)
+  : await addonsDto.getByProfileIdAndName(supabase, ownerProfileId ?? '', addonName);
+
+if (addonError || !addonRow) {
+  return Astro.redirect(addonPath);
+}
+
+const addonRecord = addonRow as AddonRecord;
+addon = {
+  id: addonRecord.id,
+  name: addonRecord.name ?? addonName,
+  repo: addonRecord.repo ?? '',
+};
+
+if (Astro.request.method === 'POST' && canCreateRelease) {
+  const formData = await Astro.request.formData();
+  formVersion = String(formData.get('version') ?? '').trim();
+  formReleaseTag = String(formData.get('tag') ?? '').trim();
+  formAssetName = String(formData.get('asset') ?? '').trim();
+
+  if (!formVersion || !formReleaseTag) {
+    status = 'Version and release tag are required.';
+    tone = 'error';
+  } else {
+    const versionTriplet = parseSemverTriplet(formVersion);
+    if (!versionTriplet) {
+      status = 'Version must be in MAJOR.MINOR.PATCH format.';
+      tone = 'error';
+    } else {
+      const githubRepo = parseGitHubOwnerRepo(addon.repo);
+      if (!githubRepo) {
+        status = 'Only GitHub repositories are supported (github.com/owner/repo).';
+        tone = 'error';
+      } else {
+        const releaseLookup = await findGitHubReleaseTag(githubRepo.owner, githubRepo.repo, [formReleaseTag]);
+        if (!releaseLookup.tag) {
+          status = releaseLookup.error ?? 'Matching GitHub Release was not found.';
+          tone = 'error';
+        } else {
+          formReleaseTag = releaseLookup.tag;
+          if (!formAssetName) formAssetName = defaultAssetName(githubRepo.owner, githubRepo.repo);
+          const assetLookup = await releaseHasAsset(githubRepo.owner, githubRepo.repo, formReleaseTag, formAssetName);
+          if (!assetLookup.ok) {
+            status = assetLookup.error ?? 'Matching GitHub Release asset was not found.';
+            tone = 'error';
+          } else {
+            const { error: versionError } = await addonVersionsDto.insert(supabase, {
+              addon_id: addon.id,
+              major: versionTriplet.major,
+              minor: versionTriplet.minor,
+              patch: versionTriplet.patch,
+              tag: formReleaseTag,
+              asset: formAssetName,
+            });
+
+            if (versionError) {
+              status = versionError.message;
+              tone = 'error';
+            } else {
+              return Astro.redirect(addonPath);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+---
+
+<RootLayout>
+  <Title
+    title="Publish release"
+    subtitle={`Publish a new release for @${usernameDisplay}/${addon.name}.`}
+  />
+
+  <form method="post" action={Astro.url.pathname}>
+    <Card class="flex flex-col gap-4">
+      <Input label="Release tag" name="tag" placeholder="v0.1.0" type="text" value={formReleaseTag} required />
+      <Input label="Version" name="version" placeholder="0.1.0" type="text" value={formVersion} required />
+      <Input label="Asset name" name="asset" placeholder="@owner_repo.zip" type="text" value={formAssetName} />
+
+      <p
+        class:list={{
+          'min-h-[20px] text-sm': true,
+          'text-slate-500': tone === 'muted',
+          'text-red-600': tone === 'error',
+          'text-green-600': tone === 'success',
+        }}
+      >
+        {status}
+      </p>
+
+      <Button variant="primary" size="form" icon="check" type="submit">
+        Publish release
+      </Button>
+      <Button href={addonPath} size="form" icon="x">
+        Cancel
+      </Button>
+    </Card>
+  </form>
+</RootLayout>

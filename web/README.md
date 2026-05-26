@@ -14,7 +14,7 @@ Seed a local dev user:
 ./scripts/db_seed.sh
 ```
 
-The default seeded login is `dev@gdam.local` / `password123` with username `@dev`.
+The default seeded login is `test@gdam.dev` / `password123` with username `@dev`.
 
 Create `web/.env.local` with the local API URL and publishable key shown by `supabase status`:
 

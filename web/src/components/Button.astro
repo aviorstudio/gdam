@@ -1,0 +1,59 @@
+---
+import ButtonIcon from './ButtonIcon.astro';
+
+type ButtonVariant = 'outline' | 'primary' | 'danger' | 'danger-outline' | 'muted';
+type ButtonSize = 'nav' | 'form' | 'chip';
+type ButtonIconName = 'account' | 'check' | 'docs' | 'key' | 'orgs' | 'plus' | 'settings' | 'sign-in' | 'sign-out' | 'trash' | 'x';
+
+interface Props {
+	href?: string;
+	variant?: ButtonVariant;
+	size?: ButtonSize;
+	icon?: ButtonIconName;
+	type?: 'button' | 'submit' | 'reset';
+	name?: string;
+	value?: string;
+	form?: string;
+	class?: string;
+}
+
+const {
+	href,
+	variant = 'outline',
+	size = 'nav',
+	icon,
+	type = 'button',
+	name,
+	value,
+	form,
+	class: className = '',
+} = Astro.props as Props;
+
+const baseClasses = 'inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2';
+const sizeClasses = {
+	nav: 'px-4 py-2',
+	form: 'px-4 py-3',
+	chip: 'rounded-full px-3 py-1',
+} satisfies Record<ButtonSize, string>;
+const variantClasses = {
+	outline: 'border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 focus-visible:outline-slate-400',
+	primary: 'bg-sky-600 text-white hover:bg-sky-700 focus-visible:outline-sky-600',
+	danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:outline-red-600',
+	'danger-outline': 'border border-red-200 bg-white text-red-600 hover:bg-red-50 focus-visible:outline-red-500',
+	muted: 'border border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-100 focus-visible:outline-slate-400',
+} satisfies Record<ButtonVariant, string>;
+
+const classes = [baseClasses, sizeClasses[size], variantClasses[variant], className].filter(Boolean).join(' ');
+---
+
+{href ? (
+	<a class={classes} href={href}>
+		{icon ? <ButtonIcon name={icon} /> : null}
+		<span><slot /></span>
+	</a>
+) : (
+	<button class={classes} type={type} name={name} value={value} form={form}>
+		{icon ? <ButtonIcon name={icon} /> : null}
+		<span><slot /></span>
+	</button>
+)}

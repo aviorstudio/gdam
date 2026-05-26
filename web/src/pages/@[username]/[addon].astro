@@ -2,15 +2,12 @@
 export const prerender = false;
 
 import RootLayout from '../../layouts/RootLayout.astro';
-import Dialog from '../../components/Dialog.astro';
 import Title from '../../components/Title.astro';
 import AddonList from '../../components/AddonList.astro';
-import Input from '../../components/Input.astro';
 import { getSessionFromCookies, hasAuthCookies } from '../../lib/auth';
 import { orgsProfilesDto, addonVersionsDto, addonsDto, usernamesDto } from '../../lib/dtoService';
-import { findGitHubReleaseTag, releaseHasAsset, releaseTagCandidates } from '../../lib/github';
-import { parseGitHubOwnerRepo, toGitHubRepoRootUrl, toRepoUrl } from '../../lib/repo';
-import { formatSemverTripletFromNullable, parseSemverTriplet } from '../../lib/semver';
+import { toGitHubRepoRootUrl, toRepoUrl } from '../../lib/repo';
+import { formatSemverTripletFromNullable } from '../../lib/semver';
 import { supabase } from '../../lib/supabase';
 
 const DELETE_CSRF_COOKIE = 'gdam-delete-csrf';
@@ -74,17 +71,6 @@ let ownerLabel = '';
 let ownerSlug = encodeURIComponent(usernameParam);
 
 let canCreateRelease = false;
-let showCreateReleaseDialog = Astro.url.searchParams.get('create') === '1';
-let createStatus = '';
-let createTone: 'muted' | 'error' | 'success' = 'muted';
-
-let formVersion = '';
-let formReleaseTag = '';
-let formAssetName = '';
-
-if (showCreateReleaseDialog && !session) {
-  return Astro.redirect('/signin');
-}
 
 let addon: {
   id: string;
@@ -103,8 +89,6 @@ let versions: Array<{
   assetName: string;
   createdAt: string;
 }> = [];
-
-const defaultAssetName = (owner: string, repo: string) => `@${owner}_${repo}.zip`;
 
 const notFound = () => {
   Astro.response.status = 404;
@@ -150,13 +134,6 @@ if (!usernameNormal || !addonName) {
       (ownerOrgId && canPublishForOrg)
     );
 
-    if (showCreateReleaseDialog && !canCreateRelease) {
-      Astro.response.status = 403;
-      pageTone = 'error';
-      pageStatus = 'You do not have permission to publish releases for this addon.';
-      showCreateReleaseDialog = false;
-    }
-
     if (ownerProfileId && ownerOrgId) {
       Astro.response.status = 500;
       pageTone = 'error';
@@ -191,13 +168,12 @@ if (!usernameNormal || !addonName) {
           }
 
           const formData = await Astro.request.formData();
-          const action = String(formData.get('action') ?? 'create-release');
+          const action = String(formData.get('action') ?? '');
 
           if (!canCreateRelease) {
             Astro.response.status = 403;
             pageTone = 'error';
-            createStatus = 'You do not have permission to publish releases for this addon.';
-            createTone = 'error';
+            pageStatus = 'You do not have permission to manage releases for this addon.';
           } else if (action === 'delete-addon') {
             if (String(formData.get('csrf_token') ?? '') !== deleteCsrfToken) {
               Astro.response.status = 403;
@@ -233,62 +209,6 @@ if (!usernameNormal || !addonName) {
                 pageStatus = deleteError.message;
               } else {
                 return Astro.redirect(Astro.url.pathname);
-              }
-            }
-          } else {
-            showCreateReleaseDialog = true;
-            formVersion = String(formData.get('version') ?? '').trim();
-            formReleaseTag = String(formData.get('tag') ?? '').trim();
-            formAssetName = String(formData.get('asset') ?? '').trim();
-
-            if (!formVersion) {
-              createStatus = 'Version is required.';
-              createTone = 'error';
-            } else {
-              const versionTriplet = parseSemverTriplet(formVersion);
-              if (!versionTriplet) {
-                createStatus = 'Version must be in MAJOR.MINOR.PATCH format.';
-                createTone = 'error';
-              } else {
-                const githubRepo = parseGitHubOwnerRepo(addon.repo);
-                if (!githubRepo) {
-                  createStatus = 'Only GitHub repositories are supported (github.com/owner/repo).';
-                  createTone = 'error';
-                } else {
-                  const releaseLookup = await findGitHubReleaseTag(
-                    githubRepo.owner,
-                    githubRepo.repo,
-                    releaseTagCandidates(formVersion, formReleaseTag)
-                  );
-                  if (!releaseLookup.tag) {
-                    createStatus = releaseLookup.error ?? 'Matching GitHub Release was not found.';
-                    createTone = 'error';
-                  } else {
-                    formReleaseTag = releaseLookup.tag;
-                    if (!formAssetName) formAssetName = defaultAssetName(githubRepo.owner, githubRepo.repo);
-                    const assetLookup = await releaseHasAsset(githubRepo.owner, githubRepo.repo, formReleaseTag, formAssetName);
-                    if (!assetLookup.ok) {
-                      createStatus = assetLookup.error ?? 'Matching GitHub Release asset was not found.';
-                      createTone = 'error';
-                    } else {
-                      const { error: versionError } = await addonVersionsDto.insert(supabase, {
-                        addon_id: addon.id,
-                        major: versionTriplet.major,
-                        minor: versionTriplet.minor,
-                        patch: versionTriplet.patch,
-                        tag: formReleaseTag,
-                        asset: formAssetName,
-                      });
-
-                      if (versionError) {
-                        createStatus = versionError.message;
-                        createTone = 'error';
-                      } else {
-                        return Astro.redirect(Astro.url.pathname);
-                      }
-                    }
-                  }
-                }
               }
             }
           }
@@ -348,11 +268,14 @@ const versionList = versions.map((version) => ({
       : undefined}
     subtitle={pageTone === 'not-found'
       ? 'No addon matches that URL.'
-      : repoUrl ? (addon?.editorPlugin ? 'Editor plugin' : 'Runtime addon') : 'No repository linked.'}
+      : undefined}
     subtitleLink={pageTone !== 'not-found' && repoUrl
       ? { href: repoUrl, label: repoLabel || addon?.repo || repoUrl, external: true }
       : undefined}
-    action={canCreateRelease && pageTone === 'default' ? { href: '?create=1', label: 'Create release' } : undefined}
+    actions={canCreateRelease && pageTone === 'default' && addon ? [
+      { href: `/publish/@${ownerSlug}/${encodeURIComponent(addon.name || addonName)}`, label: 'Publish release' },
+      { href: `/settings/@${ownerSlug}/${encodeURIComponent(addon.name || addonName)}`, label: 'Settings' },
+    ] : undefined}
   />
 
   <AddonList
@@ -365,98 +288,4 @@ const versionList = versions.map((version) => ({
       ? 'Double-check the URL and try again.'
       : 'This addon has not published any versions.'}
   />
-
-  {
-    canCreateRelease && (
-      <Dialog id="create-release-dialog" open={showCreateReleaseDialog} title="Create a release" size="lg">
-        <Fragment slot="description">
-          Publish a new release for this addon.
-        </Fragment>
-
-	        <form method="post" action={Astro.url.pathname} class="flex flex-col gap-4">
-	          <div class="grid gap-4 md:grid-cols-2">
-	            <Input
-	              label="Version"
-	              name="version"
-	              placeholder="0.1.0"
-	              type="text"
-	              value={formVersion}
-	              required
-	            />
-
-	            <Input
-	              label="Release tag (optional)"
-	              name="tag"
-	              placeholder="v0.1.0"
-	              type="text"
-	              value={formReleaseTag}
-	            />
-
-	            <Input
-	              label="Asset name"
-	              name="asset"
-	              placeholder="@owner_repo.zip"
-	              type="text"
-	              value={formAssetName}
-	            />
-	          </div>
-
-          <p
-            class:list={{
-              'min-h-[20px] text-sm': true,
-              'text-slate-500': createTone === 'muted',
-              'text-red-600': createTone === 'error',
-              'text-green-600': createTone === 'success',
-            }}
-          >
-            {createStatus}
-          </p>
-
-          <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <a
-              class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
-              href={Astro.url.pathname}
-            >
-              Cancel
-            </a>
-            <button
-              class="inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
-              type="submit"
-            >
-              Create release
-            </button>
-          </div>
-        </form>
-      </Dialog>
-    )
-  }
-
-  {
-    canCreateRelease && pageTone === 'default' && addon && (
-      <form
-        method="post"
-        action={Astro.url.pathname}
-        class="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5"
-        onsubmit={`return confirm(${JSON.stringify(`Delete ${addon.name}? This cannot be undone.`)})`}
-      >
-        <input type="hidden" name="action" value="delete-addon" />
-        <input type="hidden" name="csrf_token" value={deleteCsrfToken} />
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p class="text-sm font-semibold text-red-900">Delete addon</p>
-            <p class="text-sm text-red-700">Delete this addon and all of its versions from the registry.</p>
-          </div>
-          <button
-            class="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
-            type="submit"
-            name="action"
-            value="delete-addon"
-          >
-            Delete addon
-          </button>
-        </div>
-      </form>
-    )
-  }
-
 </RootLayout>

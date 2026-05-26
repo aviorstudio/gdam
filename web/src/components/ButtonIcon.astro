@@ -1,0 +1,40 @@
+---
+import checkIcon from '../assets/icons/check-24.svg?raw';
+import gearIcon from '../assets/icons/gear-24.svg?raw';
+import keyIcon from '../assets/icons/key-24.svg?raw';
+import organizationIcon from '../assets/icons/organization-24.svg?raw';
+import personIcon from '../assets/icons/person-24.svg?raw';
+import plusIcon from '../assets/icons/plus-24.svg?raw';
+import projectRoadmapIcon from '../assets/icons/project-roadmap-24.svg?raw';
+import signInIcon from '../assets/icons/sign-in-24.svg?raw';
+import signOutIcon from '../assets/icons/sign-out-24.svg?raw';
+import trashIcon from '../assets/icons/trash-24.svg?raw';
+import xIcon from '../assets/icons/x-24.svg?raw';
+
+type IconName = 'account' | 'check' | 'docs' | 'key' | 'orgs' | 'plus' | 'settings' | 'sign-in' | 'sign-out' | 'trash' | 'x';
+
+interface Props {
+  name: IconName;
+}
+
+const { name } = Astro.props as Props;
+const icons = {
+  account: personIcon,
+  check: checkIcon,
+  docs: projectRoadmapIcon,
+  key: keyIcon,
+  orgs: organizationIcon,
+  plus: plusIcon,
+  settings: gearIcon,
+  'sign-in': signInIcon,
+  'sign-out': signOutIcon,
+  trash: trashIcon,
+  x: xIcon,
+} satisfies Record<IconName, string>;
+
+const svg = icons[name]
+  .replace('<svg ', '<svg class="h-4 w-4 shrink-0 fill-current" aria-hidden="true" ')
+  .replace(/\s(width|height)="24"/g, '');
+---
+
+<Fragment set:html={svg} />

@@ -1,0 +1,185 @@
+---
+export const prerender = false;
+
+import RootLayout from '../../layouts/RootLayout.astro';
+import Card from '../../components/Card.astro';
+import Title from '../../components/Title.astro';
+import Button from '../../components/Button.astro';
+import Input from '../../components/Input.astro';
+import { getSessionFromCookies } from '../../lib/auth';
+import { orgsDto, orgsProfilesDto, usernamesDto } from '../../lib/dtoService';
+import { supabase } from '../../lib/supabase';
+
+const normalizeUsername = (value: string) => value.trim().toLowerCase();
+const normalizeOptionalValue = (value: string) => {
+  const trimmed = value.trim();
+  return trimmed || null;
+};
+const normalizeOptionalUrl = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return { value: null, error: '' };
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return { value: null, error: 'Link must start with http:// or https://.' };
+    }
+    return { value: url.toString(), error: '' };
+  } catch {
+    return { value: null, error: 'Link must be a valid URL.' };
+  }
+};
+const reservedUsernames = new Set([
+  'signin',
+  'register',
+  'account',
+  'settings',
+  'api',
+  '404',
+  'robots.txt',
+  'sitemap.xml',
+  'favicon.ico',
+  'favicon.svg',
+]);
+const isReservedUsername = (value: string) => reservedUsernames.has(value);
+
+const session = await getSessionFromCookies(Astro.cookies);
+if (!session) {
+  return Astro.redirect('/signin');
+}
+
+const profileId = session.user?.id ?? '';
+if (!profileId) {
+  return Astro.redirect('/signin');
+}
+
+let status = '';
+let tone: 'muted' | 'error' | 'success' = 'muted';
+let formOrgUsername = '';
+let formLink = '';
+let formBio = '';
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  formOrgUsername = String(formData.get('org_username') ?? '').trim();
+  formLink = String(formData.get('link') ?? '').trim();
+  formBio = String(formData.get('bio') ?? '').trim();
+
+  const orgUsernameDisplay = formOrgUsername;
+  const orgUsernameNormal = normalizeUsername(orgUsernameDisplay);
+  const normalizedLink = normalizeOptionalUrl(formLink);
+
+  if (!orgUsernameNormal) {
+    status = 'Organization username is required.';
+    tone = 'error';
+  } else if (isReservedUsername(orgUsernameNormal)) {
+    status = 'That username is reserved.';
+    tone = 'error';
+  } else if (normalizedLink.error) {
+    status = normalizedLink.error;
+    tone = 'error';
+  } else {
+    const { data: existingUsername, error: existingUsernameError } = await usernamesDto.getByName(
+      supabase,
+      orgUsernameNormal
+    );
+
+    if (existingUsernameError) {
+      status = existingUsernameError.message;
+      tone = 'error';
+    } else if (existingUsername) {
+      status = 'That username is already taken.';
+      tone = 'error';
+    } else {
+      const { data: createdOrg, error: orgError } = await orgsDto.insert(supabase, {
+        link: normalizedLink.value,
+        bio: normalizeOptionalValue(formBio),
+      });
+      if (orgError) {
+        status = orgError.message;
+        tone = 'error';
+      } else if (!createdOrg?.id) {
+        status = 'Organization created but no id returned.';
+        tone = 'error';
+      } else {
+        const { error: membershipError } = await orgsProfilesDto.insert(supabase, {
+          org_id: createdOrg.id,
+          profile_id: profileId,
+          admin: true,
+        });
+
+        if (membershipError) {
+          status = membershipError.message;
+          tone = 'error';
+        } else {
+          const { error: createUsernameError } = await usernamesDto.insert(supabase, {
+            name: orgUsernameDisplay,
+            org_id: createdOrg.id,
+          });
+
+          if (createUsernameError) {
+            status = createUsernameError.code === '23505' ? 'That username is already taken.' : createUsernameError.message;
+            tone = 'error';
+          } else {
+            return Astro.redirect(`/@${encodeURIComponent(orgUsernameDisplay)}`);
+          }
+        }
+      }
+    }
+  }
+}
+---
+
+<RootLayout>
+  <Title title="Create org" subtitle="Create an organization for shared addon publishing." />
+
+  <form method="post" action={Astro.url.pathname}>
+    <Card class="flex flex-col gap-4">
+      <Input
+        label="Org username"
+        name="org_username"
+        placeholder="my-awesome-studio"
+        type="text"
+        value={formOrgUsername}
+        minlength="3"
+        maxlength="32"
+        required
+      />
+
+      <Input
+        label="Link"
+        name="link"
+        placeholder="https://example.com"
+        type="url"
+        value={formLink}
+      />
+
+      <label class="grid gap-1 text-sm font-semibold text-slate-900">
+        <span>Bio</span>
+        <textarea
+          class="min-h-28 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+          name="bio"
+          placeholder="Tell people what this org builds."
+          value={formBio}
+        ></textarea>
+      </label>
+
+      <p
+        class:list={{
+          'min-h-[20px] text-sm': true,
+          'text-slate-500': tone === 'muted',
+          'text-red-600': tone === 'error',
+          'text-green-600': tone === 'success',
+        }}
+      >
+        {status}
+      </p>
+
+      <Button variant="primary" size="form" icon="check" type="submit">
+        Create org
+      </Button>
+      <Button href="/orgs" size="form" icon="x">
+        Cancel
+      </Button>
+    </Card>
+  </form>
+</RootLayout>

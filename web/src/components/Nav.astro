@@ -1,17 +1,15 @@
 ---
-import { getAuthCookies, hasAuthCookies } from '../lib/auth';
+import { getSessionFromCookies, hasAuthCookies } from '../lib/auth';
 import { usernamesDto } from '../lib/dtoService';
 import { supabase } from '../lib/supabase';
-import accountIcon from '../assets/icons/person-24.svg?url';
-import orgsIcon from '../assets/icons/organization-24.svg?url';
-import settingsIcon from '../assets/icons/gear-24.svg?url';
+import Button from './Button.astro';
 
 type UsernameRecord = {
 	name: string | null;
 };
 
 type NavActionVariant = 'text' | 'icon' | 'primary';
-type NavIconName = 'account' | 'orgs' | 'settings';
+type NavIconName = 'account' | 'docs' | 'key' | 'orgs' | 'sign-in';
 
 type NavAction = {
 	href: string;
@@ -20,37 +18,12 @@ type NavAction = {
 	icon?: NavIconName;
 };
 
-const iconSrcByName = {
-	account: accountIcon,
-	orgs: orgsIcon,
-	settings: settingsIcon,
-} satisfies Record<NavIconName, string>;
-
-const decodeJwtPayload = (token: string) => {
-	const parts = token.split('.');
-	if (parts.length !== 3) return null;
-
-	const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-	const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
-
-	try {
-		const json = Buffer.from(padded, 'base64').toString('utf8');
-		return JSON.parse(json) as Record<string, unknown>;
-	} catch {
-		return null;
-	}
-};
-
-const hasTokens = hasAuthCookies(Astro.cookies);
-const { accessToken } = getAuthCookies(Astro.cookies);
-const accessTokenValue = accessToken?.value ?? '';
-const profileId = accessTokenValue ? String(decodeJwtPayload(accessTokenValue)?.sub ?? '') : '';
-const isSignedIn = Boolean(hasTokens && profileId);
+const session = hasAuthCookies(Astro.cookies) ? await getSessionFromCookies(Astro.cookies) : null;
+const profileId = session?.user?.id ?? '';
+const isSignedIn = Boolean(profileId);
 
 let usernameDisplayForProfile = '';
 let accountHref = '/';
-let orgsHref = '/';
-let settingsHref = '/';
 if (profileId) {
 	const { data: usernameRows, error: usernameError } = await usernamesDto.getByUserId(supabase, profileId);
 	if (!usernameError) {
@@ -62,34 +35,32 @@ if (profileId) {
 if (usernameDisplayForProfile) {
 	const usernamePath = `/@${encodeURIComponent(usernameDisplayForProfile)}`;
 	accountHref = usernamePath;
-	orgsHref = `${usernamePath}/orgs`;
-	settingsHref = `${usernamePath}/settings`;
 }
 
-const textButtonClasses =
-	'inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400';
-const primaryButtonClasses =
-	'inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600';
-const iconButtonClasses =
-	'inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400';
+const getIcon = (action: NavAction): NavIconName => {
+	if (action.icon) return action.icon;
+	if (action.label === 'Docs') return 'docs';
+	return 'account';
+};
 
 const actions: NavAction[] = [
-	{ href: '/docs', label: 'Docs', variant: 'text' },
+	{ href: '/docs', label: 'Docs', variant: 'text', icon: 'docs' },
 	...(isSignedIn
-		? ([
-				{ href: orgsHref, label: 'Orgs', variant: 'icon', icon: 'orgs' },
+		? usernameDisplayForProfile ? ([
+				{ href: '/orgs', label: 'Orgs', variant: 'icon', icon: 'orgs' },
 				{ href: accountHref, label: 'Account', variant: 'icon', icon: 'account' },
-				{ href: settingsHref, label: 'Settings', variant: 'icon', icon: 'settings' },
 			] satisfies NavAction[])
 			: ([
-					{ href: '/signin', label: 'Sign in', variant: 'text' },
-					{ href: '/register', label: 'Register', variant: 'primary' },
+					{ href: '/register', label: 'Register username', variant: 'primary' },
+				] satisfies NavAction[])
+			: ([
+					{ href: '/signin', label: 'Sign in', variant: 'primary', icon: 'sign-in' },
 				] satisfies NavAction[])),
 ];
 ---
 
 <nav
-	class="mx-auto flex w-full max-w-5xl items-center gap-2 border-b border-slate-200 bg-white/80 px-4 py-4 backdrop-blur"
+	class="relative z-10 mx-auto flex w-full max-w-5xl items-center gap-2 border-b border-slate-200 bg-white/80 px-4 py-4 backdrop-blur"
 	aria-label="Primary"
 >
 	<a class="text-lg font-semibold tracking-tight text-slate-900 hover:text-slate-700" href="/">
@@ -98,22 +69,14 @@ const actions: NavAction[] = [
 
 	{
 		actions.map((action, index) => (
-			<a
-				class:list={{
-					[textButtonClasses]: action.variant === 'text',
-					[primaryButtonClasses]: action.variant === 'primary',
-					[iconButtonClasses]: action.variant === 'icon',
-					'ml-auto': index === 0,
-				}}
+			<Button
 				href={action.href}
-				title={action.variant === 'icon' ? action.label : undefined}
+				variant={action.variant === 'primary' ? 'primary' : 'outline'}
+				icon={getIcon(action)}
+				class={index === 0 ? 'ml-auto' : ''}
 			>
-				{action.icon ? (
-					<img class="h-5 w-5" src={iconSrcByName[action.icon]} alt="" aria-hidden="true" />
-				) : null}
-
-				{action.variant === 'icon' ? <span class="sr-only">{action.label}</span> : action.label}
-			</a>
+				{action.label}
+			</Button>
 		))
 	}
 </nav>

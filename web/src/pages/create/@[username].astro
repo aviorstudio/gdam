@@ -1,0 +1,292 @@
+---
+export const prerender = false;
+
+import RootLayout from '../../layouts/RootLayout.astro';
+import Card from '../../components/Card.astro';
+import Title from '../../components/Title.astro';
+import Button from '../../components/Button.astro';
+import Input from '../../components/Input.astro';
+import { getSessionFromCookies } from '../../lib/auth';
+import { orgsProfilesDto, addonVersionsDto, addonsDto, usernamesDto } from '../../lib/dtoService';
+import { findGitHubReleaseTag, releaseHasAsset } from '../../lib/github';
+import { parseGitHubOwnerRepo, toRepoUrl } from '../../lib/repo';
+import { parseSemverTriplet } from '../../lib/semver';
+import { supabase } from '../../lib/supabase';
+
+type UsernameRecord = {
+  name: string | null;
+  user_id: string | null;
+  org_id: string | null;
+};
+
+type OrgsProfileRecord = {
+  org_id: string | null;
+  admin: boolean | null;
+};
+
+type PublishOwner = {
+  value: string;
+  label: string;
+  slug: string;
+  profileId: string | null;
+  orgId: string | null;
+};
+
+const safeDecodeURIComponent = (value: string) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
+const normalizeUsername = (value: string) => value.trim().toLowerCase();
+const normalizeGitHubRepo = (repoInput: string) => {
+  const normalizedRepo = toRepoUrl(repoInput);
+  if (!normalizedRepo) return { repo: '', error: 'Repository is required.' };
+
+  let url: URL;
+  try {
+    url = new URL(normalizedRepo);
+  } catch {
+    return { repo: normalizedRepo, error: 'Repository must be a valid URL.' };
+  }
+
+  if (!url.hostname.toLowerCase().endsWith('github.com')) {
+    return { repo: normalizedRepo, error: 'Only GitHub repositories are supported (github.com/owner/repo).' };
+  }
+
+  const parts = url.pathname.split('/').filter(Boolean);
+  if (parts.length < 2) return { repo: normalizedRepo, error: 'Repository must be in the form github.com/owner/repo.' };
+  const repo = `${url.origin}/${parts[0]}/${parts[1]}`;
+  let extra = parts.slice(2);
+  if (extra.length >= 2 && (extra[0] === 'tree' || extra[0] === 'blob')) extra = extra.slice(2);
+  if (extra.length > 0) return { repo, error: 'Repository should be the repo root.' };
+  return { repo, error: '' };
+};
+
+const defaultAssetName = (owner: string, repo: string) => `@${owner}_${repo}.zip`;
+const usernameParam = safeDecodeURIComponent(Astro.params.username ?? '');
+const usernameNormal = normalizeUsername(usernameParam);
+
+const session = await getSessionFromCookies(Astro.cookies);
+if (!session) return Astro.redirect('/signin');
+
+const profileId = session.user?.id ?? '';
+if (!profileId || !usernameNormal) return Astro.redirect('/signin');
+
+const publishOwners: PublishOwner[] = [];
+const { data: profileUsernameRows, error: profileUsernameError } = await usernamesDto.getByUserId(supabase, profileId);
+if (!profileUsernameError) {
+  const profileUsername = ((profileUsernameRows as UsernameRecord[] | null) ?? []).find((row) => row.user_id === profileId && row.name);
+  if (profileUsername?.name) {
+    publishOwners.push({
+      value: `profile:${profileId}`,
+      label: `@${profileUsername.name}`,
+      slug: profileUsername.name,
+      profileId,
+      orgId: null,
+    });
+  }
+}
+
+const { data: membershipRows, error: membershipsError } = await orgsProfilesDto.listByProfileId(supabase, profileId);
+if (!membershipsError) {
+  const adminOrgIds = ((membershipRows as OrgsProfileRecord[] | null) ?? [])
+    .filter((row) => row.admin && row.org_id)
+    .map((row) => row.org_id as string);
+
+  if (adminOrgIds.length > 0) {
+    const { data: orgUsernameRows, error: orgUsernameError } = await usernamesDto.listByOrgIds(supabase, adminOrgIds);
+    if (!orgUsernameError) {
+      for (const row of (orgUsernameRows as UsernameRecord[] | null) ?? []) {
+        if (!row.org_id || !row.name) continue;
+        publishOwners.push({
+          value: `org:${row.org_id}`,
+          label: `@${row.name}`,
+          slug: row.name,
+          profileId: null,
+          orgId: row.org_id,
+        });
+      }
+    }
+  }
+}
+
+const targetOwner = publishOwners.find((owner) => normalizeUsername(owner.slug) === usernameNormal) ?? null;
+if (!targetOwner) {
+  Astro.response.status = 403;
+}
+
+let status = targetOwner ? '' : 'You do not have permission to publish addons for this account.';
+let tone: 'muted' | 'error' | 'success' = targetOwner ? 'muted' : 'error';
+let formName = '';
+let formRepo = '';
+let formVersion = '';
+let formReleaseTag = '';
+let formAssetName = '';
+let formEditorPlugin = false;
+let formPublishRelease = false;
+
+if (Astro.request.method === 'POST' && targetOwner) {
+  const formData = await Astro.request.formData();
+  formName = String(formData.get('name') ?? '').trim();
+  formRepo = String(formData.get('repo') ?? '').trim();
+  formVersion = String(formData.get('version') ?? '').trim();
+  formReleaseTag = String(formData.get('tag') ?? '').trim();
+  formAssetName = String(formData.get('asset') ?? '').trim();
+  formEditorPlugin = formData.get('editor') === 'on';
+  formPublishRelease = formData.get('publish_release') === 'on';
+  const selectedOwner = targetOwner;
+
+  if (!formName || !formRepo) {
+    status = 'Addon name and repository are required.';
+    tone = 'error';
+  } else if (formPublishRelease && (!formVersion || !formReleaseTag)) {
+    status = 'Version and release tag are required to publish a release.';
+    tone = 'error';
+  } else if (formPublishRelease && !parseSemverTriplet(formVersion)) {
+    status = 'Version must be in MAJOR.MINOR.PATCH format.';
+    tone = 'error';
+  } else {
+      const normalized = normalizeGitHubRepo(formRepo);
+      if (normalized.error) {
+        status = normalized.error;
+        tone = 'error';
+      } else {
+        formRepo = normalized.repo;
+        const githubRepo = parseGitHubOwnerRepo(formRepo);
+        if (!githubRepo) {
+          status = 'Only GitHub repositories are supported (github.com/owner/repo).';
+          tone = 'error';
+        } else if (formPublishRelease) {
+          const releaseLookup = await findGitHubReleaseTag(githubRepo.owner, githubRepo.repo, [formReleaseTag]);
+          if (!releaseLookup.tag) {
+            status = releaseLookup.error ?? 'Matching GitHub Release was not found.';
+            tone = 'error';
+          } else {
+            formReleaseTag = releaseLookup.tag;
+            if (!formAssetName) formAssetName = defaultAssetName(githubRepo.owner, githubRepo.repo);
+            const assetLookup = await releaseHasAsset(githubRepo.owner, githubRepo.repo, formReleaseTag, formAssetName);
+            if (!assetLookup.ok) {
+              status = assetLookup.error ?? 'Matching GitHub Release asset was not found.';
+              tone = 'error';
+            } else {
+              const versionTriplet = parseSemverTriplet(formVersion);
+              if (!versionTriplet) throw new Error('Validated version became invalid.');
+              const addonOwnerPayload = selectedOwner.orgId
+                ? { profile_id: null, org_id: selectedOwner.orgId }
+                : { profile_id: selectedOwner.profileId, org_id: null };
+              const { data: createdAddon, error: addonError } = await addonsDto.insert(supabase, {
+                ...addonOwnerPayload,
+                name: formName,
+                repo: formRepo,
+                editor: formEditorPlugin,
+              });
+
+              if (addonError) {
+                status = addonError.message;
+                tone = 'error';
+              } else if (!createdAddon?.id) {
+                status = 'Addon created but no id returned.';
+                tone = 'error';
+              } else {
+                const { error: versionError } = await addonVersionsDto.insert(supabase, {
+                  addon_id: createdAddon.id,
+                  major: versionTriplet.major,
+                  minor: versionTriplet.minor,
+                  patch: versionTriplet.patch,
+                  tag: formReleaseTag,
+                  asset: formAssetName,
+                });
+
+                if (versionError) {
+                  status = versionError.message;
+                  tone = 'error';
+                } else {
+                  return Astro.redirect(`/@${encodeURIComponent(selectedOwner.slug)}/${encodeURIComponent(formName)}`);
+                }
+              }
+            }
+          }
+        } else {
+          const addonOwnerPayload = selectedOwner.orgId
+            ? { profile_id: null, org_id: selectedOwner.orgId }
+            : { profile_id: selectedOwner.profileId, org_id: null };
+          const { data: createdAddon, error: addonError } = await addonsDto.insert(supabase, {
+            ...addonOwnerPayload,
+            name: formName,
+            repo: formRepo,
+            editor: formEditorPlugin,
+          });
+
+          if (addonError) {
+            status = addonError.message;
+            tone = 'error';
+          } else if (!createdAddon?.id) {
+            status = 'Addon created but no id returned.';
+            tone = 'error';
+          } else {
+            return Astro.redirect(`/@${encodeURIComponent(selectedOwner.slug)}/${encodeURIComponent(formName)}`);
+          }
+        }
+      }
+  }
+}
+---
+
+<RootLayout>
+  <Title title="Create addon" subtitle={`Publish a new addon under @${usernameParam}.`} />
+
+  <form method="post" action={Astro.url.pathname}>
+    <Card class="flex flex-col gap-4">
+      <Input label="Addon name" name="name" placeholder="my-awesome-addon" type="text" value={formName} required />
+      <Input label="Repository" name="repo" placeholder="github.com/owner/repo" type="text" value={formRepo} required />
+
+      <label class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+        <input class="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-600" type="checkbox" name="editor" checked={formEditorPlugin} />
+        <span class="font-semibold text-slate-900">Editor enabled</span>
+      </label>
+
+      <label class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+        <input class="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-600" type="checkbox" name="publish_release" checked={formPublishRelease} data-publish-release-toggle />
+        <span class="font-semibold text-slate-900">Publish release</span>
+      </label>
+
+      <div class:list={{ 'flex flex-col gap-4': true, hidden: !formPublishRelease }} data-publish-release-fields>
+        <Input label="Release tag" name="tag" placeholder="v0.1.0" type="text" value={formReleaseTag} />
+        <Input label="Version" name="version" placeholder="0.1.0" type="text" value={formVersion} />
+        <Input label="Asset name" name="asset" placeholder="@owner_repo.zip" type="text" value={formAssetName} />
+      </div>
+
+      <p
+        class:list={{
+          'min-h-[20px] text-sm': true,
+          'text-slate-500': tone === 'muted',
+          'text-red-600': tone === 'error',
+          'text-green-600': tone === 'success',
+        }}
+      >
+        {status}
+      </p>
+
+      <Button variant="primary" size="form" icon="check" type="submit">
+        Create addon
+      </Button>
+      <Button href={`/@${encodeURIComponent(usernameParam)}`} size="form" icon="x">
+        Cancel
+      </Button>
+    </Card>
+  </form>
+
+  <script is:inline>
+    const publishReleaseToggle = document.querySelector('[data-publish-release-toggle]');
+    const publishReleaseFields = document.querySelector('[data-publish-release-fields]');
+    const updatePublishReleaseFields = () => {
+      publishReleaseFields?.classList.toggle('hidden', !publishReleaseToggle?.checked);
+    };
+
+    publishReleaseToggle?.addEventListener('change', updatePublishReleaseFields);
+    updatePublishReleaseFields();
+  </script>
+</RootLayout>
