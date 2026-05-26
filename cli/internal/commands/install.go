@@ -71,16 +71,6 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			continue
 		}
 
-		dst := filepath.Join(addonsDir, addonDirName)
-		if info, err := os.Lstat(dst); err == nil {
-			if info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-				continue
-			}
-			return fmt.Errorf("%w: addon path exists and is not a directory: %s", ErrUserInput, dst)
-		} else if !os.IsNotExist(err) {
-			return err
-		}
-
 		resolved, err := resolveManifestAddon(ctx, pluginKey, addon.Version)
 		if err != nil {
 			return fmt.Errorf("%w: unable to resolve %s: %v", ErrUserInput, pluginKey, err)
@@ -89,7 +79,7 @@ func Install(ctx context.Context, opts InstallOptions) error {
 		candidates = append(candidates, installCandidate{
 			pluginKey:    pluginKey,
 			addonDir:     addonDirName,
-			dst:          dst,
+			dst:          filepath.Join(addonsDir, addonDirName),
 			version:      resolved.Version,
 			editorPlugin: resolved.EditorPlugin,
 			ghOwner:      resolved.GitHubOwner,
@@ -124,18 +114,12 @@ func Install(ctx context.Context, opts InstallOptions) error {
 	gh := githubapi.NewClient(os.Getenv("GITHUB_TOKEN"))
 
 	for i := range candidates {
-		if _, err := os.Lstat(candidates[i].dst); err == nil {
-			continue
-		} else if !os.IsNotExist(err) {
-			return err
-		}
-
 		pkgTmpDir := filepath.Join(tmpDir, fmt.Sprintf("pkg-%d", i))
 		if err := os.MkdirAll(pkgTmpDir, 0o755); err != nil {
 			return err
 		}
 
-		pkgRootDir, err := prepareGitHubPackageRoot(ctx, gh, candidates[i].ghOwner, candidates[i].ghRepo, candidates[i].ref, candidates[i].assetName, pkgTmpDir)
+		pkgRootDir, err := preparePackageRoot(ctx, gh, candidates[i].ghOwner, candidates[i].ghRepo, candidates[i].ref, candidates[i].assetName, pkgTmpDir)
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrUserInput, err)
 		}
@@ -147,9 +131,7 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			return fmt.Errorf("%w: package is missing plugin.cfg in release asset %s (expected to install it to %s)", ErrUserInput, candidates[i].assetName, expected)
 		}
 
-		if _, err := os.Lstat(candidates[i].dst); err == nil {
-			continue
-		} else if !os.IsNotExist(err) {
+		if err := fsutil.RemoveAll(candidates[i].dst); err != nil {
 			return err
 		}
 

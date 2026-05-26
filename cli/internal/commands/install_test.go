@@ -9,11 +9,13 @@ import (
 	"github.com/aviorstudio/gdam/cli/internal/manifest"
 )
 
-func TestInstall_SkipsExistingAddonWithoutRepo(t *testing.T) {
+func TestInstall_ReplacesExistingAddonDir(t *testing.T) {
+	withFakeRegistryInstall(t)
+
 	projectDir := t.TempDir()
 
 	m := manifest.New()
-	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{})
+	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{Version: "1.2.3"})
 	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}
@@ -45,16 +47,23 @@ func TestInstall_SkipsExistingAddonWithoutRepo(t *testing.T) {
 		t.Fatalf("install: %v", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(dst, "keep.txt")); err != nil {
-		t.Fatalf("expected addons content to remain, stat: %v", err)
+	if _, err := os.Stat(filepath.Join(dst, "keep.txt")); err == nil {
+		t.Fatalf("expected stale addon content to be removed")
+	} else if !os.IsNotExist(err) {
+		t.Fatalf("stat keep file: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dst, "plugin.cfg")); err != nil {
+		t.Fatalf("expected fresh addon content, stat: %v", err)
 	}
 }
 
-func TestInstall_ErrorsWhenAddonMissingAndRepoMissing(t *testing.T) {
+func TestInstall_InstallsMissingAddonFromRegistry(t *testing.T) {
+	withFakeRegistryInstall(t)
+
 	projectDir := t.TempDir()
 
 	m := manifest.New()
-	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{})
+	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{Version: "1.2.3"})
 	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}
@@ -70,22 +79,26 @@ func TestInstall_ErrorsWhenAddonMissingAndRepoMissing(t *testing.T) {
 		t.Fatalf("chdir: %v", err)
 	}
 
-	if err := Install(context.Background(), InstallOptions{}); err == nil {
-		t.Fatalf("expected error")
+	if err := Install(context.Background(), InstallOptions{}); err != nil {
+		t.Fatalf("install: %v", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(projectDir, "addons")); err == nil {
-		t.Fatalf("expected addons dir to not be created on error")
-	} else if !os.IsNotExist(err) {
-		t.Fatalf("stat addons dir: %v", err)
+	addonDirName, err := addonDirNameForPluginKey("@user/addon")
+	if err != nil {
+		t.Fatalf("addonDirNameForPluginKey: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(projectDir, "addons", addonDirName, "plugin.cfg")); err != nil {
+		t.Fatalf("expected installed plugin.cfg, stat: %v", err)
 	}
 }
 
-func TestInstall_DoesNotRemoveExistingAddonsWhenNoInstallsNeeded(t *testing.T) {
+func TestInstall_ReplacesManagedAddonButKeepsUnmanagedAddons(t *testing.T) {
+	withFakeRegistryInstall(t)
+
 	projectDir := t.TempDir()
 
 	m := manifest.New()
-	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{})
+	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{Version: "1.2.3"})
 	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}
@@ -140,8 +153,13 @@ func TestInstall_DoesNotRemoveExistingAddonsWhenNoInstallsNeeded(t *testing.T) {
 		t.Fatalf("install: %v", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(pluginAddonDir, "keep.txt")); err != nil {
-		t.Fatalf("expected addon addon to be kept: %v", err)
+	if _, err := os.Stat(filepath.Join(pluginAddonDir, "keep.txt")); err == nil {
+		t.Fatalf("expected managed addon stale file to be removed")
+	} else if !os.IsNotExist(err) {
+		t.Fatalf("stat stale file: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(pluginAddonDir, "plugin.cfg")); err != nil {
+		t.Fatalf("expected managed addon to be freshly installed: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(oldAddonDir, "old.txt")); err != nil {
 		t.Fatalf("expected managed addon to be kept: %v", err)
