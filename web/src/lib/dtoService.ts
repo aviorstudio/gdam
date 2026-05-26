@@ -19,6 +19,7 @@ export const orgsDto = {
     client.from('orgs').insert(payload).select('*').maybeSingle(),
   updateById: (client: SupabaseClient, id: string, payload: { link?: string | null; bio?: string | null }) =>
     client.from('orgs').update(payload).eq('id', id),
+  deleteById: (client: SupabaseClient, id: string) => client.from('orgs').delete().eq('id', id),
 };
 
 export type OrgProfileInsert = {
