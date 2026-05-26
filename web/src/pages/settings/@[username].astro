@@ -5,10 +5,12 @@ import RootLayout from '../../layouts/RootLayout.astro';
 import Card from '../../components/Card.astro';
 import Title from '../../components/Title.astro';
 import Button from '../../components/Button.astro';
+import Dialog from '../../components/Dialog.astro';
 import Input from '../../components/Input.astro';
 import { getSessionFromCookies } from '../../lib/auth';
-import { orgsDto, orgsProfilesDto, profilesDto, usernamesDto } from '../../lib/dtoService';
+import { orgsDto, orgsProfilesDto, profilesDto, secretKeyScopesDto, secretKeysDto, usernamesDto } from '../../lib/dtoService';
 import { supabase } from '../../lib/supabase';
+import { createHash, randomBytes } from 'node:crypto';
 
 const DELETE_CSRF_COOKIE = 'gdam-delete-csrf';
 
@@ -25,7 +27,28 @@ type OwnerRecord = {
 };
 
 type OrgsProfileRecord = {
+  org_id: string | null;
   admin: boolean | null;
+};
+
+type SecretKeyRecord = {
+  id: string;
+  name: string | null;
+  created_at: string | null;
+  last_used_at: string | null;
+};
+
+type SecretKeyScopeRecord = {
+  secret_key_id: string | null;
+  profile_id: string | null;
+  org_id: string | null;
+};
+
+type PublishScopeOption = {
+  value: string;
+  label: string;
+  profileId: string | null;
+  orgId: string | null;
 };
 
 const safeDecodeURIComponent = (value: string) => {
@@ -55,6 +78,8 @@ const normalizeOptionalUrl = (value: string) => {
     return { value: null, error: 'Link must be a valid URL.' };
   }
 };
+const createSecretKey = () => `gdam_sk_${randomBytes(32).toString('base64url')}`;
+const hashSecretKey = (value: string) => createHash('sha256').update(value).digest('hex');
 const reservedUsernames = new Set([
   'signin',
   'register',
@@ -133,12 +158,110 @@ let settingsTone: 'muted' | 'error' | 'success' = 'muted';
 let formUsername = usernameDisplay;
 let formLink = ownerRecord?.link ?? '';
 let formBio = ownerRecord?.bio ?? '';
+let formSecretKeyName = 'GitHub Actions';
+let createdSecretKey = '';
+let secretKeyRows: SecretKeyRecord[] = [];
+let publishScopeOptions: PublishScopeOption[] = [];
+let selectedSecretKeyScopes: string[] = [];
+let secretKeyScopeLabelsByKeyId = new Map<string, string[]>();
+
+if (isProfileSettings) {
+  publishScopeOptions.push({
+    value: `profile:${profileId}`,
+    label: `@${usernameDisplay}`,
+    profileId,
+    orgId: null,
+  });
+
+  const { data: membershipRows, error: membershipsError } = await orgsProfilesDto.listByProfileId(supabase, profileId);
+  if (membershipsError) {
+    settingsStatus = membershipsError.message;
+    settingsTone = 'error';
+  } else {
+    const adminOrgIds = ((membershipRows as OrgsProfileRecord[] | null) ?? [])
+      .filter((row) => row.admin && row.org_id)
+      .map((row) => row.org_id as string);
+    if (adminOrgIds.length > 0) {
+      const { data: orgUsernameRows, error: orgUsernameError } = await usernamesDto.listByOrgIds(supabase, adminOrgIds);
+      if (orgUsernameError) {
+        settingsStatus = settingsStatus || orgUsernameError.message;
+        settingsTone = settingsTone === 'muted' ? 'error' : settingsTone;
+      } else {
+        for (const row of (orgUsernameRows as UsernameRecord[] | null) ?? []) {
+          if (!row.org_id || !row.name) continue;
+          publishScopeOptions.push({
+            value: `org:${row.org_id}`,
+            label: `@${row.name}`,
+            profileId: null,
+            orgId: row.org_id,
+          });
+        }
+      }
+    }
+  }
+}
 
 if (Astro.request.method === 'POST') {
   const formData = await Astro.request.formData();
   const action = String(formData.get('action') ?? 'save-settings');
 
-  if (action === 'delete-org' && isOrgSettings && usernameRecord.org_id) {
+  if (action === 'create-secret-key' && isProfileSettings) {
+    formSecretKeyName = String(formData.get('secret_key_name') ?? '').trim();
+    selectedSecretKeyScopes = formData.getAll('secret_key_scopes').map((value) => String(value));
+    const allowedScopesByValue = new Map(publishScopeOptions.map((scope) => [scope.value, scope]));
+    const selectedScopes = selectedSecretKeyScopes
+      .map((value) => allowedScopesByValue.get(value))
+      .filter((scope): scope is PublishScopeOption => Boolean(scope));
+    if (!formSecretKeyName) {
+      settingsStatus = 'Secret key name is required.';
+      settingsTone = 'error';
+    } else if (selectedScopes.length === 0) {
+      settingsStatus = 'Select at least one publish scope.';
+      settingsTone = 'error';
+    } else {
+      createdSecretKey = createSecretKey();
+      const { data: secretKeyRow, error: secretKeyError } = await secretKeysDto.insert(supabase, {
+        name: formSecretKeyName,
+        token_hash: hashSecretKey(createdSecretKey),
+        created_by: profileId,
+      });
+      if (secretKeyError || !secretKeyRow?.id) {
+        createdSecretKey = '';
+        settingsStatus = secretKeyError?.message || 'Secret key created but no id returned.';
+        settingsTone = 'error';
+      } else {
+        const { error: scopeError } = await secretKeyScopesDto.insert(supabase, selectedScopes.map((scope) => ({
+          secret_key_id: secretKeyRow.id,
+          profile_id: scope.profileId,
+          org_id: scope.orgId,
+        })));
+        if (scopeError) {
+          createdSecretKey = '';
+          await secretKeysDto.deleteById(supabase, secretKeyRow.id);
+          settingsStatus = scopeError.message;
+          settingsTone = 'error';
+        } else {
+          settingsStatus = 'Copy this secret key now. It will not be shown again.';
+          settingsTone = 'success';
+        }
+      }
+    }
+  } else if (action === 'revoke-secret-key' && isProfileSettings) {
+    const secretKeyId = String(formData.get('secret_key_id') ?? '').trim();
+    if (!secretKeyId) {
+      settingsStatus = 'Secret key id is required.';
+      settingsTone = 'error';
+    } else {
+      const { error: revokeError } = await secretKeysDto.deleteById(supabase, secretKeyId);
+      if (revokeError) {
+        settingsStatus = revokeError.message;
+        settingsTone = 'error';
+      } else {
+        settingsStatus = 'Secret key revoked.';
+        settingsTone = 'success';
+      }
+    }
+  } else if (action === 'delete-org' && isOrgSettings && usernameRecord.org_id) {
     if (String(formData.get('csrf_token') ?? '') !== deleteCsrfToken) {
       settingsStatus = 'Invalid delete request.';
       settingsTone = 'error';
@@ -198,6 +321,48 @@ if (Astro.request.method === 'POST') {
           settingsTone = 'error';
         } else {
           return Astro.redirect(`/settings/@${encodeURIComponent(formUsername)}`);
+        }
+      }
+    }
+  }
+}
+
+if (isProfileSettings) {
+  const secretKeyResult = await secretKeysDto.listByCreatedBy(supabase, profileId);
+  if (secretKeyResult.error) {
+    settingsStatus = settingsStatus || secretKeyResult.error.message;
+    settingsTone = settingsTone === 'muted' ? 'error' : settingsTone;
+  } else {
+    secretKeyRows = (secretKeyResult.data as SecretKeyRecord[] | null) ?? [];
+    const secretKeyIds = secretKeyRows.map((key) => key.id);
+    if (secretKeyIds.length > 0) {
+      const { data: scopeRows, error: scopeError } = await secretKeyScopesDto.listBySecretKeyIds(supabase, secretKeyIds);
+      if (scopeError) {
+        settingsStatus = settingsStatus || scopeError.message;
+        settingsTone = settingsTone === 'muted' ? 'error' : settingsTone;
+      } else {
+        const profileIds = Array.from(new Set(((scopeRows as SecretKeyScopeRecord[] | null) ?? []).map((scope) => scope.profile_id).filter(Boolean) as string[]));
+        const orgIds = Array.from(new Set(((scopeRows as SecretKeyScopeRecord[] | null) ?? []).map((scope) => scope.org_id).filter(Boolean) as string[]));
+        const labelByProfileId = new Map<string, string>();
+        const labelByOrgId = new Map<string, string>();
+        if (profileIds.length > 0) {
+          const { data: usernameRows } = await usernamesDto.listByUserIds(supabase, profileIds);
+          for (const row of (usernameRows as UsernameRecord[] | null) ?? []) {
+            if (row.user_id && row.name) labelByProfileId.set(row.user_id, `@${row.name}`);
+          }
+        }
+        if (orgIds.length > 0) {
+          const { data: usernameRows } = await usernamesDto.listByOrgIds(supabase, orgIds);
+          for (const row of (usernameRows as UsernameRecord[] | null) ?? []) {
+            if (row.org_id && row.name) labelByOrgId.set(row.org_id, `@${row.name}`);
+          }
+        }
+        for (const scope of (scopeRows as SecretKeyScopeRecord[] | null) ?? []) {
+          if (!scope.secret_key_id) continue;
+          const labels = secretKeyScopeLabelsByKeyId.get(scope.secret_key_id) ?? [];
+          if (scope.profile_id) labels.push(labelByProfileId.get(scope.profile_id) ?? scope.profile_id);
+          if (scope.org_id) labels.push(labelByOrgId.get(scope.org_id) ?? scope.org_id);
+          secretKeyScopeLabelsByKeyId.set(scope.secret_key_id, labels);
         }
       }
     }
@@ -273,6 +438,109 @@ if (Astro.request.method === 'POST') {
   {isProfileSettings ? (
     <form id="signout-form" action="/api/auth/signout"></form>
   ) : null}
+
+  {isProfileSettings ? (
+  <Card class="flex flex-col gap-5">
+    <div class="flex flex-col gap-1">
+      <p class="text-sm font-semibold text-slate-900">Secret keys</p>
+      <p class="text-sm text-slate-600">Create CI credentials for your profile and orgs you administer. Scopes can only be selected during creation.</p>
+    </div>
+
+    <form method="post" action={Astro.url.pathname} class="flex flex-col gap-3">
+      <Input label="Key name" name="secret_key_name" type="text" value={formSecretKeyName} required />
+
+      <div class="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-sm font-semibold text-slate-900">Publish scopes</p>
+        {publishScopeOptions.map((scope, index) => (
+          <label class="flex items-start gap-3 text-sm text-slate-700">
+            <input
+              class="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-600"
+              type="checkbox"
+              name="secret_key_scopes"
+              value={scope.value}
+              checked={selectedSecretKeyScopes.length > 0 ? selectedSecretKeyScopes.includes(scope.value) : index === 0}
+            />
+            <span class="font-semibold text-slate-900">{scope.label}</span>
+          </label>
+        ))}
+      </div>
+
+      <Button variant="primary" size="form" icon="check" type="submit" name="action" value="create-secret-key">
+        Create secret key
+      </Button>
+    </form>
+
+    <div class="flex flex-col divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
+      {secretKeyRows.length > 0 ? secretKeyRows.map((key) => (
+        <div class="flex items-start gap-3 p-4">
+          <div class="flex min-w-0 flex-1 flex-col gap-1">
+            <p class="truncate text-sm font-semibold text-slate-900">{key.name}</p>
+            <p class="text-xs text-slate-500">Scopes: {(secretKeyScopeLabelsByKeyId.get(key.id) ?? []).join(', ') || 'None'}</p>
+            <p class="text-xs text-slate-500">{key.last_used_at ? `Last used ${new Date(key.last_used_at).toLocaleString()}` : 'Never used'}</p>
+          </div>
+          <div class="flex shrink-0 flex-col items-end gap-3">
+            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+              {key.created_at ? new Date(key.created_at).toLocaleDateString() : 'Unknown'}
+            </span>
+            <form method="post" action={Astro.url.pathname} onsubmit={`return confirm(${JSON.stringify(`Revoke ${key.name || 'this secret key'}?`)})`}>
+              <input type="hidden" name="secret_key_id" value={key.id} />
+              <Button variant="danger-outline" size="form" icon="trash" type="submit" name="action" value="revoke-secret-key">
+                Revoke
+              </Button>
+            </form>
+          </div>
+        </div>
+      )) : (
+        <div class="p-4 text-sm text-slate-600">No secret keys yet.</div>
+      )}
+    </div>
+  </Card>
+  ) : null}
+
+  {createdSecretKey ? (
+    <Dialog id="secret-key-created-dialog" open title="Copy your secret key" size="lg">
+      <Fragment slot="description">
+        This secret key will never be shown again. Copy it now and store it in your CI secrets as <span class="font-semibold text-slate-900">GDAM_SECRET_KEY</span>.
+      </Fragment>
+
+      <div class="flex flex-col gap-4">
+        <div class="grid gap-1 text-sm font-semibold text-slate-900">
+          <span>Secret key</span>
+          <div class="flex gap-2">
+            <input
+              class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-sm font-medium text-slate-900 shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+              name="created_secret_key"
+              type="text"
+              value={createdSecretKey}
+              readonly
+              data-secret-key-value
+            />
+            <Button size="form" icon="check" type="button" data-copy-secret-key>
+              Copy
+            </Button>
+          </div>
+        </div>
+        <Button href={Astro.url.pathname} size="form" icon="check" variant="primary">
+          I copied it
+        </Button>
+      </div>
+    </Dialog>
+  ) : null}
+
+  <script is:inline>
+    const copySecretKeyButton = document.querySelector('[data-copy-secret-key]');
+    const secretKeyInput = document.querySelector('[data-secret-key-value]');
+    copySecretKeyButton?.addEventListener('click', async () => {
+      if (!(secretKeyInput instanceof HTMLInputElement)) return;
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(secretKeyInput.value);
+      } else {
+        secretKeyInput.select();
+        document.execCommand('copy');
+      }
+      copySecretKeyButton.textContent = 'Copied';
+    });
+  </script>
 
   {isOrgSettings ? (
     <form

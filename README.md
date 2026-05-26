@@ -63,6 +63,14 @@ If you hit GitHub rate limits while installing addons, set `GITHUB_TOKEN`.
 
 Registry releases are installed from GitHub Release assets. Publish an addon version with a semver package version such as `1.2.3`, a GitHub release tag, and an asset name.
 
-The tag can be any valid GitHub release tag. If the tag field is left blank, GDAM tries `v<version>` first and then `<version>`, for example `v1.2.3` then `1.2.3`.
+The tag can be any valid GitHub release tag. The release tag is required when publishing.
 
 The asset name can be anything the publisher chooses. That ZIP should contain the addon files at the archive root, including `plugin.cfg`. GDAM installs the asset into its local convention, such as `res://addons/@username_addon/`, regardless of the asset filename.
+
+For CI publishing, create a secret key from the owner settings page, store it as `GDAM_SECRET_KEY`, and publish releases with:
+
+```sh
+gdam publish @username/addon 1.2.3 v1.2.3 @owner_repo.zip
+```
+
+Secret keys are scoped to one user or org and can only publish releases for existing addons under that owner. If `ASSET_NAME` is omitted, `gdam publish` uses `@owner_repo.zip` from `GITHUB_REPOSITORY` when available.

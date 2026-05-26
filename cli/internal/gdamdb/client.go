@@ -2,6 +2,7 @@ package gdamdb
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -19,6 +20,17 @@ type Client struct {
 	baseURL    string
 	apiKey     string
 	httpClient *http.Client
+}
+
+type PublishReleaseInput struct {
+	SecretKey  string
+	Owner      string
+	Addon      string
+	Major      int
+	Minor      int
+	Patch      int
+	ReleaseTag string
+	AssetName  string
 }
 
 func NewDefaultClient() *Client {
@@ -293,6 +305,58 @@ func (c *Client) listAddonVersions(ctx context.Context, addonID string) ([]versi
 		rows = []versionRow{}
 	}
 	return rows, nil
+}
+
+func (c *Client) PublishRelease(ctx context.Context, input PublishReleaseInput) error {
+	payload := map[string]any{
+		"secret_key":    strings.TrimSpace(input.SecretKey),
+		"owner_name":    strings.TrimSpace(input.Owner),
+		"addon_name":    strings.TrimSpace(input.Addon),
+		"version_major": input.Major,
+		"version_minor": input.Minor,
+		"version_patch": input.Patch,
+		"release_tag":   strings.TrimSpace(input.ReleaseTag),
+		"asset_name":    strings.TrimSpace(input.AssetName),
+	}
+	return c.postRPC(ctx, "publish_addon_version_with_secret_key", payload)
+}
+
+func (c *Client) postRPC(ctx context.Context, fn string, payload any) error {
+	u, err := url.Parse(c.baseURL)
+	if err != nil {
+		return err
+	}
+	u.Path = path.Join(u.Path, "rest/v1/rpc", fn)
+	if !strings.HasPrefix(u.Path, "/") {
+		u.Path = "/" + u.Path
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	if c.apiKey == "" {
+		return fmt.Errorf("missing Supabase publishable key (set GDAM_SUPABASE_PUBLISHABLE_KEY or SUPABASE_PUBLISHABLE_KEY)")
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("apikey", c.apiKey)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 32<<10))
+		return fmt.Errorf("gdam db failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(msg)))
+	}
+	return nil
 }
 
 func (c *Client) get(ctx context.Context, table string, query url.Values, dst any) error {

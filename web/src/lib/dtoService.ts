@@ -39,6 +39,39 @@ export const orgsProfilesDto = {
     }),
 };
 
+export type SecretKeyInsert = {
+  name: string;
+  token_hash: string;
+  created_by: string;
+};
+
+export type SecretKeyScopeInsert = {
+  secret_key_id: string;
+  profile_id?: string | null;
+  org_id?: string | null;
+};
+
+export const secretKeysDto = {
+  insert: (client: SupabaseClient, payload: SecretKeyInsert) =>
+    client.from('secret_keys').insert(payload).select('id').maybeSingle(),
+  deleteById: (client: SupabaseClient, id: string) => client.from('secret_keys').delete().eq('id', id),
+  listByCreatedBy: (client: SupabaseClient, profileId: string) =>
+    client
+      .from('secret_keys')
+      .select('id,name,created_at,last_used_at')
+      .eq('created_by', profileId)
+      .order('created_at', { ascending: false }),
+};
+
+export const secretKeyScopesDto = {
+  insert: (client: SupabaseClient, payload: SecretKeyScopeInsert[]) => client.from('secret_key_scopes').insert(payload),
+  listBySecretKeyIds: (client: SupabaseClient, secretKeyIds: string[]) =>
+    client
+      .from('secret_key_scopes')
+      .select('secret_key_id,profile_id,org_id')
+      .in('secret_key_id', secretKeyIds),
+};
+
 export type UsernameInsert = {
   name: string;
   user_id?: string | null;

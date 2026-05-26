@@ -47,6 +47,8 @@ func run(args []string) int {
 		return runUnlink(args[2:])
 	case "install":
 		return runInstall(args[2:])
+	case "publish":
+		return runPublish(args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n\n", cmd)
 		printUsage()
@@ -229,6 +231,40 @@ func runInstall(args []string) int {
 	return 0
 }
 
+func runPublish(args []string) int {
+	fs := flag.NewFlagSet("publish", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 3 && fs.NArg() != 4 {
+		fmt.Fprintln(os.Stderr, "usage: gdam publish @username/addon VERSION RELEASE_TAG [ASSET_NAME]")
+		return 2
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	assetName := ""
+	if fs.NArg() == 4 {
+		assetName = fs.Arg(3)
+	}
+	if err := commands.Publish(ctx, commands.PublishOptions{
+		Spec:       fs.Arg(0),
+		Version:    fs.Arg(1),
+		ReleaseTag: fs.Arg(2),
+		AssetName:  assetName,
+	}); err != nil {
+		if errors.Is(err, commands.ErrUserInput) {
+			fmt.Fprintln(os.Stderr, err)
+			return 2
+		}
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	return 0
+}
+
 func printUsage() {
 	fmt.Fprintln(os.Stderr, `gdam - Godot addon manager (GitHub addons installer)
 
@@ -237,13 +273,15 @@ Usage:
   gdam init
   gdam add @username/addon[@version]
   gdam install
+  gdam publish @username/addon VERSION RELEASE_TAG [ASSET_NAME]
   gdam remove @username/addon
   gdam link @username/addon [local_path]
   gdam unlink @username/addon
   gdam unlink --all
 
 Environment:
-  GITHUB_TOKEN   Optional GitHub token to avoid rate limits.`)
+  GDAM_SECRET_KEY   Secret key for publishing releases in CI.
+  GITHUB_TOKEN      Optional GitHub token to avoid rate limits.`)
 }
 
 func printVersion() {

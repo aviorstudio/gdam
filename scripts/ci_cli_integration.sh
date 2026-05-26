@@ -11,6 +11,7 @@ DEV_EMAIL="${GDAM_DEV_EMAIL:-test@gdam.dev}"
 DEV_PASSWORD="${GDAM_DEV_PASSWORD:-password123}"
 ADDON_NAME="${GDAM_TEST_ADDON_NAME:-gdam-test-addon}"
 RUNTIME_ADDON_NAME="${GDAM_TEST_RUNTIME_ADDON_NAME:-gdam-test-runtime}"
+PUBLISH_ADDON_NAME="${GDAM_TEST_PUBLISH_ADDON_NAME:-gdam-test-publish}"
 ADDON_REPO="${GDAM_TEST_ADDON_REPO:-https://github.com/aviorstudio/gdam-test-addon}"
 GODOT_REPO="${GDAM_TEST_GODOT_REPO:-https://github.com/aviorstudio/gdam-test-godot}"
 
@@ -159,8 +160,23 @@ fi
 ADDON_SHA="$(git -C "$ADDON_DIR" rev-parse HEAD)"
 ADDON_ID="$(upsert_addon "$ADDON_NAME" true)"
 RUNTIME_ADDON_ID="$(upsert_addon "$RUNTIME_ADDON_NAME" false)"
+PUBLISH_ADDON_ID="$(upsert_addon "$PUBLISH_ADDON_NAME" false)"
 upsert_version "$ADDON_ID" "$ADDON_SHA" "@aviorstudio_gdam-test-addon.zip"
 upsert_version "$RUNTIME_ADDON_ID" "$ADDON_SHA" "@aviorstudio_gdam-test-addon.zip"
+
+GDAM_SECRET_KEY="gdam_sk_integration_$(date +%s%N)"
+GDAM_SECRET_KEY_HASH="$(printf '%s' "$GDAM_SECRET_KEY" | sha256sum | cut -d ' ' -f1)"
+secret_key_payload="$(jq -cn \
+  --arg name "CLI integration" \
+  --arg token_hash "$GDAM_SECRET_KEY_HASH" \
+  --arg profile_id "$USER_ID" \
+  '{name:$name,token_hash:$token_hash,created_by:$profile_id}')"
+SECRET_KEY_ID="$(api_post "$SUPABASE_URL/rest/v1/secret_keys" "$secret_key_payload" | jq -r '.[0].id')"
+secret_key_scope_payload="$(jq -cn \
+  --arg secret_key_id "$SECRET_KEY_ID" \
+  --arg profile_id "$USER_ID" \
+  '{secret_key_id:$secret_key_id,profile_id:$profile_id,org_id:null}')"
+api_post "$SUPABASE_URL/rest/v1/secret_key_scopes" "$secret_key_scope_payload" >/dev/null
 
 cd "$GODOT_DIR"
 "$ROOT_DIR/cli/bin/gdam" init
@@ -168,6 +184,16 @@ test -f gdam.json
 
 expect_failure "$ROOT_DIR/cli/bin/gdam" add "@dev/$ADDON_NAME@0.1"
 expect_failure "$ROOT_DIR/cli/bin/gdam" add "@dev/does-not-exist@0.1.0"
+expect_failure "$ROOT_DIR/cli/bin/gdam" publish "@dev/$PUBLISH_ADDON_NAME" 0.2.0 "$ADDON_SHA" "@aviorstudio_gdam-test-addon.zip"
+
+GDAM_SECRET_KEY="$GDAM_SECRET_KEY" "$ROOT_DIR/cli/bin/gdam" publish "@dev/$PUBLISH_ADDON_NAME" 0.2.0 "$ADDON_SHA" "@aviorstudio_gdam-test-addon.zip"
+published_versions="$(api_get "$SUPABASE_URL/rest/v1/addon_versions?select=major,minor,patch,tag,asset&addon_id=eq.$PUBLISH_ADDON_ID&major=eq.0&minor=eq.2&patch=eq.0")"
+jq -e --arg tag "$ADDON_SHA" --arg asset "@aviorstudio_gdam-test-addon.zip" '.[0].tag == $tag and .[0].asset == $asset' <<<"$published_versions" >/dev/null
+curl -sS -f -X DELETE \
+  -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  "$SUPABASE_URL/rest/v1/secret_keys?id=eq.$SECRET_KEY_ID" >/dev/null
+expect_failure env GDAM_SECRET_KEY="$GDAM_SECRET_KEY" "$ROOT_DIR/cli/bin/gdam" publish "@dev/$PUBLISH_ADDON_NAME" 0.3.0 "$ADDON_SHA" "@aviorstudio_gdam-test-addon.zip"
 
 "$ROOT_DIR/cli/bin/gdam" add "@dev/$ADDON_NAME@0.1.0"
 test -f "addons/@dev_${ADDON_NAME}/plugin.cfg"
