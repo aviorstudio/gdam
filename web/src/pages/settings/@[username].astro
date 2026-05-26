@@ -10,6 +10,8 @@ import { getSessionFromCookies } from '../../lib/auth';
 import { orgsDto, orgsProfilesDto, profilesDto, usernamesDto } from '../../lib/dtoService';
 import { supabase } from '../../lib/supabase';
 
+const DELETE_CSRF_COOKIE = 'gdam-delete-csrf';
+
 type UsernameRecord = {
   id: string;
   name: string | null;
@@ -120,6 +122,12 @@ const ownerResult = isOrgSettings && usernameRecord.org_id
 const ownerData = ownerResult.data;
 const ownerRecord = ownerData as OwnerRecord | null;
 
+let deleteCsrfToken = Astro.cookies.get(DELETE_CSRF_COOKIE)?.value ?? '';
+if (isOrgSettings && !deleteCsrfToken) {
+  deleteCsrfToken = crypto.randomUUID();
+  Astro.cookies.set(DELETE_CSRF_COOKIE, deleteCsrfToken, { path: '/', sameSite: 'lax', secure: Astro.url.protocol === 'https:' });
+}
+
 let settingsStatus = '';
 let settingsTone: 'muted' | 'error' | 'success' = 'muted';
 let formUsername = usernameDisplay;
@@ -130,7 +138,20 @@ if (Astro.request.method === 'POST') {
   const formData = await Astro.request.formData();
   const action = String(formData.get('action') ?? 'save-settings');
 
-  if (action === 'save-settings') {
+  if (action === 'delete-org' && isOrgSettings && usernameRecord.org_id) {
+    if (String(formData.get('csrf_token') ?? '') !== deleteCsrfToken) {
+      settingsStatus = 'Invalid delete request.';
+      settingsTone = 'error';
+    } else {
+      const { error: deleteError } = await orgsDto.deleteById(supabase, usernameRecord.org_id);
+      if (deleteError) {
+        settingsStatus = deleteError.message;
+        settingsTone = 'error';
+      } else {
+        return Astro.redirect('/orgs');
+      }
+    }
+  } else if (action === 'save-settings') {
     formUsername = String(formData.get('username') ?? '').trim();
     formLink = String(formData.get('link') ?? '').trim();
     formBio = String(formData.get('bio') ?? '').trim();
@@ -229,8 +250,7 @@ if (Astro.request.method === 'POST') {
           class="min-h-28 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
           name="bio"
           placeholder="Tell people what you build."
-          value={formBio}
-        ></textarea>
+        >{formBio}</textarea>
       </label>
     </div>
 
@@ -252,5 +272,25 @@ if (Astro.request.method === 'POST') {
 
   {isProfileSettings ? (
     <form id="signout-form" action="/api/auth/signout"></form>
+  ) : null}
+
+  {isOrgSettings ? (
+    <form
+      method="post"
+      action={Astro.url.pathname}
+      class="mx-auto w-[calc(100%-2rem)] max-w-5xl rounded-2xl border border-red-200 bg-red-50 p-5"
+      onsubmit={`return confirm(${JSON.stringify(`Delete @${usernameDisplay}? This cannot be undone.`)})`}
+    >
+      <input type="hidden" name="csrf_token" value={deleteCsrfToken} />
+      <div class="flex flex-col gap-3">
+        <div>
+          <p class="text-sm font-semibold text-red-900">Delete org</p>
+          <p class="text-sm text-red-700">Delete this org, its addons, and all of their versions from the registry.</p>
+        </div>
+        <Button variant="danger" size="form" icon="trash" type="submit" name="action" value="delete-org">
+          Delete org
+        </Button>
+      </div>
+    </form>
   ) : null}
 </RootLayout>

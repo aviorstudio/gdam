@@ -1,13 +1,54 @@
 import { expect, test, type Page } from '@playwright/test';
+import { createClient } from '@supabase/supabase-js';
 
-const signInAsDev = async (page: Page) => {
+const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54421';
+const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY ?? 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
+const TEST_PASSWORD = 'password123';
+
+const signIn = async (page: Page, email: string, password = TEST_PASSWORD, accountHref = '/@dev') => {
   await page.goto('/signin');
-  await page.getByLabel('Email').fill('test@gdam.dev');
-  await page.getByLabel('Password').fill('password123');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
 
   await expect(page).toHaveURL('/');
-  await expect(page.getByRole('link', { name: 'Account' })).toHaveAttribute('href', '/@dev');
+  await expect(page.getByRole('link', { name: 'Account' })).toHaveAttribute('href', accountHref);
+};
+
+const signInAsDev = async (page: Page) => {
+  await signIn(page, 'test@gdam.dev');
+};
+
+const disableNativeValidation = async (page: Page) => {
+  await page.locator('form').first().evaluate((form) => {
+    (form as HTMLFormElement).noValidate = true;
+  });
+};
+
+const createLocalUser = async (username: string) => {
+  const email = `${username}@gdam.dev`;
+  const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  let authResult = await supabase.auth.signUp({ email, password: TEST_PASSWORD });
+  if (!authResult.data.session) {
+    authResult = await supabase.auth.signInWithPassword({ email, password: TEST_PASSWORD });
+  }
+
+  const session = authResult.data.session;
+  const userId = session?.user?.id ?? '';
+  if (authResult.error || !session || !userId) {
+    throw new Error(authResult.error?.message || `Unable to create ${email}`);
+  }
+
+  await supabase.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
+  const profileResult = await supabase.from('profiles').upsert({ id: userId });
+  if (profileResult.error) throw new Error(profileResult.error.message);
+
+  const usernameResult = await supabase.from('usernames').insert({ name: username, user_id: userId, org_id: null });
+  if (usernameResult.error && usernameResult.error.code !== '23505') {
+    throw new Error(usernameResult.error.message);
+  }
+
+  return { email, password: TEST_PASSWORD, username };
 };
 
 const publishAddon = async (
@@ -149,6 +190,34 @@ test('signed-in user can create an org and publish under it', async ({ page }) =
   await expect(page.getByRole('link', { name: '0.1.0' })).toBeVisible();
 });
 
+test('org admin can delete an org and cascade its addons', async ({ page }) => {
+  await signInAsDev(page);
+
+  const suffix = Date.now().toString(36);
+  const org = `delete-org-${suffix}`;
+  const addon = `delete-org-addon-${suffix}`;
+
+  await page.goto('/orgs/create');
+  await page.getByLabel('Org username').fill(org);
+  await page.getByRole('button', { name: 'Create org' }).click();
+  await expect(page).toHaveURL(`/@${org}`);
+
+  await publishAddon(page, { owner: org, name: addon, editorPlugin: true });
+  await expect(page.getByRole('link', { name: '0.1.0' })).toBeVisible();
+
+  await page.goto(`/settings/@${org}`);
+  page.once('dialog', async (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Delete org' }).click();
+  await expect(page).toHaveURL('/orgs');
+  await expect(page.getByRole('link', { name: `@${org}` })).toHaveCount(0);
+
+  await page.goto(`/@${org}`);
+  await expect(page.getByRole('heading', { name: 'Not found' })).toBeVisible();
+
+  await page.goto(`/@${org}/${addon}`);
+  await expect(page.getByRole('heading', { name: 'Not found' })).toBeVisible();
+});
+
 test('signed-in user can set profile link and bio', async ({ page }) => {
   await signInAsDev(page);
 
@@ -164,9 +233,128 @@ test('signed-in user can set profile link and bio', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'example.com/dev' })).toHaveAttribute('href', 'https://example.com/dev');
 });
 
+test('org creation validates every field and preserves valid input', async ({ page }) => {
+  await signInAsDev(page);
+
+  await page.goto('/orgs/create');
+  await disableNativeValidation(page);
+  await page.getByRole('button', { name: 'Create org' }).click();
+  await expect(page.getByText('Organization username is required.')).toBeVisible();
+
+  await page.getByLabel('Org username').fill('settings');
+  await page.getByRole('button', { name: 'Create org' }).click();
+  await expect(page.getByText('That username is reserved.')).toBeVisible();
+
+  await page.getByLabel('Org username').fill('dev');
+  await page.getByRole('button', { name: 'Create org' }).click();
+  await expect(page.getByText('That username is already taken.')).toBeVisible();
+
+  const org = `validate-org-${Date.now().toString(36)}`;
+  await page.getByLabel('Org username').fill(org);
+  await page.getByLabel('Link').fill('ftp://example.com/org');
+  await page.getByLabel('Bio').fill('Validation org bio');
+  await page.getByRole('button', { name: 'Create org' }).click();
+  await expect(page.getByText('Link must start with http:// or https://.')).toBeVisible();
+  await expect(page.getByLabel('Org username')).toHaveValue(org);
+  await expect(page.getByLabel('Bio')).toHaveValue('Validation org bio');
+
+  await page.getByLabel('Link').fill('https://example.com/validation-org');
+  await page.getByRole('button', { name: 'Create org' }).click();
+  await expect(page).toHaveURL(`/@${org}`);
+  await expect(page.getByText('Validation org bio')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'example.com/validation-org' })).toHaveAttribute('href', 'https://example.com/validation-org');
+});
+
+test('profile and org settings validate username, link, bio, and redirects', async ({ page }) => {
+  await signInAsDev(page);
+
+  await page.goto('/settings/@dev');
+  await disableNativeValidation(page);
+  await page.getByLabel('Username').fill('settings');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('That username is reserved.')).toBeVisible();
+
+  await page.getByLabel('Username').fill('dev');
+  await page.getByLabel('Link').fill('notaurl');
+  await disableNativeValidation(page);
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Link must be a valid URL.')).toBeVisible();
+
+  const org = `settings-org-${Date.now().toString(36)}`;
+  await page.goto('/orgs/create');
+  await page.getByLabel('Org username').fill(org);
+  await page.getByRole('button', { name: 'Create org' }).click();
+  await expect(page).toHaveURL(`/@${org}`);
+
+  await page.goto(`/settings/@${org}`);
+  await page.getByLabel('Username').fill('dev');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('That username is already taken.')).toBeVisible();
+
+  const renamedOrg = `${org}-renamed`;
+  await page.getByLabel('Username').fill(renamedOrg);
+  await page.getByLabel('Link').fill('https://example.com/renamed-org');
+  await page.getByLabel('Bio').fill('Renamed org bio');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page).toHaveURL(`/settings/@${renamedOrg}`);
+  await page.goto(`/@${renamedOrg}`);
+  await expect(page.getByText('Renamed org bio')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'example.com/renamed-org' })).toHaveAttribute('href', 'https://example.com/renamed-org');
+});
+
 test('unauthenticated users cannot open publish pages', async ({ page }) => {
   await page.goto('/create/@dev');
   await expect(page).toHaveURL('/signin');
+});
+
+test('unauthenticated users cannot open protected pages', async ({ page }) => {
+  await page.goto('/orgs');
+  await expect(page).toHaveURL('/');
+
+  await page.goto('/orgs/create');
+  await expect(page).toHaveURL('/signin');
+
+  await page.goto('/settings/@dev');
+  await expect(page).toHaveURL('/@dev');
+
+  await page.goto('/publish/@dev/missing-addon');
+  await expect(page).toHaveURL('/signin');
+});
+
+test('signed-in non-owners cannot manage another profile or org', async ({ page }) => {
+  await signInAsDev(page);
+
+  const suffix = Date.now().toString(36);
+  const org = `private-org-${suffix}`;
+  const addon = `private-addon-${suffix}`;
+  await page.goto('/orgs/create');
+  await page.getByLabel('Org username').fill(org);
+  await page.getByRole('button', { name: 'Create org' }).click();
+  await expect(page).toHaveURL(`/@${org}`);
+  await publishAddon(page, { owner: org, name: addon, editorPlugin: true });
+
+  const outsider = await createLocalUser(`outsider-${suffix}`);
+  await page.goto('/api/auth/signout');
+  await signIn(page, outsider.email, outsider.password, `/@${outsider.username}`);
+
+  await page.goto('/settings/@dev');
+  await expect(page).toHaveURL('/@dev');
+  await expect(page.getByRole('heading', { name: 'Settings' })).toHaveCount(0);
+
+  await page.goto(`/settings/@${org}`);
+  await expect(page).toHaveURL(`/@${org}`);
+  await expect(page.getByRole('link', { name: 'Settings' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Delete org' })).toHaveCount(0);
+
+  await page.goto(`/settings/@${org}/${addon}`);
+  await expect(page).toHaveURL(`/@${org}/${addon}`);
+  await expect(page.getByRole('button', { name: 'Delete addon' })).toHaveCount(0);
+
+  await page.goto(`/create/@${org}`);
+  await expect(page.getByText('You do not have permission to publish addons for this account.')).toBeVisible();
+
+  await page.goto(`/publish/@${org}/${addon}`);
+  await expect(page.getByText('You do not have permission to publish releases for this addon.')).toBeVisible();
 });
 
 test('create addon form rejects invalid input and duplicates', async ({ page }) => {
@@ -174,7 +362,16 @@ test('create addon form rejects invalid input and duplicates', async ({ page }) 
 
   const addon = `negative-${Date.now().toString(36)}`;
   await page.goto('/create/@dev');
+  await disableNativeValidation(page);
+  await page.getByRole('button', { name: 'Create addon' }).click();
+  await expect(page.getByText('Addon name and repository are required.')).toBeVisible();
+
   await fillCreateAddonForm(page, addon);
+  await page.getByLabel('Release tag').fill('');
+  await page.getByRole('button', { name: 'Create addon' }).click();
+  await expect(page.getByText('Version and release tag are required to publish a release.')).toBeVisible();
+
+  await page.getByLabel('Release tag').fill('v0.1.0');
   await page.getByLabel('Version').fill('1.0');
   await page.getByRole('button', { name: 'Create addon' }).click();
   await expect(page.getByText('Version must be in MAJOR.MINOR.PATCH format.')).toBeVisible();
@@ -198,6 +395,10 @@ test('publish release form rejects invalid versions and duplicates', async ({ pa
   await publishAddon(page, { name: addon, editorPlugin: true });
 
   await page.goto(`/publish/@dev/${addon}`);
+  await disableNativeValidation(page);
+  await page.getByRole('button', { name: 'Publish release' }).click();
+  await expect(page.getByText('Version and release tag are required.')).toBeVisible();
+
   await page.getByLabel('Version').fill('0.2');
   await page.getByLabel('Release tag').fill('v0.1.0');
   await page.getByRole('button', { name: 'Publish release' }).click();
