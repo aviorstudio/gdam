@@ -15,7 +15,6 @@ func TestLink_ReplacesLegacyEditorPluginEntryForSameLocalPath(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("skipping on Windows (symlink/junction behavior varies by environment)")
 	}
-	withResolvedEditorPlugin(t)
 
 	projectDir := t.TempDir()
 
@@ -34,7 +33,7 @@ func TestLink_ReplacesLegacyEditorPluginEntryForSameLocalPath(t *testing.T) {
 			Path:    pluginDir,
 		},
 	})
-	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{Version: "1.2.3"})
+	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{EditorPlugin: true})
 	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}
@@ -171,8 +170,6 @@ func TestLink_OverwritesExistingAddonsDirWhenNotInManifest(t *testing.T) {
 }
 
 func TestLink_DisablesLegacyEditorPluginEntryDerivedFromPath(t *testing.T) {
-	withResolvedEditorPlugin(t)
-
 	projectDir := t.TempDir()
 
 	pluginDir := filepath.Join(projectDir, "gd-playwright-emitter")
@@ -184,7 +181,7 @@ func TestLink_DisablesLegacyEditorPluginEntryDerivedFromPath(t *testing.T) {
 	}
 
 	m := manifest.New()
-	m = manifest.UpsertAddon(m, "@aviorstudio/gd-playwright", manifest.Addon{Version: "1.2.3"})
+	m = manifest.UpsertAddon(m, "@aviorstudio/gd-playwright", manifest.Addon{EditorPlugin: true})
 	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}

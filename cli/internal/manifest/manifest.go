@@ -18,8 +18,11 @@ type Manifest struct {
 }
 
 type Addon struct {
-	Version string `json:"version,omitempty"`
-	Link    *Link  `json:"link,omitempty"`
+	Repo         string `json:"repo,omitempty"`
+	Version      string `json:"version,omitempty"`
+	AssetName    string `json:"asset_name,omitempty"`
+	EditorPlugin bool   `json:"editor_plugin,omitempty"`
+	Link         *Link  `json:"link,omitempty"`
 }
 
 type Link struct {
@@ -87,7 +90,7 @@ func (p *Addon) UnmarshalJSON(data []byte) error {
 	}
 	for k := range raw {
 		switch k {
-		case "version":
+		case "repo", "version", "asset_name", "editor_plugin":
 		case "link":
 			return fmt.Errorf("gdam.json no longer supports link configuration (move it to %s)", LinkFilename)
 		default:
@@ -96,14 +99,20 @@ func (p *Addon) UnmarshalJSON(data []byte) error {
 	}
 
 	var tmp struct {
-		Version string `json:"version,omitempty"`
+		Repo         string `json:"repo,omitempty"`
+		Version      string `json:"version,omitempty"`
+		AssetName    string `json:"asset_name,omitempty"`
+		EditorPlugin bool   `json:"editor_plugin,omitempty"`
 	}
 	if err := json.Unmarshal(data, &tmp); err != nil {
 		return err
 	}
 
 	*p = Addon{
-		Version: tmp.Version,
+		Repo:         tmp.Repo,
+		Version:      tmp.Version,
+		AssetName:    tmp.AssetName,
+		EditorPlugin: tmp.EditorPlugin,
 	}
 	return nil
 }
