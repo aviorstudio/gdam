@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/aviorstudio/gdam/cli/internal/fsutil"
-	"github.com/aviorstudio/gdam/cli/internal/gdamdb"
 	"github.com/aviorstudio/gdam/cli/internal/githubapi"
 	"github.com/aviorstudio/gdam/cli/internal/manifest"
 	"github.com/aviorstudio/gdam/cli/internal/project"
@@ -77,28 +76,28 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 		addon.Link.Enabled = false
 	}
 
-	if strings.TrimSpace(addon.Repo) == "" {
-		projectGodotPath := filepath.Join(projectDir, "project.godot")
-		if addon.EditorPlugin {
-			if _, err := os.Stat(projectGodotPath); err == nil {
-				pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
-				if linkedAbs != "" {
-					if err := disableEditorPluginAliases(projectGodotPath, projectDir, m, pluginKey, addonDirName, linkedAbs); err != nil {
-						return err
-					}
-				}
-				updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, false)
-				if err != nil {
-					return err
-				}
-				if updated {
-					fmt.Printf("disabled %s\n", pluginCfgResPath)
-				}
-			} else if !os.IsNotExist(err) {
+	projectGodotPath := filepath.Join(projectDir, "project.godot")
+	hasProjectGodot := false
+	pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
+	if _, err := os.Stat(projectGodotPath); err == nil {
+		hasProjectGodot = true
+		if linkedAbs != "" {
+			if err := disableEditorPluginAliases(projectGodotPath, projectDir, m, pluginKey, addonDirName, linkedAbs); err != nil {
 				return err
 			}
 		}
+		updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, false)
+		if err != nil {
+			return err
+		}
+		if updated {
+			fmt.Printf("disabled %s\n", pluginCfgResPath)
+		}
+	} else if !os.IsNotExist(err) {
+		return err
+	}
 
+	if strings.TrimSpace(addon.Version) == "" {
 		if err := fsutil.RemoveAll(dst); err != nil {
 			return err
 		}
@@ -111,9 +110,9 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 		return nil
 	}
 
-	ghOwner, ghRepo, ref, repoSubdir, err := gdamdb.ParseGitHubTreeURLWithPath(addon.Repo)
+	resolved, err := resolveManifestAddon(ctx, pluginKey, addon.Version)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: unable to resolve %s: %v", ErrUserInput, pluginKey, err)
 	}
 
 	tmpDir, err := os.MkdirTemp("", "gdam-unlink-*")
@@ -122,19 +121,8 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 	}
 	defer os.RemoveAll(tmpDir)
 
-	zipPath := filepath.Join(tmpDir, "repo.zip")
 	gh := githubapi.NewClient(os.Getenv("GITHUB_TOKEN"))
-	if err := gh.DownloadZipball(ctx, ghOwner, ghRepo, ref, zipPath); err != nil {
-		return err
-	}
-
-	extractDir := filepath.Join(tmpDir, "extract")
-	rootDir, err := fsutil.ExtractZip(zipPath, extractDir)
-	if err != nil {
-		return err
-	}
-
-	pkgRootDir, err := repoSubdirRoot(rootDir, repoSubdir)
+	pkgRootDir, err := prepareGitHubPackageRoot(ctx, gh, resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, resolved.AssetName, tmpDir)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
@@ -143,10 +131,7 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	} else if !ok {
 		expected := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
-		if strings.TrimSpace(repoSubdir) != "" {
-			return fmt.Errorf("%w: package is missing plugin.cfg at %s in repository (expected to install it to %s)", ErrUserInput, repoSubdir, expected)
-		}
-		return fmt.Errorf("%w: package is missing plugin.cfg at repository root (expected to install it to %s)", ErrUserInput, expected)
+		return fmt.Errorf("%w: package is missing plugin.cfg in release asset %s (expected to install it to %s)", ErrUserInput, resolved.AssetName, expected)
 	}
 
 	localAddonsDir := filepath.Join(projectDir, "addons")
@@ -175,24 +160,13 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 		return err
 	}
 
-	projectGodotPath := filepath.Join(projectDir, "project.godot")
-	if addon.EditorPlugin {
-		if _, err := os.Stat(projectGodotPath); err == nil {
-			pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
-			if linkedAbs != "" {
-				if err := disableEditorPluginAliases(projectGodotPath, projectDir, m, pluginKey, addonDirName, linkedAbs); err != nil {
-					return err
-				}
-			}
-			updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, true)
-			if err != nil {
-				return err
-			}
-			if updated {
-				fmt.Printf("enabled %s\n", pluginCfgResPath)
-			}
-		} else if !os.IsNotExist(err) {
+	if hasProjectGodot && resolved.EditorPlugin {
+		updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, true)
+		if err != nil {
 			return err
+		}
+		if updated {
+			fmt.Printf("enabled %s\n", pluginCfgResPath)
 		}
 	}
 

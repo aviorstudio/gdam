@@ -55,6 +55,10 @@ func Link(ctx context.Context, opts LinkOptions) error {
 	}
 
 	addon, pluginExists := m.Addons[pluginKey]
+	editorPlugin := false
+	if pluginExists {
+		editorPlugin = manifestAddonEditorPlugin(ctx, pluginKey, addon.Version)
+	}
 
 	pathInput := strings.TrimSpace(opts.Path)
 	usingStoredPath := false
@@ -148,7 +152,7 @@ func Link(ctx context.Context, opts LinkOptions) error {
 	}
 
 	projectGodotPath := filepath.Join(projectDir, "project.godot")
-	if addon.EditorPlugin {
+	if editorPlugin {
 		if _, err := os.Stat(projectGodotPath); err == nil {
 			pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
 			if err := disableEditorPluginAliases(projectGodotPath, projectDir, m, pluginKey, addonDirName, abs); err != nil {

@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/aviorstudio/gdam/cli/internal/fsutil"
-	"github.com/aviorstudio/gdam/cli/internal/gdamdb"
 	"github.com/aviorstudio/gdam/cli/internal/githubapi"
 	"github.com/aviorstudio/gdam/cli/internal/manifest"
 	"github.com/aviorstudio/gdam/cli/internal/project"
@@ -56,18 +55,13 @@ func Add(ctx context.Context, opts AddOptions) error {
 	existing, hasExisting := m.Addons[pkg.Name()]
 	isLinked := hasExisting && pluginLinkEnabled(existing)
 
-	db := gdamdb.NewDefaultClient()
-
-	resolved, err := db.ResolveAddon(ctx, pkg.Owner, pkg.Repo, pkg.Version)
+	resolved, err := resolveAddonFromRegistry(ctx, pkg.Owner, pkg.Repo, pkg.Version)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
 
 	if isLinked {
-		existing.Repo = gdamdb.GitHubTreeURLWithPath(resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, "")
 		existing.Version = resolved.Version
-		existing.AssetName = resolved.AssetName
-		existing.EditorPlugin = resolved.EditorPlugin
 		m = manifest.UpsertAddon(m, pkg.Name(), existing)
 		if err := manifest.Save(manifestPath, m); err != nil {
 			return err
@@ -139,11 +133,8 @@ func Add(ctx context.Context, opts AddOptions) error {
 		link = existing.Link
 	}
 	m = manifest.UpsertAddon(m, pkg.Name(), manifest.Addon{
-		Repo:         gdamdb.GitHubTreeURLWithPath(resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, ""),
-		Version:      resolved.Version,
-		AssetName:    resolved.AssetName,
-		EditorPlugin: resolved.EditorPlugin,
-		Link:         link,
+		Version: resolved.Version,
+		Link:    link,
 	})
 	if err := manifest.Save(manifestPath, m); err != nil {
 		return err
