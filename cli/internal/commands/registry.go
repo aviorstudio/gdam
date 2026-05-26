@@ -13,6 +13,8 @@ var resolveAddonFromRegistry = func(ctx context.Context, owner, addon, requested
 	return gdamdb.NewDefaultClient().ResolveAddon(ctx, owner, addon, requestedVersion)
 }
 
+var preparePackageRoot = prepareGitHubPackageRoot
+
 func resolveManifestAddon(ctx context.Context, addonKey, requestedVersion string) (gdamdb.ResolvedAddon, error) {
 	pkg, err := spec.ParsePackageSpec(addonKey)
 	if err != nil {

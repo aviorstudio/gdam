@@ -122,7 +122,7 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 	defer os.RemoveAll(tmpDir)
 
 	gh := githubapi.NewClient(os.Getenv("GITHUB_TOKEN"))
-	pkgRootDir, err := prepareGitHubPackageRoot(ctx, gh, resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, resolved.AssetName, tmpDir)
+	pkgRootDir, err := preparePackageRoot(ctx, gh, resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, resolved.AssetName, tmpDir)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}

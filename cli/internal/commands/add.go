@@ -77,7 +77,7 @@ func Add(ctx context.Context, opts AddOptions) error {
 	defer os.RemoveAll(tmpDir)
 
 	gh := githubapi.NewClient(os.Getenv("GITHUB_TOKEN"))
-	pkgRootDir, err := prepareGitHubPackageRoot(ctx, gh, resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, resolved.AssetName, tmpDir)
+	pkgRootDir, err := preparePackageRoot(ctx, gh, resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, resolved.AssetName, tmpDir)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
@@ -104,16 +104,8 @@ func Add(ctx context.Context, opts AddOptions) error {
 	}
 
 	dst := filepath.Join(localAddonsDir, addonDirName)
-	if manifest.HasAddon(m, pkg.Name()) {
-		if err := fsutil.RemoveAll(dst); err != nil {
-			return err
-		}
-	} else {
-		if _, err := os.Lstat(dst); err == nil {
-			return fmt.Errorf("%w: destination already exists: %s", ErrUserInput, dst)
-		} else if !os.IsNotExist(err) {
-			return err
-		}
+	if err := fsutil.RemoveAll(dst); err != nil {
+		return err
 	}
 
 	if err := fsutil.CopyPath(pkgRootDir, dst); err != nil {
