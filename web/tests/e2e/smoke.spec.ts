@@ -233,6 +233,42 @@ test('signed-in user can set profile link and bio', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'example.com/dev' })).toHaveAttribute('href', 'https://example.com/dev');
 });
 
+test('signed-in user can create and revoke a copy-once scoped secret key', async ({ page }) => {
+  await signInAsDev(page);
+
+  const org = `key-org-${Date.now().toString(36)}`;
+  await page.goto('/orgs/create');
+  await page.getByLabel('Org username').fill(org);
+  await page.getByRole('button', { name: 'Create org' }).click();
+  await expect(page).toHaveURL(`/@${org}`);
+
+  const keyName = `Release workflow ${Date.now().toString(36)}`;
+  await page.goto('/settings/@dev');
+  await page.getByLabel('Key name').fill(keyName);
+  await expect(page.getByLabel('@dev')).toBeChecked();
+  await page.getByLabel(`@${org}`).check();
+  await page.getByRole('button', { name: 'Create secret key' }).click();
+  const secretKeyDialog = page.getByRole('dialog', { name: 'Copy your secret key' });
+  await expect(secretKeyDialog).toBeVisible();
+  await expect(page.getByText('This secret key will never be shown again.')).toBeVisible();
+  await expect(secretKeyDialog.getByRole('textbox', { name: 'Secret key' })).toHaveValue(/^gdam_sk_/);
+  await expect(secretKeyDialog.getByRole('button', { name: 'Copy' })).toBeVisible();
+  await expect(page.getByText(keyName)).toBeVisible();
+  await expect(page.getByText(new RegExp(`Scopes: .*@dev.*@${org}`))).toBeVisible();
+  const secretKeyRow = page.locator('.flex.items-start').filter({ hasText: keyName });
+  await expect(secretKeyRow.getByText(/\d{1,2}\/\d{1,2}\/\d{4}/)).toBeVisible();
+
+  await page.goto('/settings/@dev');
+  await expect(page.getByRole('dialog', { name: 'Copy your secret key' })).toHaveCount(0);
+  await expect(page.getByText(keyName)).toBeVisible();
+  await expect(page.getByText(new RegExp(`Scopes: .*@dev.*@${org}`))).toBeVisible();
+
+  page.once('dialog', async (dialog) => dialog.accept());
+  await page.locator('.flex.items-start').filter({ hasText: keyName }).getByRole('button', { name: 'Revoke' }).click();
+  await expect(page.getByText('Secret key revoked.')).toBeVisible();
+  await expect(page.getByText(keyName)).toHaveCount(0);
+});
+
 test('org creation validates every field and preserves valid input', async ({ page }) => {
   await signInAsDev(page);
 

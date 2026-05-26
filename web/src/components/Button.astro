@@ -27,7 +27,8 @@ const {
 	value,
 	form,
 	class: className = '',
-} = Astro.props as Props;
+	...attrs
+} = Astro.props as Props & Record<string, unknown>;
 
 const baseClasses = 'inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2';
 const sizeClasses = {
@@ -47,12 +48,12 @@ const classes = [baseClasses, sizeClasses[size], variantClasses[variant], classN
 ---
 
 {href ? (
-	<a class={classes} href={href}>
+	<a {...attrs} class={classes} href={href}>
 		{icon ? <ButtonIcon name={icon} /> : null}
 		<span><slot /></span>
 	</a>
 ) : (
-	<button class={classes} type={type} name={name} value={value} form={form}>
+	<button {...attrs} class={classes} type={type} name={name} value={value} form={form}>
 		{icon ? <ButtonIcon name={icon} /> : null}
 		<span><slot /></span>
 	</button>
