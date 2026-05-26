@@ -1,7 +1,6 @@
 package gdamdb
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -11,7 +10,6 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"time"
 )
@@ -34,61 +32,7 @@ type PublishReleaseInput struct {
 }
 
 func NewDefaultClient() *Client {
-	loadDotEnv()
 	return NewClient(defaultSupabaseURL(), defaultSupabasePublishableKey())
-}
-
-func loadDotEnv() {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return
-	}
-
-	for _, p := range dotEnvCandidates(cwd) {
-		if loadDotEnvFile(p) {
-			return
-		}
-	}
-}
-
-func dotEnvCandidates(startDir string) []string {
-	var candidates []string
-	dir := startDir
-	for {
-		candidates = append(candidates, filepath.Join(dir, ".env"), filepath.Join(dir, "cli", ".env"))
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return candidates
-		}
-		dir = parent
-	}
-}
-
-func loadDotEnvFile(p string) bool {
-	f, err := os.Open(p)
-	if err != nil {
-		return false
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		key, value, ok := strings.Cut(line, "=")
-		if !ok {
-			continue
-		}
-		key = strings.TrimSpace(key)
-		value = strings.Trim(strings.TrimSpace(value), `"'`)
-		if key == "" || os.Getenv(key) != "" {
-			continue
-		}
-		_ = os.Setenv(key, value)
-	}
-	return true
 }
 
 func defaultSupabaseURL() string {
