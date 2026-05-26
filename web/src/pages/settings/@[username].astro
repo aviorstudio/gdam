@@ -9,7 +9,7 @@ import Dialog from '../../components/Dialog.astro';
 import Input from '../../components/Input.astro';
 import { getSessionFromCookies } from '../../lib/auth';
 import { orgsDto, orgsProfilesDto, profilesDto, secretKeyScopesDto, secretKeysDto, usernamesDto } from '../../lib/dtoService';
-import { supabase } from '../../lib/supabase';
+import { createSupabaseForAccessToken } from '../../lib/supabase';
 import { createHash, randomBytes } from 'node:crypto';
 
 const DELETE_CSRF_COOKIE = 'gdam-delete-csrf';
@@ -109,8 +109,9 @@ const profileId = session.user?.id ?? '';
 if (!profileId || !usernameNormal) {
   return Astro.redirect(publicPath);
 }
+const supabaseClient = createSupabaseForAccessToken(session.access_token);
 
-const { data: usernameRow, error: usernameError } = await usernamesDto.getByName(supabase, usernameNormal);
+const { data: usernameRow, error: usernameError } = await usernamesDto.getByName(supabaseClient, usernameNormal);
 if (usernameError || !usernameRow) {
   return Astro.redirect(publicPath);
 }
@@ -123,7 +124,7 @@ if (usernameRecord.user_id && usernameRecord.user_id === profileId) {
   isProfileSettings = true;
 } else if (usernameRecord.org_id) {
   const { data: membershipRow, error: membershipError } = await orgsProfilesDto.getByOrgIdAndProfileId(
-    supabase,
+    supabaseClient,
     usernameRecord.org_id,
     profileId
   );
@@ -142,8 +143,8 @@ const settingsSubtitle = isOrgSettings
   : 'Manage your profile details.';
 
 const ownerResult = isOrgSettings && usernameRecord.org_id
-  ? await orgsDto.getById(supabase, usernameRecord.org_id)
-  : await profilesDto.getById(supabase, profileId);
+  ? await orgsDto.getById(supabaseClient, usernameRecord.org_id)
+  : await profilesDto.getById(supabaseClient, profileId);
 const ownerData = ownerResult.data;
 const ownerRecord = ownerData as OwnerRecord | null;
 
@@ -173,7 +174,7 @@ if (isProfileSettings) {
     orgId: null,
   });
 
-  const { data: membershipRows, error: membershipsError } = await orgsProfilesDto.listByProfileId(supabase, profileId);
+  const { data: membershipRows, error: membershipsError } = await orgsProfilesDto.listByProfileId(supabaseClient, profileId);
   if (membershipsError) {
     settingsStatus = membershipsError.message;
     settingsTone = 'error';
@@ -182,7 +183,7 @@ if (isProfileSettings) {
       .filter((row) => row.admin && row.org_id)
       .map((row) => row.org_id as string);
     if (adminOrgIds.length > 0) {
-      const { data: orgUsernameRows, error: orgUsernameError } = await usernamesDto.listByOrgIds(supabase, adminOrgIds);
+      const { data: orgUsernameRows, error: orgUsernameError } = await usernamesDto.listByOrgIds(supabaseClient, adminOrgIds);
       if (orgUsernameError) {
         settingsStatus = settingsStatus || orgUsernameError.message;
         settingsTone = settingsTone === 'muted' ? 'error' : settingsTone;
@@ -220,7 +221,7 @@ if (Astro.request.method === 'POST') {
       settingsTone = 'error';
     } else {
       createdSecretKey = createSecretKey();
-      const { data: secretKeyRow, error: secretKeyError } = await secretKeysDto.insert(supabase, {
+      const { data: secretKeyRow, error: secretKeyError } = await secretKeysDto.insert(supabaseClient, {
         name: formSecretKeyName,
         token_hash: hashSecretKey(createdSecretKey),
         created_by: profileId,
@@ -230,14 +231,14 @@ if (Astro.request.method === 'POST') {
         settingsStatus = secretKeyError?.message || 'Secret key created but no id returned.';
         settingsTone = 'error';
       } else {
-        const { error: scopeError } = await secretKeyScopesDto.insert(supabase, selectedScopes.map((scope) => ({
+        const { error: scopeError } = await secretKeyScopesDto.insert(supabaseClient, selectedScopes.map((scope) => ({
           secret_key_id: secretKeyRow.id,
           profile_id: scope.profileId,
           org_id: scope.orgId,
         })));
         if (scopeError) {
           createdSecretKey = '';
-          await secretKeysDto.deleteById(supabase, secretKeyRow.id);
+          await secretKeysDto.deleteById(supabaseClient, secretKeyRow.id);
           settingsStatus = scopeError.message;
           settingsTone = 'error';
         } else {
@@ -252,7 +253,7 @@ if (Astro.request.method === 'POST') {
       settingsStatus = 'Secret key id is required.';
       settingsTone = 'error';
     } else {
-      const { error: revokeError } = await secretKeysDto.deleteById(supabase, secretKeyId);
+      const { error: revokeError } = await secretKeysDto.deleteById(supabaseClient, secretKeyId);
       if (revokeError) {
         settingsStatus = revokeError.message;
         settingsTone = 'error';
@@ -266,7 +267,7 @@ if (Astro.request.method === 'POST') {
       settingsStatus = 'Invalid delete request.';
       settingsTone = 'error';
     } else {
-      const { error: deleteError } = await orgsDto.deleteById(supabase, usernameRecord.org_id);
+      const { error: deleteError } = await orgsDto.deleteById(supabaseClient, usernameRecord.org_id);
       if (deleteError) {
         settingsStatus = deleteError.message;
         settingsTone = 'error';
@@ -292,7 +293,7 @@ if (Astro.request.method === 'POST') {
       settingsTone = 'error';
     } else {
       const { data: existingUsername, error: existingUsernameError } = await usernamesDto.getByName(
-        supabase,
+        supabaseClient,
         usernameNormal
       );
       const existingUsernameRecord = existingUsername as UsernameRecord | null;
@@ -303,7 +304,7 @@ if (Astro.request.method === 'POST') {
         settingsStatus = 'That username is already taken.';
         settingsTone = 'error';
       } else {
-        const { error: usernameUpdateError } = await usernamesDto.updateById(supabase, usernameRecord.id, {
+        const { error: usernameUpdateError } = await usernamesDto.updateById(supabaseClient, usernameRecord.id, {
           name: formUsername,
         });
 
@@ -312,8 +313,8 @@ if (Astro.request.method === 'POST') {
           bio: normalizeOptionalValue(formBio),
         };
         const ownerUpdateResult = isOrgSettings && usernameRecord.org_id
-          ? await orgsDto.updateById(supabase, usernameRecord.org_id, ownerPayload)
-          : await profilesDto.updateById(supabase, profileId, ownerPayload);
+          ? await orgsDto.updateById(supabaseClient, usernameRecord.org_id, ownerPayload)
+          : await profilesDto.updateById(supabaseClient, profileId, ownerPayload);
         const ownerUpdateError = ownerUpdateResult.error;
 
         if (usernameUpdateError || ownerUpdateError) {
@@ -328,7 +329,7 @@ if (Astro.request.method === 'POST') {
 }
 
 if (isProfileSettings) {
-  const secretKeyResult = await secretKeysDto.listByCreatedBy(supabase, profileId);
+  const secretKeyResult = await secretKeysDto.listByCreatedBy(supabaseClient, profileId);
   if (secretKeyResult.error) {
     settingsStatus = settingsStatus || secretKeyResult.error.message;
     settingsTone = settingsTone === 'muted' ? 'error' : settingsTone;
@@ -336,7 +337,7 @@ if (isProfileSettings) {
     secretKeyRows = (secretKeyResult.data as SecretKeyRecord[] | null) ?? [];
     const secretKeyIds = secretKeyRows.map((key) => key.id);
     if (secretKeyIds.length > 0) {
-      const { data: scopeRows, error: scopeError } = await secretKeyScopesDto.listBySecretKeyIds(supabase, secretKeyIds);
+      const { data: scopeRows, error: scopeError } = await secretKeyScopesDto.listBySecretKeyIds(supabaseClient, secretKeyIds);
       if (scopeError) {
         settingsStatus = settingsStatus || scopeError.message;
         settingsTone = settingsTone === 'muted' ? 'error' : settingsTone;
@@ -346,13 +347,13 @@ if (isProfileSettings) {
         const labelByProfileId = new Map<string, string>();
         const labelByOrgId = new Map<string, string>();
         if (profileIds.length > 0) {
-          const { data: usernameRows } = await usernamesDto.listByUserIds(supabase, profileIds);
+          const { data: usernameRows } = await usernamesDto.listByUserIds(supabaseClient, profileIds);
           for (const row of (usernameRows as UsernameRecord[] | null) ?? []) {
             if (row.user_id && row.name) labelByProfileId.set(row.user_id, `@${row.name}`);
           }
         }
         if (orgIds.length > 0) {
-          const { data: usernameRows } = await usernamesDto.listByOrgIds(supabase, orgIds);
+          const { data: usernameRows } = await usernamesDto.listByOrgIds(supabaseClient, orgIds);
           for (const row of (usernameRows as UsernameRecord[] | null) ?? []) {
             if (row.org_id && row.name) labelByOrgId.set(row.org_id, `@${row.name}`);
           }
