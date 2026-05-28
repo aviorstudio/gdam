@@ -12,6 +12,7 @@ import { findGitHubReleaseTag, releaseHasAsset } from '../../lib/github';
 import { parseGitHubOwnerRepo, toRepoUrl } from '../../lib/repo';
 import { parseSemverTriplet } from '../../lib/semver';
 import { supabase } from '../../lib/supabase';
+import { formatAddonInsertError, formatReleaseInsertError } from '../../lib/dbError';
 
 type UsernameRecord = {
   name: string | null;
@@ -185,7 +186,7 @@ if (Astro.request.method === 'POST' && targetOwner) {
               });
 
               if (addonError) {
-                status = addonError.message;
+                status = formatAddonInsertError(addonError, selectedOwner.slug, formName);
                 tone = 'error';
               } else if (!createdAddon?.id) {
                 status = 'Addon created but no id returned.';
@@ -201,7 +202,7 @@ if (Astro.request.method === 'POST' && targetOwner) {
                 });
 
                 if (versionError) {
-                  status = versionError.message;
+                  status = formatReleaseInsertError(versionError);
                   tone = 'error';
                 } else {
                   return Astro.redirect(`/@${encodeURIComponent(selectedOwner.slug)}/${encodeURIComponent(formName)}`);
@@ -221,7 +222,7 @@ if (Astro.request.method === 'POST' && targetOwner) {
           });
 
           if (addonError) {
-            status = addonError.message;
+            status = formatAddonInsertError(addonError, selectedOwner.slug, formName);
             tone = 'error';
           } else if (!createdAddon?.id) {
             status = 'Addon created but no id returned.';

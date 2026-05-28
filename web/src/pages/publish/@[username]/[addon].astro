@@ -12,6 +12,7 @@ import { findGitHubReleaseTag, releaseHasAsset } from '../../../lib/github';
 import { parseGitHubOwnerRepo } from '../../../lib/repo';
 import { parseSemverTriplet } from '../../../lib/semver';
 import { supabase } from '../../../lib/supabase';
+import { formatReleaseInsertError } from '../../../lib/dbError';
 
 type UsernameRecord = {
   name: string | null;
@@ -150,7 +151,7 @@ if (Astro.request.method === 'POST' && canCreateRelease) {
             });
 
             if (versionError) {
-              status = versionError.message;
+              status = formatReleaseInsertError(versionError);
               tone = 'error';
             } else {
               return Astro.redirect(addonPath);

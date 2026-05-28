@@ -421,7 +421,7 @@ test('create addon form rejects invalid input and duplicates', async ({ page }) 
   await page.goto('/create/@dev');
   await fillCreateAddonForm(page, addon);
   await page.getByRole('button', { name: 'Create addon' }).click();
-  await expect(page.getByText('duplicate key value violates unique constraint')).toBeVisible();
+  await expect(page.getByText(`Addon @dev/${addon} already exists.`)).toBeVisible();
 });
 
 test('publish release form rejects invalid versions and duplicates', async ({ page }) => {
@@ -442,5 +442,5 @@ test('publish release form rejects invalid versions and duplicates', async ({ pa
 
   await page.getByLabel('Version').fill('0.1.0');
   await page.getByRole('button', { name: 'Publish release' }).click();
-  await expect(page.getByText('duplicate key value violates unique constraint')).toBeVisible();
+  await expect(page.getByText('That release version or tag already exists for this addon.')).toBeVisible();
 });
