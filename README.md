@@ -15,7 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/aviorstudio/gdam/main/scripts/insta
 Install a specific version:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/aviorstudio/gdam/main/scripts/install_cli.sh | VERSION=0.0.1 sh
+curl -fsSL https://raw.githubusercontent.com/aviorstudio/gdam/main/scripts/install_cli.sh | VERSION=0.0.4 sh
 ```
 
 Windows builds are available from [GitHub Releases](https://github.com/aviorstudio/gdam/releases).
