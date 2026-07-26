@@ -8,15 +8,18 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
-	"path"
 	"strings"
 	"time"
 )
 
+// Client talks to the GDAM API.
+//
+// It used to query PostgREST directly, which meant the CLI carried a database
+// key and reimplemented version selection. Both now live server-side: this is a
+// plain HTTP client against two public endpoints, and it ships no credentials
+// of any kind. Publishing authenticates with the user's own secret key.
 type Client struct {
 	baseURL    string
-	apiKey     string
 	httpClient *http.Client
 }
 
@@ -32,263 +35,87 @@ type PublishReleaseInput struct {
 }
 
 func NewDefaultClient() *Client {
-	return NewClient(defaultSupabaseURL(), defaultSupabasePublishableKey())
+	return NewClient(defaultAPIURL())
 }
 
-func defaultSupabaseURL() string {
-	if value := strings.TrimSpace(os.Getenv("GDAM_SUPABASE_URL")); value != "" {
-		return value
-	}
-	if value := strings.TrimSpace(os.Getenv("SUPABASE_URL")); value != "" {
-		return value
-	}
-	return DefaultSupabaseURL
-}
-
-func defaultSupabasePublishableKey() string {
-	if value := strings.TrimSpace(os.Getenv("GDAM_SUPABASE_PUBLISHABLE_KEY")); value != "" {
-		return value
-	}
-	if value := strings.TrimSpace(os.Getenv("SUPABASE_PUBLISHABLE_KEY")); value != "" {
-		return value
-	}
-	return strings.TrimSpace(DefaultSupabasePublishableKey)
-}
-
-func NewClient(baseURL, apiKey string) *Client {
-	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
-	apiKey = strings.TrimSpace(apiKey)
+func NewClient(baseURL string) *Client {
 	return &Client{
-		baseURL: baseURL,
-		apiKey:  apiKey,
+		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 	}
 }
 
+// ResolvedAddon is everything needed to install an addon. The API decides which
+// release this is, so every client resolves identically.
 type ResolvedAddon struct {
-	Name string
-	Repo string
+	Name string `json:"name"`
+	Repo string `json:"repo"`
 
-	GitHubOwner string
-	GitHubRepo  string
+	GitHubOwner string `json:"github_owner"`
+	GitHubRepo  string `json:"github_repo"`
 
-	Version    string
-	ReleaseTag string
-	AssetName  string
+	Version    string `json:"version"`
+	ReleaseTag string `json:"release_tag"`
+	AssetName  string `json:"asset_name"`
 
-	EditorPlugin bool
+	EditorPlugin bool `json:"editor_plugin"`
 }
 
 func (c *Client) ResolveAddon(ctx context.Context, username, addon, requestedVersion string) (ResolvedAddon, error) {
-	usernameNormal := strings.ToLower(strings.TrimSpace(username))
+	owner := strings.ToLower(strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(username), "@")))
 	addonName := strings.TrimSpace(addon)
-	if usernameNormal == "" || addonName == "" {
+	if owner == "" || addonName == "" {
 		return ResolvedAddon{}, fmt.Errorf("invalid addon spec")
 	}
 
-	userRow, ok, err := c.getUsernameByNormal(ctx, usernameNormal)
-	if err != nil {
+	path := "/api/v1/resolve/" + url.PathEscape(owner) + "/" + url.PathEscape(addonName)
+	if version := strings.TrimSpace(requestedVersion); version != "" {
+		path += "?" + url.Values{"version": {version}}.Encode()
+	}
+
+	var resolved ResolvedAddon
+	if err := c.do(ctx, http.MethodGet, path, nil, &resolved); err != nil {
 		return ResolvedAddon{}, err
 	}
-	if !ok {
-		return ResolvedAddon{}, fmt.Errorf("owner not found: @%s", usernameNormal)
-	}
-	if userRow.UserID != nil && userRow.OrgID != nil {
-		return ResolvedAddon{}, fmt.Errorf("username is assigned to multiple owners: @%s", usernameNormal)
-	}
-	if userRow.UserID == nil && userRow.OrgID == nil {
-		return ResolvedAddon{}, fmt.Errorf("owner not found: @%s", usernameNormal)
-	}
-
-	addonRow, ok, err := c.getAddonByOwnerAndName(ctx, userRow.UserID, userRow.OrgID, addonName)
-	if err != nil {
-		return ResolvedAddon{}, err
-	}
-	if !ok {
-		return ResolvedAddon{}, fmt.Errorf("addon not found: @%s/%s", usernameNormal, addonName)
-	}
-	if strings.TrimSpace(addonRow.Repo) == "" {
-		return ResolvedAddon{}, fmt.Errorf("addon has no repository set: @%s/%s", usernameNormal, addonName)
-	}
-
-	versionRows, err := c.listReleases(ctx, addonRow.ID)
-	if err != nil {
-		return ResolvedAddon{}, err
-	}
-	selected, ok := selectVersion(versionRows, requestedVersion)
-	if !ok {
-		return ResolvedAddon{}, fmt.Errorf("version not found: %s", requestedVersion)
-	}
-	releaseTag := strings.TrimSpace(selected.ReleaseTag)
-	if releaseTag == "" {
-		return ResolvedAddon{}, fmt.Errorf(
-			"selected version has no release tag: %d.%d.%d",
-			selected.Major,
-			selected.Minor,
-			selected.Patch,
-		)
-	}
-	assetName := strings.TrimSpace(selected.AssetName)
-	if assetName == "" {
-		return ResolvedAddon{}, fmt.Errorf(
-			"selected version has no release asset name: %d.%d.%d",
-			selected.Major,
-			selected.Minor,
-			selected.Patch,
-		)
-	}
-
-	ghOwner, ghRepo, _, err := ParseGitHubRepoURL(addonRow.Repo)
-	if err != nil {
-		return ResolvedAddon{}, err
-	}
-
-	return ResolvedAddon{
-		Name:         "@" + usernameNormal + "/" + addonName,
-		Repo:         addonRow.Repo,
-		GitHubOwner:  ghOwner,
-		GitHubRepo:   ghRepo,
-		Version:      fmt.Sprintf("%d.%d.%d", selected.Major, selected.Minor, selected.Patch),
-		ReleaseTag:   releaseTag,
-		AssetName:    assetName,
-		EditorPlugin: addonRow.EditorPlugin != nil && *addonRow.EditorPlugin,
-	}, nil
-}
-
-type usernameRow struct {
-	UsernameDisplay *string `json:"name"`
-	UserID          *string `json:"user_id"`
-	OrgID           *string `json:"org_id"`
-}
-
-type addonRow struct {
-	ID           string  `json:"id"`
-	Name         *string `json:"name"`
-	Repo         string  `json:"repo"`
-	EditorPlugin *bool   `json:"editor"`
-	CreatedAt    *string `json:"created_at"`
-	ProfileID    *string `json:"profile_id"`
-	OrgID        *string `json:"org_id"`
-}
-
-type releaseRow struct {
-	AddonID    *string `json:"addon_id"`
-	Major      int     `json:"major"`
-	Minor      int     `json:"minor"`
-	Patch      int     `json:"patch"`
-	ReleaseTag string  `json:"tag"`
-	AssetName  string  `json:"asset"`
-	CreatedAt  *string `json:"created_at"`
-}
-
-func (c *Client) getUsernameByNormal(ctx context.Context, usernameNormal string) (usernameRow, bool, error) {
-	q := url.Values{}
-	q.Set("select", "name,user_id,org_id")
-	q.Set("name", "ilike."+usernameNormal)
-	q.Set("limit", "2")
-
-	var rows []usernameRow
-	if err := c.get(ctx, "usernames", q, &rows); err != nil {
-		return usernameRow{}, false, err
-	}
-	if len(rows) == 0 {
-		return usernameRow{}, false, nil
-	}
-	if len(rows) > 1 {
-		return usernameRow{}, false, fmt.Errorf("username is not unique: %s", usernameNormal)
-	}
-	return rows[0], true, nil
-}
-
-func (c *Client) getAddonByOwnerAndName(ctx context.Context, profileID, orgID *string, addonName string) (addonRow, bool, error) {
-	q := url.Values{}
-	q.Set("select", "id,name,repo,editor,created_at,profile_id,org_id")
-	q.Set("name", "eq."+addonName)
-	q.Set("limit", "2")
-
-	if orgID != nil && strings.TrimSpace(*orgID) != "" {
-		q.Set("org_id", "eq."+strings.TrimSpace(*orgID))
-	} else if profileID != nil && strings.TrimSpace(*profileID) != "" {
-		q.Set("profile_id", "eq."+strings.TrimSpace(*profileID))
-	} else {
-		return addonRow{}, false, fmt.Errorf("owner has no id")
-	}
-
-	var rows []addonRow
-	if err := c.get(ctx, "addons", q, &rows); err != nil {
-		return addonRow{}, false, err
-	}
-	if len(rows) == 0 {
-		return addonRow{}, false, nil
-	}
-	if len(rows) > 1 {
-		return addonRow{}, false, fmt.Errorf("addon is not unique: %s", addonName)
-	}
-	return rows[0], true, nil
-}
-
-func (c *Client) listReleases(ctx context.Context, addonID string) ([]releaseRow, error) {
-	addonID = strings.TrimSpace(addonID)
-	if addonID == "" {
-		return nil, fmt.Errorf("missing addon id")
-	}
-
-	q := url.Values{}
-	q.Set("select", "addon_id,major,minor,patch,tag,asset,created_at")
-	q.Set("addon_id", "eq."+addonID)
-	q.Set("order", "major.desc,minor.desc,patch.desc,created_at.desc")
-	q.Set("limit", "100")
-
-	var rows []releaseRow
-	if err := c.get(ctx, "releases", q, &rows); err != nil {
-		return nil, err
-	}
-	if rows == nil {
-		rows = []releaseRow{}
-	}
-	return rows, nil
+	return resolved, nil
 }
 
 func (c *Client) PublishRelease(ctx context.Context, input PublishReleaseInput) error {
 	payload := map[string]any{
-		"secret_key":    strings.TrimSpace(input.SecretKey),
-		"owner_name":    strings.TrimSpace(input.Owner),
-		"addon_name":    strings.TrimSpace(input.Addon),
-		"version_major": input.Major,
-		"version_minor": input.Minor,
-		"version_patch": input.Patch,
-		"release_tag":   strings.TrimSpace(input.ReleaseTag),
-		"asset_name":    strings.TrimSpace(input.AssetName),
+		"secret_key":  strings.TrimSpace(input.SecretKey),
+		"owner":       strings.TrimSpace(input.Owner),
+		"addon":       strings.TrimSpace(input.Addon),
+		"version":     fmt.Sprintf("%d.%d.%d", input.Major, input.Minor, input.Patch),
+		"release_tag": strings.TrimSpace(input.ReleaseTag),
+		"asset_name":  strings.TrimSpace(input.AssetName),
 	}
-	return c.postRPC(ctx, "publish_release_with_secret_key", payload)
+	return c.do(ctx, http.MethodPost, "/api/v1/publish", payload, nil)
 }
 
-func (c *Client) postRPC(ctx context.Context, fn string, payload any) error {
-	u, err := url.Parse(c.baseURL)
-	if err != nil {
-		return err
-	}
-	u.Path = path.Join(u.Path, "rest/v1/rpc", fn)
-	if !strings.HasPrefix(u.Path, "/") {
-		u.Path = "/" + u.Path
+func (c *Client) do(ctx context.Context, method, path string, body any, out any) error {
+	if c.baseURL == "" {
+		return fmt.Errorf("missing GDAM API url (set GDAM_API_URL)")
 	}
 
-	body, err := json.Marshal(payload)
+	var reader io.Reader
+	if body != nil {
+		encoded, err := json.Marshal(body)
+		if err != nil {
+			return err
+		}
+		reader = bytes.NewReader(encoded)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, reader)
 	if err != nil {
 		return err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	if c.apiKey == "" {
-		return fmt.Errorf("missing Supabase publishable key (set GDAM_SUPABASE_PUBLISHABLE_KEY or SUPABASE_PUBLISHABLE_KEY)")
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("apikey", c.apiKey)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -297,43 +124,31 @@ func (c *Client) postRPC(ctx context.Context, fn string, payload any) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 32<<10))
-		return fmt.Errorf("gdam db failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(msg)))
+		return fmt.Errorf("%s", apiErrorMessage(resp))
 	}
-	return nil
+
+	if out == nil {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		return nil
+	}
+	return json.NewDecoder(resp.Body).Decode(out)
 }
 
-func (c *Client) get(ctx context.Context, table string, query url.Values, dst any) error {
-	u, err := url.Parse(c.baseURL)
-	if err != nil {
-		return err
-	}
-	u.Path = path.Join(u.Path, "rest/v1", table)
-	if !strings.HasPrefix(u.Path, "/") {
-		u.Path = "/" + u.Path
-	}
-	u.RawQuery = query.Encode()
+// apiErrorMessage prefers the API's own message, which is written to be shown
+// to a user, and falls back to the raw body.
+func apiErrorMessage(resp *http.Response) string {
+	payload, _ := io.ReadAll(io.LimitReader(resp.Body, 32<<10))
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-	if err != nil {
-		return err
+	var parsed struct {
+		Message string `json:"message"`
 	}
-	if c.apiKey == "" {
-		return fmt.Errorf("missing Supabase publishable key (set GDAM_SUPABASE_PUBLISHABLE_KEY or SUPABASE_PUBLISHABLE_KEY)")
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("apikey", c.apiKey)
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 32<<10))
-		return fmt.Errorf("gdam db failed (%d): %s", resp.StatusCode, strings.TrimSpace(string(msg)))
+	if err := json.Unmarshal(payload, &parsed); err == nil && strings.TrimSpace(parsed.Message) != "" {
+		return parsed.Message
 	}
 
-	return json.NewDecoder(resp.Body).Decode(dst)
+	text := strings.TrimSpace(string(payload))
+	if text == "" {
+		return fmt.Sprintf("gdam api failed (%d)", resp.StatusCode)
+	}
+	return fmt.Sprintf("gdam api failed (%d): %s", resp.StatusCode, text)
 }

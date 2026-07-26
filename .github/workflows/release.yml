@@ -66,18 +66,8 @@ jobs:
       - name: Test CLI
         run: go test ./...
 
-      - name: Verify release key
-        env:
-          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
-        run: |
-          if [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
-            echo 'Missing required secret: SUPABASE_PUBLISHABLE_KEY' >&2
-            exit 1
-          fi
-
       - name: Build release artifacts
         env:
-          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           VERSION: ${{ steps.release.outputs.version }}
           COMMIT: ${{ github.sha }}
         run: |
@@ -101,7 +91,7 @@ jobs:
             mkdir -p "$out_dir"
             out_path="$PWD/$out_dir/gdam$exe"
             GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 go build \
-              -ldflags "-s -w -X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE -X github.com/aviorstudio/gdam/internal/gdamdb.DefaultSupabasePublishableKey=$SUPABASE_PUBLISHABLE_KEY" \
+              -ldflags "-s -w -X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" \
               -o "$out_path" ./cmd/gdam
             cp README.md "$out_dir/README.md"
 

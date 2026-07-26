@@ -57,6 +57,18 @@ gdam --version
 
 If you hit GitHub rate limits while installing addons, set `GITHUB_TOKEN`.
 
+## Environment
+
+| Variable          | Purpose                                                          |
+| ----------------- | ---------------------------------------------------------------- |
+| `GDAM_SECRET_KEY` | Secret key used by `gdam publish` in CI                           |
+| `GDAM_API_URL`    | Registry API base url, defaults to `https://api.gdam.dev`         |
+| `GITHUB_TOKEN`    | Optional GitHub token to avoid rate limits when downloading       |
+
+Set `GDAM_API_URL` to run the CLI against a local registry while developing it.
+The CLI ships no credentials of its own: reads are public, and publishing is
+authenticated with your secret key.
+
 ## Project Files
 
 `gdam init` creates a `gdam.json` file in a Godot project. `gdam add`, `gdam remove`, and `gdam install` keep that manifest in sync with installed addons under `res://addons/`.
@@ -93,7 +105,7 @@ Run tests:
 go test ./...
 ```
 
-CLI releases use `v*` tags. The manual release workflow must run from `main`, accepts a `patch`, `minor`, or `major` bump, runs Go tests, injects version/build metadata, and builds `gdam` binaries for Linux, macOS, and Windows with checksums.
+CLI releases use `v*` tags. The manual release workflow must run from `main`, accepts a `patch`, `minor`, or `major` bump, runs Go tests, injects version/build metadata, and builds `gdam` binaries for Linux, macOS, and Windows with checksums. It needs no repository secrets — the binary contains no keys.
 
 ## License
 

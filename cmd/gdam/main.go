@@ -281,6 +281,7 @@ Usage:
 
 Environment:
   GDAM_SECRET_KEY   Secret key for publishing releases in CI.
+  GDAM_API_URL      Registry API base url (default https://api.gdam.dev).
   GITHUB_TOKEN      Optional GitHub token to avoid rate limits.`)
 }
 
