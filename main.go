@@ -6,18 +6,54 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"time"
 
 	"github.com/aviorstudio/gdam/internal/commands"
 )
 
+// Overwritten by -ldflags in the release workflow. A binary built any other way
+// keeps these defaults, which is why buildInfoVersion fills them in below.
 var (
 	version = "dev"
 	commit  = "none"
 	date    = "unknown"
 )
 
+// buildInfoVersion recovers the version from the module metadata Go stamps into
+// every binary. Only the release workflow passes -ldflags, so without this a
+// `go install github.com/aviorstudio/gdam@v0.0.6` reported "dev" — the version
+// was right there in the build info, just never read.
+//
+// Values already set by ldflags always win; this only fills in what is missing.
+func buildInfoVersion() {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+
+	// "(devel)" is what a local `go build` reports, which is no better than the
+	// default it would replace.
+	if version == "dev" && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		version = info.Main.Version
+	}
+
+	for _, s := range info.Settings {
+		switch s.Key {
+		case "vcs.revision":
+			if commit == "none" && s.Value != "" {
+				commit = s.Value
+			}
+		case "vcs.time":
+			if date == "unknown" && s.Value != "" {
+				date = s.Value
+			}
+		}
+	}
+}
+
 func main() {
+	buildInfoVersion()
 	os.Exit(run(os.Args))
 }
 
