@@ -18,6 +18,6 @@ runs:
         mkdir -p "$HOME/.local/bin"
         echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-        GOBIN="$HOME/.local/bin" go install "github.com/aviorstudio/gdam/cmd/gdam@${{ inputs.gdam-version }}"
+        GOBIN="$HOME/.local/bin" go install "github.com/aviorstudio/gdam@${{ inputs.gdam-version }}"
 
         gdam --help > /dev/null

@@ -35,7 +35,7 @@ func NewClient(token string) *Client {
 	return &Client{
 		httpClient: &http.Client{Timeout: 60 * time.Second},
 		token:      token,
-		userAgent:  "gdam-cli",
+		userAgent:  "gdam",
 	}
 }
 

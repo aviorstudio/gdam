@@ -20,6 +20,20 @@ curl -fsSL https://raw.githubusercontent.com/aviorstudio/gdam/main/scripts/insta
 
 Windows builds are available from [GitHub Releases](https://github.com/aviorstudio/gdam/releases).
 
+If you have the Go toolchain, install it from the module path instead:
+
+```sh
+go install github.com/aviorstudio/gdam@latest
+```
+
+Or run it without installing anything:
+
+```sh
+go run github.com/aviorstudio/gdam@latest --version
+```
+
+Replace `@latest` with a release tag to pin a version. This route compiles from source; the installer script and the release archives ship prebuilt binaries.
+
 ## CLI Usage
 
 From a Godot project:
