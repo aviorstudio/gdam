@@ -52,8 +52,11 @@ api_token() {
 # API allows 60 requests an hour PER IP -- and CI runners share addresses.
 # GitHub-hosted macOS runners share them heavily enough that this call returns
 # 403 several times an hour, which made "latest" installs fail intermittently
-# for every repository using the action. A token raises the limit to 5000/hour
-# against the account rather than the address.
+# for every repository using the action. A token scopes the limit to the token
+# rather than to the address: 1000/hour per repository for a workflow's
+# GITHUB_TOKEN, 5000/hour for a personal access token. The denominator is what
+# matters more than the number -- one repository's runs stop competing with
+# every other repository sharing that runner.
 #
 # The token reaches curl through a config on STDIN rather than as -H on the
 # command line: arguments are visible in the process list to every other user
@@ -146,8 +149,9 @@ if [ "$VERSION" = "latest" ]; then
       printf '\n' >&2
       printf 'The GitHub API allows 60 unauthenticated requests an hour per IP address,\n' >&2
       printf 'and CI runners share addresses. If this is CI, set GITHUB_TOKEN (or\n' >&2
-      printf 'GH_TOKEN) in the environment to raise that to 5000/hour, or install a\n' >&2
-      printf 'pinned VERSION instead of "latest".\n' >&2
+      printf 'GH_TOKEN) in the environment to scope the limit to the token instead\n' >&2
+      printf '(1000/hour per repository), or install a pinned VERSION rather than\n' >&2
+      printf '"latest".\n' >&2
     fi
     exit 1
   fi
