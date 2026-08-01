@@ -36,9 +36,41 @@ detect_arch() {
   esac
 }
 
+# A token for the GitHub API, if the caller has one. Empty is fine and is the
+# normal case for a person installing by hand.
+#
+# GDAM_GITHUB_TOKEN first so a caller can point this at a different token than
+# whatever GITHUB_TOKEN happens to hold; then the two names CI and the gh CLI
+# already set, so most callers need do nothing.
+api_token() {
+  printf '%s' "${GDAM_GITHUB_TOKEN:-${GITHUB_TOKEN:-${GH_TOKEN:-}}}"
+}
+
+# The tag of the newest release, or nothing.
+#
+# AUTHENTICATED when a token is available, because the unauthenticated GitHub
+# API allows 60 requests an hour PER IP -- and CI runners share addresses.
+# GitHub-hosted macOS runners share them heavily enough that this call returns
+# 403 several times an hour, which made "latest" installs fail intermittently
+# for every repository using the action. A token raises the limit to 5000/hour
+# against the account rather than the address.
+#
+# The token reaches curl through a config on STDIN rather than as -H on the
+# command line: arguments are visible in the process list to every other user
+# on the machine, and this script runs on shared boxes as well as in CI.
+#
+# --retry covers the transient half of the same problem: 429 and 5xx are
+# retried, and a 403 from the rate limiter is not, so a genuinely exhausted
+# quota still fails fast rather than sleeping through three attempts.
 latest_tag() {
-  curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
-    | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p'
+  _url="https://api.github.com/repos/$REPO/releases/latest"
+  _token="$(api_token)"
+  if [ -n "$_token" ]; then
+    printf 'header = "Authorization: Bearer %s"\n' "$_token" \
+      | curl -fsSL --retry 3 --retry-delay 2 -K - "$_url"
+  else
+    curl -fsSL --retry 3 --retry-delay 2 "$_url"
+  fi
 }
 
 pick_install_dir() {
@@ -99,9 +131,24 @@ OS="$(detect_os)"
 ARCH="$(detect_arch)"
 
 if [ "$VERSION" = "latest" ]; then
-  TAG="$(latest_tag)"
+  # `|| true` because the failure is reported below with a cause attached. A
+  # bare pipeline would swallow curl's status anyway -- sed exits 0 on empty
+  # input -- so this makes that explicit rather than accidental.
+  API_RESPONSE="$(latest_tag || true)"
+  TAG="$(printf '%s' "$API_RESPONSE" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')"
   if [ -z "$TAG" ]; then
     printf 'failed to resolve latest release for %s\n' "$REPO" >&2
+    # Name the likely cause. Without this the message says only that the
+    # release could not be resolved, which reads as "there is no release" --
+    # and sends you looking at the wrong repository. The rate limit was the
+    # actual cause every time this fired in CI.
+    if [ -z "$(api_token)" ]; then
+      printf '\n' >&2
+      printf 'The GitHub API allows 60 unauthenticated requests an hour per IP address,\n' >&2
+      printf 'and CI runners share addresses. If this is CI, set GITHUB_TOKEN (or\n' >&2
+      printf 'GH_TOKEN) in the environment to raise that to 5000/hour, or install a\n' >&2
+      printf 'pinned VERSION instead of "latest".\n' >&2
+    fi
     exit 1
   fi
 else
