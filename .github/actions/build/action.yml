@@ -1,0 +1,125 @@
+name: Build
+description: >
+  Everything a release ships: the binary for every supported platform, archived,
+  with checksums.
+
+  A composite action rather than a reusable workflow so it runs in the caller's
+  job, under the caller's name -- CI / Build, Release / Build -- rather than as
+  a nested "caller / callee" check.
+
+  This replaces two different builds. CI ran scripts/cli_build.sh, which
+  produces ONE host binary with no version stamped into it; release.yml
+  cross-compiled six targets inline with its own loop. Only the CI path ran on a
+  pull request, so a break in any of the six -- a build tag, a
+  platform-specific import, a syscall that does not exist on windows -- surfaced
+  first at release time, on the one build nobody is watching.
+
+  Now a pull request builds exactly what a release builds. The only difference
+  is the version stamped in, and that one of them goes on to publish.
+
+  scripts/cli_build.sh stays. It is the fast host build for the person at the
+  terminal, and it is not what CI checks any more.
+
+  NOTHING LEAVES THE RUNNER. The archives are left in ./dist. Creating the
+  release is a step the caller writes out, so nothing named "build" can publish
+  as a side effect of being reused -- and it has no token to publish with.
+
+  Assumes Go is already set up. See ../test.
+
+inputs:
+  version:
+    description: >
+      What the binary reports for `gdam version`, baked in with -X.
+
+      Defaults to "dev" rather than being required, because a pull request has
+      no version and should not have to invent one -- and "dev" is the honest
+      answer for a binary built from a working tree that may match no tag.
+    required: false
+    default: dev
+  commit:
+    description: The commit stamped into the binary alongside the version.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Cross-compile
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        COMMIT: ${{ inputs.commit }}
+      run: |
+        set -euo pipefail
+        DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        rm -rf dist
+        mkdir -p dist
+
+        build() {
+          goos="$1"; goarch="$2"; os_label="$3"; arch_label="$4"; archive_ext="$5"
+          exe=""
+          if [ "$goos" = "windows" ]; then exe=".exe"; fi
+
+          name="gdam_${os_label}_${arch_label}"
+          out_dir="dist/$name"
+          mkdir -p "$out_dir"
+          out_path="$PWD/$out_dir/gdam$exe"
+          # CGO off so the binary is static and runs on any distro.
+          GOOS="$goos" GOARCH="$goarch" CGO_ENABLED=0 go build \
+            -ldflags "-s -w -X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" \
+            -o "$out_path" .
+          cp README.md "$out_dir/README.md"
+
+          if [ "$archive_ext" = "zip" ]; then
+            (cd "$out_dir" && zip -q "../$name.zip" "gdam$exe" README.md)
+          else
+            tar -C "$out_dir" -czf "dist/$name.tar.gz" "gdam$exe" README.md
+          fi
+          echo "  $name"
+        }
+
+        build linux   amd64 Linux   x86_64 tar.gz
+        build linux   arm64 Linux   arm64  tar.gz
+        build darwin  amd64 Darwin  x86_64 tar.gz
+        build darwin  arm64 Darwin  arm64  tar.gz
+        build windows amd64 Windows x86_64 zip
+        build windows arm64 Windows arm64  zip
+
+        (cd dist && sha256sum -- *.tar.gz *.zip > checksums.txt)
+
+    # The archive is what people download, so the check runs against what came
+    # out of it rather than against the tree it was built from. Only the
+    # runner's own platform can be executed; the other five are proven to link
+    # by having compiled at all.
+    - name: The built binary reports its version
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        tmp="$(mktemp -d)"
+        tar -xzf dist/gdam_Linux_x86_64.tar.gz -C "$tmp"
+        got="$("$tmp/gdam" version 2>&1 || true)"
+        echo "$got"
+
+        # A requested version must be reported exactly -- that is a release, and
+        # an archive claiming a different version than its tag is the whole
+        # failure this guards.
+        #
+        # The default is NOT checked against the literal "dev". main.go falls
+        # back to the module version in its build info when nothing was stamped
+        # (see the `version == "dev"` branch there), so in a git checkout the
+        # toolchain's VCS pseudo-version is what comes out -- a pull request
+        # legitimately reports something like
+        # `gdam v0.0.8-0.20260802025843-da3ac2fda354`. Asserting "dev" here
+        # failed the first run of this action, and it was the check that was
+        # wrong rather than the binary.
+        if [ "$VERSION" != "dev" ]; then
+          case "$got" in
+            *"$VERSION"*) ;;
+            *) echo "::error::built binary reports '$got', expected it to contain '$VERSION'"; exit 1 ;;
+          esac
+        elif [ -z "${got#gdam }" ] || [ "${got#gdam }" = "$got" ]; then
+          echo "::error::built binary reports '$got', expected 'gdam <version>'"
+          exit 1
+        fi

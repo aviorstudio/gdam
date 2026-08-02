@@ -24,13 +24,12 @@ jobs:
       # Built first: a compile error should fail before a test suite reaches the
       # same conclusion more slowly.
       #
-      # NOTE: this builds through scripts/cli_build.sh, and release.yml
-      # cross-compiles inline with its own loop. Two build paths, and only this
-      # one runs on a pull request -- so a break in the release cross-compile
-      # still surfaces first at release time. Unifying them is a real change and
-      # deserves its own pull request; this one only stops the TEST drifting.
-      - name: Build CLI
-        run: ./scripts/cli_build.sh
+      # The same action Release uses, so a pull request builds exactly what a
+      # release builds -- all six targets. This used to run scripts/cli_build.sh,
+      # which produces one host binary: a break in windows/arm64 or darwin/arm64
+      # surfaced first at release time.
+      - name: Build
+        uses: ./.github/actions/build
 
       - name: Test
         uses: ./.github/actions/test
