@@ -1,0 +1,23 @@
+name: Test
+description: >
+  Is this commit good. Nothing is built for release here and nothing is
+  published; a failure means the code is wrong, not that the pipeline is.
+
+  A composite action rather than a reusable workflow so it runs in the caller's
+  job, under the caller's name -- CI / Test, Release / Test -- rather than as a
+  nested "caller / callee" check.
+
+  ONE definition, called by CI and by Release both. They each carried their own
+  `go test ./...` before, which is a small duplication but the same kind that
+  lets the release-side copy be trimmed for speed until it no longer matches
+  what people trust on a pull request.
+
+  Assumes Go is already set up; the caller does that, because the toolchain
+  version is a property of the job rather than of this step.
+
+runs:
+  using: composite
+  steps:
+    - name: Go tests
+      shell: bash
+      run: go test ./...
