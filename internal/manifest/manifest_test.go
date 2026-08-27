@@ -13,7 +13,7 @@ func TestSave_DoesNotWriteSchemaVersion(t *testing.T) {
 
 	m := New()
 	m = UpsertAddon(m, "@user/addon", Addon{
-		Version: "1.2.3",
+		Tag: "v1.2.3",
 		Link: &Link{
 			Enabled: true,
 			Path:    "~/dev/addon",
@@ -32,13 +32,13 @@ func TestSave_DoesNotWriteSchemaVersion(t *testing.T) {
 	}
 }
 
-func TestSave_WritesOnlyVersionForRegistryAddons(t *testing.T) {
+func TestSave_WritesOnlyTagForRegistryAddons(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "gdam.json")
 
 	m := New()
 	m = UpsertAddon(m, "@user/addon", Addon{
-		Version: "1.2.3",
+		Tag: "Release-1",
 	})
 
 	if err := Save(p, m); err != nil {
@@ -50,8 +50,8 @@ func TestSave_WritesOnlyVersionForRegistryAddons(t *testing.T) {
 		t.Fatalf("read: %v", err)
 	}
 	text := string(b)
-	if !strings.Contains(text, `"version"`) {
-		t.Fatalf("expected version in gdam.json, got:\n%s", text)
+	if !strings.Contains(text, `"tag": "Release-1"`) {
+		t.Fatalf("expected exact tag in gdam.json, got:\n%s", text)
 	}
 	for _, field := range []string{`"repo"`, `"asset_name"`, `"editor_plugin"`} {
 		if strings.Contains(text, field) {
@@ -63,7 +63,7 @@ func TestSave_WritesOnlyVersionForRegistryAddons(t *testing.T) {
 func TestLoad_RejectsLinkInGdamJSON(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "gdam.json")
-	if err := os.WriteFile(p, []byte(`{"addons":{"@user/addon":{"version":"1.2.3","link":{"enabled":true,"path":"~/dev/addon"}}}}`), 0o644); err != nil {
+	if err := os.WriteFile(p, []byte(`{"addons":{"@user/addon":{"tag":"v1.2.3","link":{"enabled":true,"path":"~/dev/addon"}}}}`), 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 
@@ -152,7 +152,7 @@ func TestSave_WritesLinksToLinkManifestAndOmitsFromGdamJSON(t *testing.T) {
 
 	m := New()
 	m = UpsertAddon(m, "@user/addon", Addon{
-		Version: "1.2.3",
+		Tag: "v1.2.3",
 		Link: &Link{
 			Enabled: true,
 			Path:    "~/dev/addon",
@@ -193,7 +193,7 @@ func TestLoad_MergesLinkManifest(t *testing.T) {
 	manifestPath := filepath.Join(dir, "gdam.json")
 	linkPath := filepath.Join(dir, LinkFilename)
 
-	if err := os.WriteFile(manifestPath, []byte(`{"addons":{"@user/addon":{"version":"1.2.3"}}}`), 0o644); err != nil {
+	if err := os.WriteFile(manifestPath, []byte(`{"addons":{"@user/addon":{"tag":"v1.2.3"}}}`), 0o644); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}
 	if err := os.WriteFile(linkPath, []byte(`{"addons":{"@user/addon":{"enabled":true,"path":"~/dev/addon"}}}`), 0o644); err != nil {

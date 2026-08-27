@@ -120,7 +120,7 @@ func runAdd(args []string) int {
 		return 2
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: gdam add @username/addon[@version]")
+		fmt.Fprintln(os.Stderr, "usage: gdam add @username/addon[@tag]")
 		return 2
 	}
 
@@ -273,8 +273,8 @@ func runPublish(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
-	if fs.NArg() != 3 && fs.NArg() != 4 {
-		fmt.Fprintln(os.Stderr, "usage: gdam publish @username/addon VERSION RELEASE_TAG [ASSET_NAME]")
+	if fs.NArg() != 2 && fs.NArg() != 3 {
+		fmt.Fprintln(os.Stderr, "usage: gdam publish @username/addon TAG [ASSET_NAME]")
 		return 2
 	}
 
@@ -282,14 +282,13 @@ func runPublish(args []string) int {
 	defer cancel()
 
 	assetName := ""
-	if fs.NArg() == 4 {
-		assetName = fs.Arg(3)
+	if fs.NArg() == 3 {
+		assetName = fs.Arg(2)
 	}
 	if err := commands.Publish(ctx, commands.PublishOptions{
-		Spec:       fs.Arg(0),
-		Version:    fs.Arg(1),
-		ReleaseTag: fs.Arg(2),
-		AssetName:  assetName,
+		Spec:      fs.Arg(0),
+		TagName:   fs.Arg(1),
+		AssetName: assetName,
 	}); err != nil {
 		if errors.Is(err, commands.ErrUserInput) {
 			fmt.Fprintln(os.Stderr, err)
@@ -307,9 +306,9 @@ func printUsage() {
 Usage:
   gdam --version
   gdam init
-  gdam add @username/addon[@version]
+  gdam add @username/addon[@tag]
   gdam install
-  gdam publish @username/addon VERSION RELEASE_TAG [ASSET_NAME]
+  gdam publish @username/addon TAG [ASSET_NAME]
   gdam remove @username/addon
   gdam link @username/addon [local_path]
   gdam unlink @username/addon

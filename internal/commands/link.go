@@ -33,8 +33,8 @@ func Link(ctx context.Context, opts LinkOptions) error {
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
-	if pkg.Version != "" {
-		return fmt.Errorf("%w: link does not take a version (use @username/addon)", ErrUserInput)
+	if pkg.Tag != "" {
+		return fmt.Errorf("%w: link does not take a tag (use @username/addon)", ErrUserInput)
 	}
 	pluginKey := pkg.Name()
 
@@ -57,7 +57,7 @@ func Link(ctx context.Context, opts LinkOptions) error {
 	addon, pluginExists := m.Addons[pluginKey]
 	editorPlugin := false
 	if pluginExists {
-		editorPlugin = manifestAddonEditorPlugin(ctx, pluginKey, addon.Version)
+		editorPlugin = manifestAddonEditorPlugin(ctx, pluginKey, addon.Tag)
 	}
 
 	pathInput := strings.TrimSpace(opts.Path)

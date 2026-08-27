@@ -55,18 +55,18 @@ func Add(ctx context.Context, opts AddOptions) error {
 	existing, hasExisting := m.Addons[pkg.Name()]
 	isLinked := hasExisting && pluginLinkEnabled(existing)
 
-	resolved, err := resolveAddonFromRegistry(ctx, pkg.Owner, pkg.Repo, pkg.Version)
+	resolved, err := resolveAddonFromRegistry(ctx, pkg.Owner, pkg.Repo, pkg.Tag)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
 
 	if isLinked {
-		existing.Version = resolved.Version
+		existing.Tag = resolved.TagName
 		m = manifest.UpsertAddon(m, pkg.Name(), existing)
 		if err := manifest.Save(manifestPath, m); err != nil {
 			return err
 		}
-		fmt.Printf("updated %s@%s (linked)\n", pkg.Name(), resolved.Version)
+		fmt.Printf("updated %s@%s (linked)\n", pkg.Name(), resolved.TagName)
 		return nil
 	}
 
@@ -77,7 +77,7 @@ func Add(ctx context.Context, opts AddOptions) error {
 	defer os.RemoveAll(tmpDir)
 
 	gh := githubapi.NewClient(os.Getenv("GITHUB_TOKEN"))
-	pkgRootDir, err := preparePackageRoot(ctx, gh, resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, resolved.AssetName, tmpDir)
+	pkgRootDir, err := preparePackageRoot(ctx, gh, resolved, tmpDir)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
@@ -125,8 +125,8 @@ func Add(ctx context.Context, opts AddOptions) error {
 		link = existing.Link
 	}
 	m = manifest.UpsertAddon(m, pkg.Name(), manifest.Addon{
-		Version: resolved.Version,
-		Link:    link,
+		Tag:  resolved.TagName,
+		Link: link,
 	})
 	if err := manifest.Save(manifestPath, m); err != nil {
 		return err
@@ -148,6 +148,6 @@ func Add(ctx context.Context, opts AddOptions) error {
 		}
 	}
 
-	fmt.Printf("installed %s@%s (%s)\n", pkg.Name(), resolved.Version, resolved.ReleaseTag)
+	fmt.Printf("installed %s@%s\n", pkg.Name(), resolved.TagName)
 	return nil
 }

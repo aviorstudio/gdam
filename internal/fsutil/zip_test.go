@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -26,6 +27,19 @@ func TestExtractZipAllowRootFilesReturnsDestinationForRootFiles(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(rootDir, "plugin.cfg")); err != nil {
 		t.Fatalf("expected plugin.cfg at root: %v", err)
+	}
+}
+
+func TestExtractZipRejectsTraversalAndAbsolutePaths(t *testing.T) {
+	for _, name := range []string{"../escape", "/absolute", `..\escape`} {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			p := filepath.Join(dir, "bad.zip")
+			writeTestZip(t, p, map[string]string{name: "bad"})
+			if _, err := ExtractZipAllowRootFiles(p, filepath.Join(dir, "out")); err == nil || !strings.Contains(err.Error(), "invalid zip entry path") {
+				t.Fatalf("got %v", err)
+			}
+		})
 	}
 }
 

@@ -49,8 +49,8 @@ func Remove(ctx context.Context, opts RemoveOptions) error {
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
-	if pkg.Version != "" {
-		return fmt.Errorf("%w: remove does not take a version (use @username/addon)", ErrUserInput)
+	if pkg.Tag != "" {
+		return fmt.Errorf("%w: remove does not take a tag (use @username/addon)", ErrUserInput)
 	}
 
 	if _, ok := m.Addons[pkg.Name()]; !ok {

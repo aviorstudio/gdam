@@ -48,8 +48,8 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
-	if pkg.Version != "" {
-		return fmt.Errorf("%w: unlink does not take a version (use @username/addon)", ErrUserInput)
+	if pkg.Tag != "" {
+		return fmt.Errorf("%w: unlink does not take a tag (use @username/addon)", ErrUserInput)
 	}
 	pluginKey := pkg.Name()
 
@@ -97,7 +97,7 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 		return err
 	}
 
-	if strings.TrimSpace(addon.Version) == "" {
+	if strings.TrimSpace(addon.Tag) == "" {
 		if err := fsutil.RemoveAll(dst); err != nil {
 			return err
 		}
@@ -110,7 +110,7 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 		return nil
 	}
 
-	resolved, err := resolveManifestAddon(ctx, pluginKey, addon.Version)
+	resolved, err := resolveManifestAddon(ctx, pluginKey, addon.Tag)
 	if err != nil {
 		return fmt.Errorf("%w: unable to resolve %s: %v", ErrUserInput, pluginKey, err)
 	}
@@ -122,7 +122,7 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 	defer os.RemoveAll(tmpDir)
 
 	gh := githubapi.NewClient(os.Getenv("GITHUB_TOKEN"))
-	pkgRootDir, err := preparePackageRoot(ctx, gh, resolved.GitHubOwner, resolved.GitHubRepo, resolved.ReleaseTag, resolved.AssetName, tmpDir)
+	pkgRootDir, err := preparePackageRoot(ctx, gh, resolved, tmpDir)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}

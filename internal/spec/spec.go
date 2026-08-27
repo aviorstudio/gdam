@@ -6,9 +6,9 @@ import (
 )
 
 type PackageSpec struct {
-	Owner   string
-	Repo    string
-	Version string
+	Owner string
+	Repo  string
+	Tag   string
 }
 
 func (p PackageSpec) Name() string {
@@ -31,7 +31,7 @@ func ParsePackageSpec(s string) (PackageSpec, error) {
 	rest := strings.TrimPrefix(s, "@")
 	parts := strings.Split(rest, "@")
 	if len(parts) > 2 {
-		return PackageSpec{}, fmt.Errorf("invalid spec %q (expected @owner/repo[@version])", s)
+		return PackageSpec{}, fmt.Errorf("invalid spec %q (expected @owner/repo[@tag])", s)
 	}
 
 	repoPart := parts[0]
@@ -49,7 +49,10 @@ func ParsePackageSpec(s string) (PackageSpec, error) {
 		Repo:  repoBits[1],
 	}
 	if len(parts) == 2 {
-		spec.Version = parts[1]
+		if parts[1] == "" {
+			return PackageSpec{}, fmt.Errorf("invalid spec %q (tag is empty)", s)
+		}
+		spec.Tag = parts[1]
 	}
 	return spec, nil
 }
