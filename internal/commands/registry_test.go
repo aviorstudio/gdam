@@ -13,10 +13,10 @@ import (
 func withResolvedEditorPlugin(t *testing.T) {
 	t.Helper()
 	previous := resolveAddonFromRegistry
-	resolveAddonFromRegistry = func(ctx context.Context, owner, addon, requestedVersion string) (gdamdb.ResolvedAddon, error) {
+	resolveAddonFromRegistry = func(ctx context.Context, owner, addon, requestedTag string) (gdamdb.ResolvedAddon, error) {
 		return gdamdb.ResolvedAddon{
 			Name:         "@" + owner + "/" + addon,
-			Version:      requestedVersion,
+			TagName:      requestedTag,
 			EditorPlugin: true,
 		}, nil
 	}
@@ -29,22 +29,21 @@ func withFakeRegistryInstall(t *testing.T) {
 	t.Helper()
 	previousResolve := resolveAddonFromRegistry
 	previousPrepare := preparePackageRoot
-	resolveAddonFromRegistry = func(ctx context.Context, owner, addon, requestedVersion string) (gdamdb.ResolvedAddon, error) {
-		version := requestedVersion
-		if version == "" {
-			version = "1.2.3"
+	resolveAddonFromRegistry = func(ctx context.Context, owner, addon, requestedTag string) (gdamdb.ResolvedAddon, error) {
+		tag := requestedTag
+		if tag == "" {
+			tag = "1.2.3"
 		}
 		return gdamdb.ResolvedAddon{
 			Name:         "@" + owner + "/" + addon,
 			GitHubOwner:  owner,
 			GitHubRepo:   addon,
-			Version:      version,
-			ReleaseTag:   "v" + version,
+			TagName:      tag,
 			AssetName:    "@" + owner + "_" + addon + ".zip",
 			EditorPlugin: true,
 		}, nil
 	}
-	preparePackageRoot = func(ctx context.Context, gh *githubapi.Client, owner, repo, ref, assetName, tmpDir string) (string, error) {
+	preparePackageRoot = func(ctx context.Context, gh *githubapi.Client, resolved gdamdb.ResolvedAddon, tmpDir string) (string, error) {
 		root := filepath.Join(tmpDir, "pkg")
 		if err := os.MkdirAll(root, 0o755); err != nil {
 			return "", err

@@ -10,152 +10,91 @@ import (
 	"testing"
 )
 
-func TestResolveAddonRequestsTheApi(t *testing.T) {
-	var gotPath, gotQuery string
+const resolvedJSON = `{"name":"@dev/cool","repo":"https://github.com/dev/cool","github_owner":"dev","github_repo":"cool","tag_name":"Release-1","github_release_id":123,"commit_sha":"0123456789012345678901234567890123456789","asset_id":456,"asset_name":"cool.zip","asset_digest":"sha256:0123456789012345678901234567890123456789012345678901234567890123","published_at":"2026-08-26T10:00:00Z","prerelease":false,"editor_plugin":true}`
+const releasesJSON = `[{"github_release_id":123,"tag_name":"Release-1","commit_sha":"0123456789012345678901234567890123456789","asset_id":456,"asset_name":"cool.zip","asset_digest":"sha256:0123456789012345678901234567890123456789012345678901234567890123","published_at":"2026-08-26T10:00:00Z","prerelease":false}]`
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotPath = r.URL.Path
-		gotQuery = r.URL.RawQuery
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = io.WriteString(w, `{
-			"name": "@dev/cool",
-			"repo": "https://github.com/dev/cool",
-			"github_owner": "dev",
-			"github_repo": "cool",
-			"version": "1.2.3",
-			"release_tag": "v1.2.3",
-			"asset_name": "cool.zip",
-			"editor_plugin": true
-		}`)
-	}))
-	defer server.Close()
-
-	resolved, err := NewClient(server.URL).ResolveAddon(context.Background(), "Dev", "cool", "1.2.3")
-	if err != nil {
-		t.Fatalf("resolve: %v", err)
+func serveResolved(w http.ResponseWriter, r *http.Request) {
+	if strings.HasSuffix(r.URL.Path, "/releases") {
+		_, _ = io.WriteString(w, releasesJSON)
+		return
 	}
-
-	if gotPath != "/api/v1/resolve/dev/cool" {
-		t.Fatalf("got path %q", gotPath)
-	}
-	if gotQuery != "version=1.2.3" {
-		t.Fatalf("got query %q", gotQuery)
-	}
-	if resolved.GitHubOwner != "dev" || resolved.GitHubRepo != "cool" {
-		t.Fatalf("got %s/%s", resolved.GitHubOwner, resolved.GitHubRepo)
-	}
-	if resolved.Version != "1.2.3" || resolved.AssetName != "cool.zip" || !resolved.EditorPlugin {
-		t.Fatalf("unexpected resolution: %+v", resolved)
-	}
+	_, _ = io.WriteString(w, resolvedJSON)
 }
 
-func TestResolveAddonOmitsEmptyVersion(t *testing.T) {
-	var gotQuery string
-
+func TestResolveAddonUsesExactTagContract(t *testing.T) {
+	var query string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotQuery = r.URL.RawQuery
-		_, _ = io.WriteString(w, `{"name":"@dev/cool"}`)
-	}))
-	defer server.Close()
-
-	if _, err := NewClient(server.URL).ResolveAddon(context.Background(), "dev", "cool", "  "); err != nil {
-		t.Fatalf("resolve: %v", err)
-	}
-	// An empty version means "latest"; sending version= would ask the API to
-	// match a release literally named the empty string.
-	if gotQuery != "" {
-		t.Fatalf("got query %q, want none", gotQuery)
-	}
-}
-
-func TestResolveAddonSurfacesApiMessage(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = io.WriteString(w, `{"message":"addon @dev/missing"}`)
-	}))
-	defer server.Close()
-
-	_, err := NewClient(server.URL).ResolveAddon(context.Background(), "dev", "missing", "")
-	if err == nil {
-		t.Fatal("expected an error")
-	}
-	if err.Error() != "addon @dev/missing" {
-		t.Fatalf("got %q, want the API's own message", err.Error())
-	}
-}
-
-func TestResolveAddonRejectsEmptySpec(t *testing.T) {
-	// No request should be made at all for an unusable spec.
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		t.Fatal("client should not have called the API")
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL)
-	if _, err := client.ResolveAddon(context.Background(), "", "cool", ""); err == nil {
-		t.Fatal("expected an error for an empty owner")
-	}
-	if _, err := client.ResolveAddon(context.Background(), "dev", "  ", ""); err == nil {
-		t.Fatal("expected an error for an empty addon")
-	}
-}
-
-func TestPublishReleasePostsSemver(t *testing.T) {
-	var payload map[string]any
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost || r.URL.Path != "/api/v1/publish" {
-			t.Errorf("got %s %s", r.Method, r.URL.Path)
+		if !strings.HasSuffix(r.URL.Path, "/releases") {
+			query = r.URL.RawQuery
 		}
-		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-			t.Errorf("decode: %v", err)
-		}
-		w.WriteHeader(http.StatusCreated)
+		serveResolved(w, r)
 	}))
 	defer server.Close()
-
-	err := NewClient(server.URL).PublishRelease(context.Background(), PublishReleaseInput{
-		SecretKey:  "gdam_sk_test",
-		Owner:      "dev",
-		Addon:      "cool",
-		Major:      1,
-		Minor:      0,
-		Patch:      2,
-		ReleaseTag: "v1.0.2",
-		AssetName:  "cool.zip",
-	})
+	got, err := NewClient(server.URL).ResolveAddon(context.Background(), "Dev", "cool", "Release-1")
 	if err != nil {
-		t.Fatalf("publish: %v", err)
+		t.Fatal(err)
 	}
-
-	// The API takes a version string, so the triplet has to be joined here.
-	if payload["version"] != "1.0.2" {
-		t.Fatalf("got version %v, want 1.0.2", payload["version"])
-	}
-	if payload["secret_key"] != "gdam_sk_test" {
-		t.Fatalf("secret key was not sent")
-	}
-	if payload["release_tag"] != "v1.0.2" || payload["asset_name"] != "cool.zip" {
-		t.Fatalf("unexpected payload: %v", payload)
+	if query != "tag=Release-1" || got.TagName != "Release-1" || got.AssetID != 456 {
+		t.Fatalf("query=%q response=%+v", query, got)
 	}
 }
 
-func TestPublishReleaseSurfacesApiMessage(t *testing.T) {
+func TestResolveAddonOmitsEmptyTag(t *testing.T) {
+	var query string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusForbidden)
-		_, _ = io.WriteString(w, `{"message":"secret key cannot publish to @other"}`)
+		if !strings.HasSuffix(r.URL.Path, "/releases") {
+			query = r.URL.RawQuery
+		}
+		serveResolved(w, r)
 	}))
 	defer server.Close()
+	if _, err := NewClient(server.URL).ResolveAddon(context.Background(), "dev", "cool", " "); err != nil {
+		t.Fatal(err)
+	}
+	if query != "" {
+		t.Fatalf("query %q", query)
+	}
+}
 
-	err := NewClient(server.URL).PublishRelease(context.Background(), PublishReleaseInput{SecretKey: "k"})
-	if err == nil || !strings.Contains(err.Error(), "cannot publish to @other") {
+func TestResolveAddonRejectsIncompleteIdentity(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { _, _ = io.WriteString(w, `{"name":"@dev/cool"}`) }))
+	defer server.Close()
+	_, err := NewClient(server.URL).ResolveAddon(context.Background(), "dev", "cool", "")
+	if err == nil || !strings.Contains(err.Error(), "missing verified release identity") {
 		t.Fatalf("got %v", err)
 	}
 }
 
-func TestClientRequiresBaseURL(t *testing.T) {
-	_, err := NewClient("  ").ResolveAddon(context.Background(), "dev", "cool", "")
-	if err == nil || !strings.Contains(err.Error(), "GDAM_API_URL") {
-		t.Fatalf("got %v, want a message naming GDAM_API_URL", err)
+func TestResolveAddonSurfacesAPIMessage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(404)
+		_, _ = io.WriteString(w, `{"message":"addon missing"}`)
+	}))
+	defer server.Close()
+	_, err := NewClient(server.URL).ResolveAddon(context.Background(), "dev", "cool", "")
+	if err == nil || err.Error() != "addon missing" {
+		t.Fatalf("got %v", err)
+	}
+}
+
+func TestPublishReleasePostsTagOnly(t *testing.T) {
+	var payload map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&payload)
+		w.WriteHeader(201)
+	}))
+	defer server.Close()
+	err := NewClient(server.URL).PublishRelease(context.Background(), PublishReleaseInput{SecretKey: "secret", Owner: "dev", Addon: "cool", TagName: "Release-1", AssetName: "cool.zip"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if payload["tag_name"] != "Release-1" || payload["asset_name"] != "cool.zip" {
+		t.Fatalf("%v", payload)
+	}
+	if _, ok := payload["version"]; ok {
+		t.Fatalf("legacy version sent: %v", payload)
+	}
+	if _, ok := payload["release_tag"]; ok {
+		t.Fatalf("legacy release_tag sent: %v", payload)
 	}
 }

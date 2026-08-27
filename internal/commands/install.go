@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	"github.com/aviorstudio/gdam/internal/fsutil"
+	"github.com/aviorstudio/gdam/internal/gdamdb"
 	"github.com/aviorstudio/gdam/internal/githubapi"
 	"github.com/aviorstudio/gdam/internal/manifest"
 	"github.com/aviorstudio/gdam/internal/project"
@@ -20,12 +21,9 @@ type installCandidate struct {
 	pluginKey    string
 	addonDir     string
 	dst          string
-	version      string
+	tag          string
 	editorPlugin bool
-	ghOwner      string
-	ghRepo       string
-	ref          string
-	assetName    string
+	resolved     gdamdb.ResolvedAddon
 	prepRootDir  string
 }
 
@@ -71,7 +69,7 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			continue
 		}
 
-		resolved, err := resolveManifestAddon(ctx, pluginKey, addon.Version)
+		resolved, err := resolveManifestAddon(ctx, pluginKey, addon.Tag)
 		if err != nil {
 			return fmt.Errorf("%w: unable to resolve %s: %v", ErrUserInput, pluginKey, err)
 		}
@@ -80,12 +78,9 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			pluginKey:    pluginKey,
 			addonDir:     addonDirName,
 			dst:          filepath.Join(addonsDir, addonDirName),
-			version:      resolved.Version,
+			tag:          resolved.TagName,
 			editorPlugin: resolved.EditorPlugin,
-			ghOwner:      resolved.GitHubOwner,
-			ghRepo:       resolved.GitHubRepo,
-			ref:          resolved.ReleaseTag,
-			assetName:    resolved.AssetName,
+			resolved:     resolved,
 		})
 	}
 
@@ -119,7 +114,7 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			return err
 		}
 
-		pkgRootDir, err := preparePackageRoot(ctx, gh, candidates[i].ghOwner, candidates[i].ghRepo, candidates[i].ref, candidates[i].assetName, pkgTmpDir)
+		pkgRootDir, err := preparePackageRoot(ctx, gh, candidates[i].resolved, pkgTmpDir)
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrUserInput, err)
 		}
@@ -128,7 +123,7 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			return fmt.Errorf("%w: %v", ErrUserInput, err)
 		} else if !ok {
 			expected := "res://" + path.Join("addons", candidates[i].addonDir, "plugin.cfg")
-			return fmt.Errorf("%w: package is missing plugin.cfg in release asset %s (expected to install it to %s)", ErrUserInput, candidates[i].assetName, expected)
+			return fmt.Errorf("%w: package is missing plugin.cfg in release asset %s (expected to install it to %s)", ErrUserInput, candidates[i].resolved.AssetName, expected)
 		}
 
 		if err := fsutil.RemoveAll(candidates[i].dst); err != nil {
@@ -158,8 +153,8 @@ func Install(ctx context.Context, opts InstallOptions) error {
 			}
 		}
 
-		if candidates[i].version != "" {
-			fmt.Printf("installed %s@%s\n", candidates[i].pluginKey, candidates[i].version)
+		if candidates[i].tag != "" {
+			fmt.Printf("installed %s@%s\n", candidates[i].pluginKey, candidates[i].tag)
 		} else {
 			fmt.Printf("installed %s\n", candidates[i].pluginKey)
 		}

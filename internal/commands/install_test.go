@@ -15,7 +15,7 @@ func TestInstall_ReplacesExistingAddonDir(t *testing.T) {
 	projectDir := t.TempDir()
 
 	m := manifest.New()
-	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{Version: "1.2.3"})
+	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{Tag: "1.2.3"})
 	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestInstall_InstallsMissingAddonFromRegistry(t *testing.T) {
 	projectDir := t.TempDir()
 
 	m := manifest.New()
-	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{Version: "1.2.3"})
+	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{Tag: "1.2.3"})
 	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestInstall_ReplacesManagedAddonButKeepsUnmanagedAddons(t *testing.T) {
 	projectDir := t.TempDir()
 
 	m := manifest.New()
-	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{Version: "1.2.3"})
+	m = manifest.UpsertAddon(m, "@user/addon", manifest.Addon{Tag: "1.2.3"})
 	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
 		t.Fatalf("write gdam.json: %v", err)
 	}
