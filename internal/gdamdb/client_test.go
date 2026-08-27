@@ -11,12 +11,23 @@ import (
 )
 
 const resolvedJSON = `{"name":"@dev/cool","repo":"https://github.com/dev/cool","github_owner":"dev","github_repo":"cool","tag_name":"Release-1","github_release_id":123,"commit_sha":"0123456789012345678901234567890123456789","asset_id":456,"asset_name":"cool.zip","asset_digest":"sha256:0123456789012345678901234567890123456789012345678901234567890123","published_at":"2026-08-26T10:00:00Z","prerelease":false,"editor_plugin":true}`
+const releasesJSON = `[{"github_release_id":123,"tag_name":"Release-1","commit_sha":"0123456789012345678901234567890123456789","asset_id":456,"asset_name":"cool.zip","asset_digest":"sha256:0123456789012345678901234567890123456789012345678901234567890123","published_at":"2026-08-26T10:00:00Z","prerelease":false}]`
+
+func serveResolved(w http.ResponseWriter, r *http.Request) {
+	if strings.HasSuffix(r.URL.Path, "/releases") {
+		_, _ = io.WriteString(w, releasesJSON)
+		return
+	}
+	_, _ = io.WriteString(w, resolvedJSON)
+}
 
 func TestResolveAddonUsesExactTagContract(t *testing.T) {
 	var query string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		query = r.URL.RawQuery
-		_, _ = io.WriteString(w, resolvedJSON)
+		if !strings.HasSuffix(r.URL.Path, "/releases") {
+			query = r.URL.RawQuery
+		}
+		serveResolved(w, r)
 	}))
 	defer server.Close()
 	got, err := NewClient(server.URL).ResolveAddon(context.Background(), "Dev", "cool", "Release-1")
@@ -31,8 +42,10 @@ func TestResolveAddonUsesExactTagContract(t *testing.T) {
 func TestResolveAddonOmitsEmptyTag(t *testing.T) {
 	var query string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		query = r.URL.RawQuery
-		_, _ = io.WriteString(w, resolvedJSON)
+		if !strings.HasSuffix(r.URL.Path, "/releases") {
+			query = r.URL.RawQuery
+		}
+		serveResolved(w, r)
 	}))
 	defer server.Close()
 	if _, err := NewClient(server.URL).ResolveAddon(context.Background(), "dev", "cool", " "); err != nil {
