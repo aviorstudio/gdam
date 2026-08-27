@@ -7,15 +7,13 @@ import (
 	"strings"
 
 	"github.com/aviorstudio/gdam/internal/gdamdb"
-	"github.com/aviorstudio/gdam/internal/semver"
 	"github.com/aviorstudio/gdam/internal/spec"
 )
 
 type PublishOptions struct {
-	Spec       string
-	Version    string
-	ReleaseTag string
-	AssetName  string
+	Spec      string
+	TagName   string
+	AssetName string
 }
 
 func Publish(ctx context.Context, opts PublishOptions) error {
@@ -23,16 +21,11 @@ func Publish(ctx context.Context, opts PublishOptions) error {
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
-	if strings.TrimSpace(pkg.Version) != "" {
-		return fmt.Errorf("%w: publish version must be a separate argument", ErrUserInput)
+	if strings.TrimSpace(pkg.Tag) != "" {
+		return fmt.Errorf("%w: publish tag must be a separate argument", ErrUserInput)
 	}
 
-	version, ok := semver.Parse(opts.Version)
-	if !ok || len(version.Pre) > 0 {
-		return fmt.Errorf("%w: version must be in MAJOR.MINOR.PATCH format", ErrUserInput)
-	}
-
-	releaseTag := strings.TrimSpace(opts.ReleaseTag)
+	releaseTag := strings.TrimSpace(opts.TagName)
 	if releaseTag == "" {
 		return fmt.Errorf("%w: release tag is required", ErrUserInput)
 	}
@@ -40,9 +33,6 @@ func Publish(ctx context.Context, opts PublishOptions) error {
 	assetName := strings.TrimSpace(opts.AssetName)
 	if assetName == "" {
 		assetName = defaultCIAssetName()
-	}
-	if assetName == "" {
-		return fmt.Errorf("%w: asset name is required when GITHUB_REPOSITORY is not set", ErrUserInput)
 	}
 
 	secretKey := strings.TrimSpace(os.Getenv("GDAM_SECRET_KEY"))
@@ -52,19 +42,16 @@ func Publish(ctx context.Context, opts PublishOptions) error {
 
 	db := gdamdb.NewDefaultClient()
 	if err := db.PublishRelease(ctx, gdamdb.PublishReleaseInput{
-		SecretKey:  secretKey,
-		Owner:      pkg.Owner,
-		Addon:      pkg.Repo,
-		Major:      version.Major,
-		Minor:      version.Minor,
-		Patch:      version.Patch,
-		ReleaseTag: releaseTag,
-		AssetName:  assetName,
+		SecretKey: secretKey,
+		Owner:     pkg.Owner,
+		Addon:     pkg.Repo,
+		TagName:   releaseTag,
+		AssetName: assetName,
 	}); err != nil {
 		return err
 	}
 
-	fmt.Printf("published %s@%d.%d.%d\n", pkg.Name(), version.Major, version.Minor, version.Patch)
+	fmt.Printf("published %s@%s\n", pkg.Name(), releaseTag)
 	return nil
 }
 

@@ -18,8 +18,8 @@ type Manifest struct {
 }
 
 type Addon struct {
-	Version string `json:"version,omitempty"`
-	Link    *Link  `json:"link,omitempty"`
+	Tag  string `json:"tag,omitempty"`
+	Link *Link  `json:"link,omitempty"`
 }
 
 type Link struct {
@@ -87,7 +87,9 @@ func (p *Addon) UnmarshalJSON(data []byte) error {
 	}
 	for k := range raw {
 		switch k {
+		case "tag":
 		case "version":
+			return fmt.Errorf("legacy gdam.json version field is unsupported; run `gdam add @owner/addon@<exact-tag>` to create a new manifest")
 		case "link":
 			return fmt.Errorf("gdam.json no longer supports link configuration (move it to %s)", LinkFilename)
 		default:
@@ -96,15 +98,13 @@ func (p *Addon) UnmarshalJSON(data []byte) error {
 	}
 
 	var tmp struct {
-		Version string `json:"version,omitempty"`
+		Tag string `json:"tag"`
 	}
 	if err := json.Unmarshal(data, &tmp); err != nil {
 		return err
 	}
 
-	*p = Addon{
-		Version: tmp.Version,
-	}
+	*p = Addon{Tag: tmp.Tag}
 	return nil
 }
 

@@ -58,7 +58,7 @@ func TestAdd_ReplacesExistingUnmanagedAddonDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load gdam.json: %v", err)
 	}
-	if got := loaded.Addons["@user/addon"].Version; got != "1.2.3" {
+	if got := loaded.Addons["@user/addon"].Tag; got != "1.2.3" {
 		t.Fatalf("expected version 1.2.3, got %q", got)
 	}
 }

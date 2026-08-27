@@ -23,15 +23,14 @@ type Client struct {
 	httpClient *http.Client
 }
 
+const maxAPIResponseBytes = int64(4 << 20)
+
 type PublishReleaseInput struct {
-	SecretKey  string
-	Owner      string
-	Addon      string
-	Major      int
-	Minor      int
-	Patch      int
-	ReleaseTag string
-	AssetName  string
+	SecretKey string
+	Owner     string
+	Addon     string
+	TagName   string
+	AssetName string
 }
 
 func NewDefaultClient() *Client {
@@ -56,14 +55,19 @@ type ResolvedAddon struct {
 	GitHubOwner string `json:"github_owner"`
 	GitHubRepo  string `json:"github_repo"`
 
-	Version    string `json:"version"`
-	ReleaseTag string `json:"release_tag"`
-	AssetName  string `json:"asset_name"`
+	TagName         string    `json:"tag_name"`
+	GitHubReleaseID int64     `json:"github_release_id"`
+	CommitSHA       string    `json:"commit_sha"`
+	AssetID         int64     `json:"asset_id"`
+	AssetName       string    `json:"asset_name"`
+	AssetDigest     string    `json:"asset_digest"`
+	PublishedAt     time.Time `json:"published_at"`
+	Prerelease      bool      `json:"prerelease"`
 
 	EditorPlugin bool `json:"editor_plugin"`
 }
 
-func (c *Client) ResolveAddon(ctx context.Context, username, addon, requestedVersion string) (ResolvedAddon, error) {
+func (c *Client) ResolveAddon(ctx context.Context, username, addon, requestedTag string) (ResolvedAddon, error) {
 	owner := strings.ToLower(strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(username), "@")))
 	addonName := strings.TrimSpace(addon)
 	if owner == "" || addonName == "" {
@@ -71,25 +75,77 @@ func (c *Client) ResolveAddon(ctx context.Context, username, addon, requestedVer
 	}
 
 	path := "/api/v1/resolve/" + url.PathEscape(owner) + "/" + url.PathEscape(addonName)
-	if version := strings.TrimSpace(requestedVersion); version != "" {
-		path += "?" + url.Values{"version": {version}}.Encode()
+	if tag := strings.TrimSpace(requestedTag); tag != "" {
+		path += "?" + url.Values{"tag": {tag}}.Encode()
 	}
 
 	var resolved ResolvedAddon
 	if err := c.do(ctx, http.MethodGet, path, nil, &resolved); err != nil {
 		return ResolvedAddon{}, err
 	}
+	if err := resolved.validateCore(); err != nil {
+		return ResolvedAddon{}, fmt.Errorf("invalid registry response: %w", err)
+	}
+	var releases []struct {
+		GitHubReleaseID int64     `json:"github_release_id"`
+		TagName         string    `json:"tag_name"`
+		CommitSHA       string    `json:"commit_sha"`
+		AssetID         int64     `json:"asset_id"`
+		AssetName       string    `json:"asset_name"`
+		AssetDigest     string    `json:"asset_digest"`
+		PublishedAt     time.Time `json:"published_at"`
+		Prerelease      bool      `json:"prerelease"`
+	}
+	releasesPath := "/api/v1/owners/" + url.PathEscape(owner) + "/addons/" + url.PathEscape(addonName) + "/releases"
+	if err := c.do(ctx, http.MethodGet, releasesPath, nil, &releases); err != nil {
+		return ResolvedAddon{}, err
+	}
+	matched := false
+	for _, release := range releases {
+		if release.GitHubReleaseID != resolved.GitHubReleaseID {
+			continue
+		}
+		if release.TagName != resolved.TagName || release.CommitSHA != resolved.CommitSHA || release.AssetID != resolved.AssetID || release.AssetName != resolved.AssetName || release.AssetDigest != resolved.AssetDigest {
+			return ResolvedAddon{}, fmt.Errorf("registry release identity drift detected")
+		}
+		resolved.PublishedAt = release.PublishedAt
+		resolved.Prerelease = release.Prerelease
+		matched = true
+		break
+	}
+	if !matched {
+		return ResolvedAddon{}, fmt.Errorf("resolved release is missing from registry release list")
+	}
+	if err := resolved.validate(); err != nil {
+		return ResolvedAddon{}, fmt.Errorf("invalid registry response: %w", err)
+	}
 	return resolved, nil
+}
+
+func (r ResolvedAddon) validate() error {
+	if err := r.validateCore(); err != nil {
+		return err
+	}
+	if r.PublishedAt.IsZero() {
+		return fmt.Errorf("missing verified release identity fields")
+	}
+	return nil
+}
+
+func (r ResolvedAddon) validateCore() error {
+	if r.Name == "" || r.GitHubOwner == "" || r.GitHubRepo == "" || r.TagName == "" || r.CommitSHA == "" || r.AssetName == "" || r.AssetDigest == "" || r.GitHubReleaseID <= 0 || r.AssetID <= 0 {
+		return fmt.Errorf("missing verified release identity fields")
+	}
+	return nil
 }
 
 func (c *Client) PublishRelease(ctx context.Context, input PublishReleaseInput) error {
 	payload := map[string]any{
-		"secret_key":  strings.TrimSpace(input.SecretKey),
-		"owner":       strings.TrimSpace(input.Owner),
-		"addon":       strings.TrimSpace(input.Addon),
-		"version":     fmt.Sprintf("%d.%d.%d", input.Major, input.Minor, input.Patch),
-		"release_tag": strings.TrimSpace(input.ReleaseTag),
-		"asset_name":  strings.TrimSpace(input.AssetName),
+		"secret_key": strings.TrimSpace(input.SecretKey),
+		"owner":      strings.TrimSpace(input.Owner),
+		"addon":      strings.TrimSpace(input.Addon),
+		"tag_name":   strings.TrimSpace(input.TagName),
+		"asset_name": strings.TrimSpace(input.AssetName),
 	}
 	return c.do(ctx, http.MethodPost, "/api/v1/publish", payload, nil)
 }
@@ -131,7 +187,15 @@ func (c *Client) do(ctx context.Context, method, path string, body any, out any)
 		_, _ = io.Copy(io.Discard, resp.Body)
 		return nil
 	}
-	return json.NewDecoder(resp.Body).Decode(out)
+	limited := io.LimitReader(resp.Body, maxAPIResponseBytes+1)
+	payload, err := io.ReadAll(limited)
+	if err != nil {
+		return err
+	}
+	if int64(len(payload)) > maxAPIResponseBytes {
+		return fmt.Errorf("gdam api response exceeds %d-byte limit", maxAPIResponseBytes)
+	}
+	return json.Unmarshal(payload, out)
 }
 
 // apiErrorMessage prefers the API's own message, which is written to be shown

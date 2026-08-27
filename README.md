@@ -44,11 +44,17 @@ gdam add @username/addon
 gdam install
 ```
 
-Install a specific addon version:
+Install an exact, case-sensitive GitHub Release tag:
 
 ```sh
-gdam add @username/addon@1.2.3
+gdam add @username/addon@Release-1
 ```
+
+Without a tag, the registry selects the newest stable (non-prerelease) Release.
+Exact tags may select prereleases. Tags are opaque: `v1.2.3` and `1.2.3` are
+different, and hash-looking text is accepted only when it names a registered
+GitHub Release. Tags may contain Git ref characters, including `/`, as long as
+the package specification remains unambiguous (tags cannot contain `@`).
 
 Remove an addon:
 
@@ -85,25 +91,46 @@ authenticated with your secret key.
 
 ## Project Files
 
-`gdam init` creates a `gdam.json` file in a Godot project. `gdam add`, `gdam remove`, and `gdam install` keep that manifest in sync with installed addons under `res://addons/`.
+`gdam init` creates a `gdam.json` file in a Godot project. Each registered
+dependency stores its exact Release tag in a `tag` field. Old manifests with a
+`version` field are intentionally unsupported and must be recreated with
+`gdam add @owner/addon@<exact-tag>`; GDAM never rewrites them automatically.
+`gdam add`, `gdam remove`, and `gdam install` keep the manifest in sync with
+installed addons under `res://addons/`.
 
 Local development links are tracked separately with `gdam.link.json`, so a project can use an unpublished local addon without changing the published dependency manifest.
 
 ## Publishing Addons
 
-Registry releases are installed from GitHub Release assets. Publish an addon version with a semver package version such as `1.2.3`, a GitHub release tag, and an asset name.
-
-The tag can be any valid GitHub release tag. The release tag is required when publishing.
+Registry releases are installed from GitHub Release assets. Publish one exact
+GitHub Release tag and, optionally, an asset selector. There is no separate
+semantic package version.
 
 The asset name can be anything the publisher chooses. That ZIP should contain the addon files at the archive root, including `plugin.cfg`. GDAM installs the asset into its local convention, such as `res://addons/@username_addon/`, regardless of the asset filename.
 
 For CI publishing, create a secret key from the owner settings page, store it as `GDAM_SECRET_KEY`, and publish releases with:
 
 ```sh
-gdam publish @username/addon 1.2.3 v1.2.3 @owner_repo.zip
+gdam publish @username/addon Release-1 @owner_repo.zip
 ```
 
 Secret keys are scoped to one user or org and can only publish releases for existing addons under that owner. If `ASSET_NAME` is omitted, `gdam publish` uses `@owner_repo.zip` from `GITHUB_REPOSITORY` when available.
+
+## Download integrity and limits
+
+The registry supplies the GitHub Release ID, exact tag, commit SHA, asset ID,
+asset name, SHA-256 digest, publication time, and prerelease state. Before each
+install, GDAM rechecks that identity with GitHub, downloads through the immutable
+asset-ID endpoint, and verifies the digest before extraction. Any release, tag,
+commit, asset, digest, truncation, or archive-layout drift fails closed.
+
+Registry requests time out after 30 seconds and response bodies are limited to
+4 MiB. Asset downloads time out after two
+minutes, follow at most five redirects, and are limited to 128 MiB. Authorization
+is removed on cross-origin redirects. Extraction rejects absolute paths, `..`
+traversal, backslashes, and symlinks; it permits at most 10,000 entries and 512
+MiB total uncompressed content. ZIP assets must contain `plugin.cfg` at the
+archive root.
 
 ## Development
 
