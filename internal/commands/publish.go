@@ -34,9 +34,6 @@ func Publish(ctx context.Context, opts PublishOptions) error {
 	if assetName == "" {
 		assetName = defaultCIAssetName()
 	}
-	if assetName == "" {
-		return fmt.Errorf("%w: asset name is required when GITHUB_REPOSITORY is not set", ErrUserInput)
-	}
 
 	secretKey := strings.TrimSpace(os.Getenv("GDAM_SECRET_KEY"))
 	if secretKey == "" {

@@ -124,7 +124,8 @@ install, GDAM rechecks that identity with GitHub, downloads through the immutabl
 asset-ID endpoint, and verifies the digest before extraction. Any release, tag,
 commit, asset, digest, truncation, or archive-layout drift fails closed.
 
-Registry requests time out after 30 seconds. Asset downloads time out after two
+Registry requests time out after 30 seconds and response bodies are limited to
+4 MiB. Asset downloads time out after two
 minutes, follow at most five redirects, and are limited to 128 MiB. Authorization
 is removed on cross-origin redirects. Extraction rejects absolute paths, `..`
 traversal, backslashes, and symlinks; it permits at most 10,000 entries and 512

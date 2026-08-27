@@ -23,6 +23,8 @@ type Client struct {
 	httpClient *http.Client
 }
 
+const maxAPIResponseBytes = int64(4 << 20)
+
 type PublishReleaseInput struct {
 	SecretKey string
 	Owner     string
@@ -142,7 +144,11 @@ func (c *Client) do(ctx context.Context, method, path string, body any, out any)
 		_, _ = io.Copy(io.Discard, resp.Body)
 		return nil
 	}
-	return json.NewDecoder(resp.Body).Decode(out)
+	limited := io.LimitReader(resp.Body, maxAPIResponseBytes+1)
+	payload, err := io.ReadAll(limited)
+	if err != nil { return err }
+	if int64(len(payload)) > maxAPIResponseBytes { return fmt.Errorf("gdam api response exceeds %d-byte limit", maxAPIResponseBytes) }
+	return json.Unmarshal(payload, out)
 }
 
 // apiErrorMessage prefers the API's own message, which is written to be shown
