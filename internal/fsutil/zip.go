@@ -9,6 +9,11 @@ import (
 	"strings"
 )
 
+const (
+	MaxArchiveFiles             = 10_000
+	MaxArchiveUncompressedBytes = int64(512 << 20)
+)
+
 func ExtractZip(zipPath, destDir string) (string, error) {
 	rootDir, singleRoot, err := extractZip(zipPath, destDir)
 	if err != nil {
@@ -48,6 +53,16 @@ func extractZip(zipPath, destDir string) (string, bool, error) {
 	}
 
 	roots := map[string]struct{}{}
+	if len(r.File) > MaxArchiveFiles {
+		return "", false, fmt.Errorf("archive exceeds %d-entry limit", MaxArchiveFiles)
+	}
+	var total uint64
+	for _, f := range r.File {
+		if f.UncompressedSize64 > uint64(MaxArchiveUncompressedBytes)-total {
+			return "", false, fmt.Errorf("archive exceeds %d-byte uncompressed limit", MaxArchiveUncompressedBytes)
+		}
+		total += f.UncompressedSize64
+	}
 
 	for _, f := range r.File {
 		name := strings.TrimPrefix(f.Name, "/")
@@ -78,7 +93,10 @@ func extractZipFile(f *zip.File, destDir string) error {
 		return fmt.Errorf("refusing to extract symlink: %s", f.Name)
 	}
 
-	rel := filepath.FromSlash(strings.TrimPrefix(f.Name, "/"))
+	if strings.HasPrefix(f.Name, "/") || strings.Contains(f.Name, `\`) {
+		return fmt.Errorf("invalid zip entry path: %s", f.Name)
+	}
+	rel := filepath.FromSlash(f.Name)
 	rel = filepath.Clean(rel)
 	if rel == "." || rel == string(filepath.Separator) || rel == "" {
 		return nil
@@ -113,8 +131,12 @@ func extractZipFile(f *zip.File, destDir string) error {
 	}
 	defer out.Close()
 
-	if _, err := io.Copy(out, in); err != nil {
+	n, err := io.Copy(out, io.LimitReader(in, MaxArchiveUncompressedBytes+1))
+	if err != nil {
 		return err
+	}
+	if n > MaxArchiveUncompressedBytes || uint64(n) != f.UncompressedSize64 {
+		return fmt.Errorf("archive entry size mismatch: %s", f.Name)
 	}
 	return out.Close()
 }
