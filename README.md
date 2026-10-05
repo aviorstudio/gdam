@@ -1,3 +1,5 @@
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: c9e7cf212e113cd39e388c4a50ac35c12883d3f69273820929e24297563e8693 -->
+
 # GDAM
 
 GDAM is the Godot Addon Manager.
@@ -132,22 +134,12 @@ traversal, backslashes, and symlinks; it permits at most 10,000 entries and 512
 MiB total uncompressed content. ZIP assets must contain `plugin.cfg` at the
 archive root.
 
-## Development
-
-Build the CLI:
-
-```sh
-./scripts/cli_build.sh
-```
-
-Run tests:
-
-```sh
-go test ./...
-```
-
-CLI releases use `v*` tags. The manual release workflow must run from `main`, accepts a `patch`, `minor`, or `major` bump, runs Go tests, injects version/build metadata, and builds `gdam` binaries for Linux, macOS, and Windows with checksums. It needs no repository secrets — the binary contains no keys.
 
 ## License
 
-MIT
+MIT.
+
+
+## License
+
+MIT.
