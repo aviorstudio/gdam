@@ -177,6 +177,7 @@ DEST_DIR="$(pick_install_dir)"
 mkdir -p "$DEST_DIR"
 if [ ! -w "$DEST_DIR" ]; then
   printf 'install directory is not writable: %s\n' "$DEST_DIR" >&2
+  # shellcheck disable=SC2016 # Show the shell variable literally in the suggested command.
   printf 'rerun with INSTALL_DIR=$HOME/.local/bin or use sudo with INSTALL_DIR=/usr/local/bin\n' >&2
   exit 1
 fi
