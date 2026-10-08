@@ -18,6 +18,6 @@ description: >
 runs:
   using: composite
   steps:
-    - name: Go tests
+    - name: Verify CLI source and behavior
       shell: bash
-      run: go test ./...
+      run: make lint test
