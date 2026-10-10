@@ -252,7 +252,7 @@ func runInstall(args []string) int {
 		return 2
 	}
 	if fs.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "usage: gdam install [--frozen-lockfile]")
+		fmt.Fprintln(os.Stderr, "usage: gdam install [--frozen-lockfile] [--offline] [--cache-dir DIR]")
 		return 2
 	}
 
@@ -311,7 +311,7 @@ Usage:
   gdam init
   gdam add @username/addon[@tag]
   gdam update @username/addon@tag
-  gdam install [--frozen-lockfile]
+  gdam install [--frozen-lockfile] [--offline] [--cache-dir DIR]
   gdam publish @username/addon TAG [ASSET_NAME]
   gdam remove @username/addon
   gdam link @username/addon [local_path]
