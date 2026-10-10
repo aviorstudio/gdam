@@ -15,6 +15,14 @@ const LinkFilename = "gdam.link.json"
 
 type Manifest struct {
 	Addons map[string]Addon `json:"addons"`
+	// Package, in an addon's own repository, is the directory holding the
+	// addon's source (the contents of its release asset), relative to the
+	// manifest. That directory carries its own gdam.json declaring the
+	// addon's dependencies; `gdam install` checks the declaration against
+	// the project's pins and writes the addon's deps file there, so the
+	// addon under development reaches its dependencies the same way an
+	// installed copy does.
+	Package string `json:"package,omitempty"`
 }
 
 type Addon struct {
@@ -114,12 +122,9 @@ func New() Manifest {
 	}
 }
 
-func Load(path string) (Manifest, error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return Manifest{}, err
-	}
-
+// Parse decodes a manifest's bytes without consulting a link manifest: the
+// form an addon's own gdam.json takes inside a release asset.
+func Parse(b []byte) (Manifest, error) {
 	var m Manifest
 	dec := json.NewDecoder(bytes.NewReader(b))
 	dec.DisallowUnknownFields()
@@ -128,6 +133,19 @@ func Load(path string) (Manifest, error) {
 	}
 	if m.Addons == nil {
 		m.Addons = map[string]Addon{}
+	}
+	return m, nil
+}
+
+func Load(path string) (Manifest, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return Manifest{}, err
+	}
+
+	m, err := Parse(b)
+	if err != nil {
+		return Manifest{}, err
 	}
 
 	linkPath := filepath.Join(filepath.Dir(path), LinkFilename)
@@ -177,6 +195,7 @@ func Save(path string, m Manifest) error {
 		}
 	}
 
+	outManifest.Package = m.Package
 	out, err := json.MarshalIndent(outManifest, "", "  ")
 	if err != nil {
 		return err
@@ -231,4 +250,18 @@ func UpsertAddon(m Manifest, name string, addon Addon) Manifest {
 func RemoveAddon(m Manifest, name string) Manifest {
 	delete(m.Addons, name)
 	return m
+}
+
+// Pins returns the exact tags the manifest asks for, by addon name, with
+// linked addons left out: a linked addon is the developer's own tree and
+// is neither resolved nor downloaded.
+func Pins(m Manifest) map[string]string {
+	pins := map[string]string{}
+	for name, addon := range m.Addons {
+		if addon.Link != nil && addon.Link.Enabled && strings.TrimSpace(addon.Link.Path) != "" {
+			continue
+		}
+		pins[name] = addon.Tag
+	}
+	return pins
 }

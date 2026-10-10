@@ -19,8 +19,6 @@ type RemoveOptions struct {
 }
 
 func Remove(ctx context.Context, opts RemoveOptions) error {
-	_ = ctx
-
 	specInput := strings.TrimSpace(opts.Spec)
 	if specInput == "" {
 		return fmt.Errorf("%w: missing addon spec", ErrUserInput)
@@ -88,5 +86,7 @@ func Remove(ctx context.Context, opts RemoveOptions) error {
 	}
 
 	fmt.Printf("removed %s\n", pkg.Name())
-	return nil
+	// Re-resolving drops the addon's own dependencies from the lock and
+	// prunes any copy nothing asks for any more.
+	return installProject(ctx, projectDir, InstallOptions{})
 }

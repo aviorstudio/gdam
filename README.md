@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 091c71d06750e3f5f382315224259ffeaf1b440f24cf683ee9ff04ca0e4a9868 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: c169bb942e22f93202dbbfedd7cc6774eec3af13b997fe9ce71696cb1a4c93b6 -->
 
 # GDAM
 
@@ -102,6 +102,76 @@ dependency stores its exact Release tag in a `tag` field. Old manifests with a
 installed addons under `res://addons/`.
 
 Local development links are tracked separately with `gdam.link.json`, so a project can use an unpublished local addon without changing the published dependency manifest.
+
+## Dependencies
+
+An addon can depend on other addons. Its release asset ships a `gdam.json` at
+its root, in the same shape as a project's, naming the exact tag of each addon
+it needs:
+
+```json
+{ "addons": { "@aviorstudio/gd-session": { "tag": "v0.0.1" } } }
+```
+
+The publisher records that declaration with the release, and the registry
+refuses a release whose dependency is not itself published. `gdam install`
+reads the declarations from the registry, works out the whole set before
+downloading anything, and installs every release in it.
+
+A Godot project has one `addons/` directory and one global class namespace,
+so one copy of an addon normally serves everyone: it is installed at
+`addons/<owner_addon>` (hoisted). When exact pins disagree, the project's own
+pin takes that address and a consumer that pinned a different tag gets its own
+copy nested inside its directory, at `addons/<consumer>/.gdam/<owner_addon>`,
+with fresh script UIDs. Nothing errors on a disagreement; `gdam install`
+prints where each nested copy went and which addon asked for it.
+
+An addon reaches its dependencies only through the file gdam generates for it,
+`.gdam/deps.gd`, never by a hard-coded `res://addons/...` path, because the
+address differs between the hoisted and nested cases:
+
+```gdscript
+const Deps = preload("../.gdam/deps.gd")
+
+func make_adapter():
+	return Deps.GdSession_credential_adapter.new()
+```
+
+`deps.gd` holds a `PATHS` dictionary (addon name to its `res://` directory) and
+one `preload` constant per dependency script, named `<Addon>_<path>` with the
+owner and a leading `src/` dropped: `GdSession_credential_adapter` for
+`@aviorstudio/gd-session`'s `src/credential_adapter.gd`. It is rewritten on
+every install and must not be committed by the consuming project or shipped in
+a release asset.
+
+Two rules make a nested second copy possible. An addon that others depend on
+declares no `class_name`: Godot registers class names project-wide, so a second
+copy would fail to load, and the registry refuses such a release as a
+dependency. And an object that crosses an addon boundary (a credential adapter
+a game hands to gd-clerk, say) is matched by its methods, not by `is` against
+the dependency's class, because the game and the addon may hold different
+copies of that class.
+
+In an addon's own repository, `"package": "addon"` in the project's `gdam.json`
+names the addon's source directory. `gdam install` then checks the directory's
+own `gdam.json` against the project's pins (they must name the same tags) and
+writes `addon/.gdam/deps.gd` there, so the addon under development reaches its
+dependencies exactly as an installed copy does.
+
+## The lock file
+
+`gdam.lock` records what the project's pins resolved to: every release in the
+set, its GitHub release id, asset id and SHA-256, and every path it was
+installed to with the declaration that asked for it. `gdam add`, `gdam update`
+and `gdam remove` resolve and rewrite it. `gdam install` installs from the lock
+alone when it still answers `gdam.json`, without consulting the registry, and
+verifies every download against the locked identity before extracting a byte.
+When `gdam.json` has changed it re-resolves and rewrites the lock;
+`gdam install --frozen-lockfile` fails instead, which is what CI should run.
+Commit the lock.
+
+`gdam update @owner/addon@<tag>` moves one pin and re-resolves; it is the same
+command as `gdam add`.
 
 ## Publishing Addons
 
