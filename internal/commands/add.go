@@ -4,12 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
-	"github.com/aviorstudio/gdam/internal/fsutil"
-	"github.com/aviorstudio/gdam/internal/githubapi"
 	"github.com/aviorstudio/gdam/internal/manifest"
 	"github.com/aviorstudio/gdam/internal/project"
 	"github.com/aviorstudio/gdam/internal/spec"
@@ -70,54 +67,12 @@ func Add(ctx context.Context, opts AddOptions) error {
 		return nil
 	}
 
-	tmpDir, err := os.MkdirTemp("", "gdam-add-*")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tmpDir)
-
-	gh := githubapi.NewClient(os.Getenv("GITHUB_TOKEN"))
-	pkgRootDir, err := preparePackageRoot(ctx, gh, resolved, tmpDir)
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrUserInput, err)
-	}
-
-	localAddonsDir := filepath.Join(projectDir, "addons")
-	if err := os.MkdirAll(localAddonsDir, 0o755); err != nil {
-		return err
-	}
-
 	addonDirName, err := addonDirNameForPluginKey(pkg.Name())
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	}
-
 	if err := validateNoAddonDirCollision(m, pkg.Name(), addonDirName); err != nil {
 		return err
-	}
-
-	if ok, err := pluginCfgExistsAtDirRoot(pkgRootDir); err != nil {
-		return fmt.Errorf("%w: %v", ErrUserInput, err)
-	} else if !ok {
-		expected := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
-		return fmt.Errorf("%w: package is missing plugin.cfg in release asset %s (expected to install it to %s)", ErrUserInput, resolved.AssetName, expected)
-	}
-
-	dst := filepath.Join(localAddonsDir, addonDirName)
-	if err := fsutil.RemoveAll(dst); err != nil {
-		return err
-	}
-
-	if err := fsutil.CopyPath(pkgRootDir, dst); err != nil {
-		return err
-	}
-
-	if ok, err := pluginCfgExistsAtDirRoot(dst); err != nil {
-		_ = fsutil.RemoveAll(dst)
-		return fmt.Errorf("%w: %v", ErrUserInput, err)
-	} else if !ok {
-		_ = fsutil.RemoveAll(dst)
-		return fmt.Errorf("%w: installed addon is missing plugin.cfg at %s", ErrUserInput, filepath.Join(dst, "plugin.cfg"))
 	}
 
 	var link *manifest.Link
@@ -132,22 +87,7 @@ func Add(ctx context.Context, opts AddOptions) error {
 		return err
 	}
 
-	projectGodotPath := filepath.Join(projectDir, "project.godot")
-	if resolved.EditorPlugin {
-		if _, err := os.Stat(projectGodotPath); err == nil {
-			pluginCfgResPath := "res://" + path.Join("addons", addonDirName, "plugin.cfg")
-			updated, err := project.SetEditorPluginEnabled(projectGodotPath, pluginCfgResPath, true)
-			if err != nil {
-				return err
-			}
-			if updated {
-				fmt.Printf("enabled %s\n", pluginCfgResPath)
-			}
-		} else if !os.IsNotExist(err) {
-			return err
-		}
-	}
-
-	fmt.Printf("installed %s@%s\n", pkg.Name(), resolved.TagName)
-	return nil
+	// The pin is recorded; the install resolves the whole set, rewrites the
+	// lock and places every copy, this addon's dependencies included.
+	return installProject(ctx, projectDir, InstallOptions{})
 }

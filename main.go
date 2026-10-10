@@ -73,7 +73,7 @@ func run(args []string) int {
 		return 0
 	case "init":
 		return runInit(args[2:])
-	case "add":
+	case "add", "update":
 		return runAdd(args[2:])
 	case "remove", "rm":
 		return runRemove(args[2:])
@@ -120,7 +120,7 @@ func runAdd(args []string) int {
 		return 2
 	}
 	if fs.NArg() != 1 {
-		fmt.Fprintln(os.Stderr, "usage: gdam add @username/addon[@tag]")
+		fmt.Fprintln(os.Stderr, "usage: gdam add @username/addon[@tag]  (gdam update is the same command)")
 		return 2
 	}
 
@@ -245,18 +245,19 @@ func runUnlink(args []string) int {
 func runInstall(args []string) int {
 	fs := flag.NewFlagSet("install", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
+	frozen := fs.Bool("frozen-lockfile", false, "fail instead of re-resolving when gdam.lock does not answer gdam.json")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 	if fs.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "usage: gdam install")
+		fmt.Fprintln(os.Stderr, "usage: gdam install [--frozen-lockfile]")
 		return 2
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	if err := commands.Install(ctx, commands.InstallOptions{}); err != nil {
+	if err := commands.Install(ctx, commands.InstallOptions{FrozenLockfile: *frozen}); err != nil {
 		if errors.Is(err, commands.ErrUserInput) {
 			fmt.Fprintln(os.Stderr, err)
 			return 2
@@ -307,7 +308,8 @@ Usage:
   gdam --version
   gdam init
   gdam add @username/addon[@tag]
-  gdam install
+  gdam update @username/addon@tag
+  gdam install [--frozen-lockfile]
   gdam publish @username/addon TAG [ASSET_NAME]
   gdam remove @username/addon
   gdam link @username/addon [local_path]
