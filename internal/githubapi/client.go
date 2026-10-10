@@ -236,3 +236,60 @@ func (c *Client) addHeaders(req *http.Request) {
 		req.Header.Set("Authorization", c.token)
 	}
 }
+
+// ReadReleaseIdentity collects index facts from the publisher's GitHub client.
+// The registry remains a pure index; it does not hold GitHub credentials.
+func (c *Client) ReadReleaseIdentity(ctx context.Context, owner, repo, tag, assetName string) (ReleaseIdentity, int64, error) {
+	var release struct {
+		ID         int64     `json:"id"`
+		Tag        string    `json:"tag_name"`
+		Published  time.Time `json:"published_at"`
+		Prerelease bool      `json:"prerelease"`
+		Draft      bool      `json:"draft"`
+		Assets     []struct {
+			ID     int64  `json:"id"`
+			Name   string `json:"name"`
+			Digest string `json:"digest"`
+			Size   int64  `json:"size"`
+			State  string `json:"state"`
+		} `json:"assets"`
+	}
+	base := c.apiBaseURL + "/repos/" + url.PathEscape(owner) + "/" + url.PathEscape(repo)
+	if err := c.getJSON(ctx, base+"/releases/tags/"+url.PathEscape(tag), &release); err != nil {
+		return ReleaseIdentity{}, 0, err
+	}
+	if release.ID <= 0 || release.Tag != tag || release.Draft || release.Published.IsZero() {
+		return ReleaseIdentity{}, 0, fmt.Errorf("release is not published or has a different tag")
+	}
+	matches := 0
+	var identity ReleaseIdentity
+	var size int64
+	for _, asset := range release.Assets {
+		if asset.State != "uploaded" || (assetName != "" && asset.Name != assetName) {
+			continue
+		}
+		matches++
+		identity = ReleaseIdentity{ReleaseID: release.ID, TagName: release.Tag, AssetID: asset.ID, AssetName: asset.Name, Digest: strings.ToLower(asset.Digest), PublishedAt: release.Published, Prerelease: release.Prerelease}
+		size = asset.Size
+	}
+	if matches != 1 || identity.AssetID <= 0 || size <= 0 {
+		return ReleaseIdentity{}, 0, fmt.Errorf("name exactly one uploaded release asset")
+	}
+	if _, err := parseSHA256(identity.Digest); err != nil {
+		return ReleaseIdentity{}, 0, err
+	}
+	var commit struct {
+		SHA string `json:"sha"`
+	}
+	if err := c.getJSON(ctx, base+"/commits/"+url.PathEscape(tag), &commit); err != nil {
+		return ReleaseIdentity{}, 0, err
+	}
+	if len(commit.SHA) != 40 && len(commit.SHA) != 64 {
+		return ReleaseIdentity{}, 0, fmt.Errorf("tag does not resolve to a commit")
+	}
+	if _, err := hex.DecodeString(commit.SHA); err != nil {
+		return ReleaseIdentity{}, 0, fmt.Errorf("invalid commit identity")
+	}
+	identity.CommitSHA = strings.ToLower(commit.SHA)
+	return identity, size, nil
+}
