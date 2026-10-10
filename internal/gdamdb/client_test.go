@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 const resolvedJSON = `{"name":"@dev/cool","repo":"https://github.com/dev/cool","github_owner":"dev","github_repo":"cool","tag_name":"Release-1","github_release_id":123,"commit_sha":"0123456789012345678901234567890123456789","asset_id":456,"asset_name":"cool.zip","asset_digest":"sha256:0123456789012345678901234567890123456789012345678901234567890123","published_at":"2026-08-26T10:00:00Z","prerelease":false,"editor_plugin":true}`
@@ -96,5 +97,27 @@ func TestPublishReleasePostsTagOnly(t *testing.T) {
 	}
 	if _, ok := payload["release_tag"]; ok {
 		t.Fatalf("legacy release_tag sent: %v", payload)
+	}
+}
+
+func TestClerkPublishSendsCompleteFactsAndBearer(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/publish" || r.Header.Get("Authorization") != "Bearer ak_secret" {
+			t.Error("wrong publish authentication")
+		}
+		var body map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if _, ok := body["secret_key"]; ok {
+			t.Error("Clerk secret duplicated in request body")
+		}
+		if body["github_release_id"] != float64(42) || body["asset_id"] != float64(43) || body["asset_size"] != float64(100) || body["commit_sha"] != strings.Repeat("a", 40) {
+			t.Errorf("missing release facts: %+v", body)
+		}
+		w.WriteHeader(201)
+	}))
+	defer server.Close()
+	err := NewClient(server.URL).PublishRelease(context.Background(), PublishReleaseInput{SecretKey: "ak_secret", Owner: "owner", Addon: "addon", TagName: "v1", AssetName: "addon.zip", ReleaseID: 42, CommitSHA: strings.Repeat("a", 40), AssetID: 43, AssetDigest: "sha256:" + strings.Repeat("b", 64), AssetSize: 100, PublishedAt: time.Now()})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
