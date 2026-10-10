@@ -42,6 +42,15 @@ type Client struct {
 	token      string
 	userAgent  string
 	apiBaseURL string
+	cacheDir   string
+	offline    bool
+}
+
+// WithCache enables digest-addressed archive reuse. Offline uses only the
+// reviewed lock and rehashed local bytes; it never claims fresh GitHub metadata.
+func (c *Client) WithCache(dir string, offline bool) *Client {
+	c.cacheDir, c.offline = dir, offline
+	return c
 }
 
 func NewClient(token string) *Client {
@@ -75,8 +84,14 @@ func (c *Client) DownloadVerifiedReleaseAsset(ctx context.Context, owner, repo s
 	if identity.ReleaseID <= 0 || identity.AssetID <= 0 || strings.TrimSpace(identity.TagName) == "" || strings.TrimSpace(identity.CommitSHA) == "" || strings.TrimSpace(identity.AssetName) == "" || strings.TrimSpace(identity.Digest) == "" || identity.PublishedAt.IsZero() {
 		return fmt.Errorf("incomplete verified release identity")
 	}
+	if c.offline {
+		return c.copyCached(identity.Digest, destPath)
+	}
 	if err := c.verifyRelease(ctx, owner, repo, identity); err != nil {
 		return err
+	}
+	if c.cacheDir != "" && c.copyCached(identity.Digest, destPath) == nil {
+		return nil
 	}
 
 	u := c.apiBaseURL + "/repos/" + path.Join(owner, repo) + "/releases/assets/" + fmt.Sprint(identity.AssetID)
@@ -135,6 +150,11 @@ func (c *Client) DownloadVerifiedReleaseAsset(ctx context.Context, owner, repo s
 		return fmt.Errorf("release asset digest mismatch: expected %s, got sha256:%s", identity.Digest, hex.EncodeToString(got))
 	}
 	ok = true
+	if c.cacheDir != "" {
+		if err := c.storeCached(identity.Digest, destPath); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

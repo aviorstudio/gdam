@@ -24,6 +24,8 @@ type InstallOptions struct {
 	// gdam.json exactly. CI passes it so a stale lock fails loudly instead
 	// of being rewritten on the runner.
 	FrozenLockfile bool
+	Offline        bool
+	CacheDir       string
 }
 
 // Install brings addons/ to what gdam.json asks for, transitively.
@@ -50,6 +52,9 @@ func Install(ctx context.Context, opts InstallOptions) error {
 }
 
 func installProject(ctx context.Context, projectDir string, opts InstallOptions) error {
+	if opts.Offline {
+		opts.FrozenLockfile = true
+	}
 	manifestPath := filepath.Join(projectDir, "gdam.json")
 	m, err := manifest.Load(manifestPath)
 	if err != nil {
@@ -158,6 +163,15 @@ func installProject(ctx context.Context, projectDir string, opts InstallOptions)
 	}
 	defer os.RemoveAll(tmpDir)
 	gh := githubapi.NewClient(os.Getenv("GITHUB_TOKEN"))
+	cache := opts.CacheDir
+	if cache == "" {
+		base, err := os.UserCacheDir()
+		if err != nil {
+			return err
+		}
+		cache = filepath.Join(base, "gdam", "archives")
+	}
+	gh.WithCache(cache, opts.Offline)
 
 	for i, c := range plan.Copies {
 		if c.Release.Local {
