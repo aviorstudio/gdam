@@ -38,10 +38,11 @@ func Publish(ctx context.Context, opts PublishOptions) error {
 
 	secretKey := strings.TrimSpace(os.Getenv("GDAM_API_KEY"))
 	if secretKey == "" {
-		secretKey = strings.TrimSpace(os.Getenv("GDAM_SECRET_KEY"))
+		return fmt.Errorf("%w: missing GDAM_API_KEY", ErrUserInput)
 	}
-	if secretKey == "" {
-		return fmt.Errorf("%w: missing GDAM_API_KEY (or legacy GDAM_SECRET_KEY)", ErrUserInput)
+
+	if !strings.HasPrefix(secretKey, "ak_") {
+		return fmt.Errorf("%w: GDAM_API_KEY must be a Clerk publishing key", ErrUserInput)
 	}
 
 	db := gdamdb.NewDefaultClient()
@@ -56,7 +57,7 @@ func Publish(ctx context.Context, opts PublishOptions) error {
 		return err
 	}
 	if err := db.PublishRelease(ctx, gdamdb.PublishReleaseInput{
-		SecretKey: secretKey,
+		APIKey:    secretKey,
 		Owner:     pkg.Owner,
 		Addon:     pkg.Repo,
 		TagName:   releaseTag,
