@@ -78,14 +78,14 @@ func TestResolveAddonSurfacesAPIMessage(t *testing.T) {
 	}
 }
 
-func TestPublishReleasePostsTagOnly(t *testing.T) {
+func TestPublishReleasePreservesOpaqueTag(t *testing.T) {
 	var payload map[string]any
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewDecoder(r.Body).Decode(&payload)
 		w.WriteHeader(201)
 	}))
 	defer server.Close()
-	err := NewClient(server.URL).PublishRelease(context.Background(), PublishReleaseInput{SecretKey: "secret", Owner: "dev", Addon: "cool", TagName: "Release-1", AssetName: "cool.zip"})
+	err := NewClient(server.URL).PublishRelease(context.Background(), PublishReleaseInput{APIKey: "ak_secret", Owner: "dev", Addon: "cool", TagName: "Release-1", AssetName: "cool.zip"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func TestClerkPublishSendsCompleteFactsAndBearer(t *testing.T) {
 		w.WriteHeader(201)
 	}))
 	defer server.Close()
-	err := NewClient(server.URL).PublishRelease(context.Background(), PublishReleaseInput{SecretKey: "ak_secret", Owner: "owner", Addon: "addon", TagName: "v1", AssetName: "addon.zip", ReleaseID: 42, CommitSHA: strings.Repeat("a", 40), AssetID: 43, AssetDigest: "sha256:" + strings.Repeat("b", 64), AssetSize: 100, PublishedAt: time.Now()})
+	err := NewClient(server.URL).PublishRelease(context.Background(), PublishReleaseInput{APIKey: "ak_secret", Owner: "owner", Addon: "addon", TagName: "v1", AssetName: "addon.zip", ReleaseID: 42, CommitSHA: strings.Repeat("a", 40), AssetID: 43, AssetDigest: "sha256:" + strings.Repeat("b", 64), AssetSize: 100, PublishedAt: time.Now()})
 	if err != nil {
 		t.Fatal(err)
 	}

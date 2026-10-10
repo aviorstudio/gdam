@@ -84,7 +84,6 @@ If you hit GitHub rate limits while installing addons, set `GITHUB_TOKEN`.
 | Variable          | Purpose                                                          |
 | ----------------- | ---------------------------------------------------------------- |
 | `GDAM_API_KEY` | Clerk publishing key used by `gdam publish` |
-| `GDAM_SECRET_KEY` | Legacy alias for `GDAM_API_KEY` |
 | `GDAM_API_URL`    | Registry API base url, defaults to `https://api.gdam.dev`         |
 | `GITHUB_TOKEN`    | Optional GitHub token to avoid rate limits when downloading       |
 
@@ -194,8 +193,7 @@ gdam publish @username/addon Release-1 @owner_repo.zip
 ```
 
 Publishing keys are scoped to selected users or orgs and can only publish releases for existing addons under that owner. The CLI reads the registered repository and complete release facts from GitHub
-before posting to the index. Existing `gdam_sk_…` keys and `GDAM_SECRET_KEY`
-remain supported during the transition. If `ASSET_NAME` is omitted, `gdam publish` uses `@owner_repo.zip` from `GITHUB_REPOSITORY` when available.
+before posting to the index. If `ASSET_NAME` is omitted, `gdam publish` uses `@owner_repo.zip` from `GITHUB_REPOSITORY` when available.
 
 ## Download integrity and limits
 

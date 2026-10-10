@@ -26,7 +26,7 @@ type Client struct {
 const maxAPIResponseBytes = int64(4 << 20)
 
 type PublishReleaseInput struct {
-	SecretKey   string
+	APIKey      string
 	Owner       string
 	Addon       string
 	TagName     string
@@ -153,18 +153,13 @@ func (r ResolvedAddon) validateCore() error {
 
 func (c *Client) PublishRelease(ctx context.Context, input PublishReleaseInput) error {
 	payload := map[string]any{
-		"secret_key":        strings.TrimSpace(input.SecretKey),
 		"owner":             strings.TrimSpace(input.Owner),
 		"addon":             strings.TrimSpace(input.Addon),
 		"tag_name":          strings.TrimSpace(input.TagName),
 		"asset_name":        strings.TrimSpace(input.AssetName),
 		"github_release_id": input.ReleaseID, "commit_sha": input.CommitSHA, "asset_id": input.AssetID, "asset_digest": input.AssetDigest, "asset_size": input.AssetSize, "published_at": input.PublishedAt, "prerelease": input.Prerelease,
 	}
-	if strings.HasPrefix(strings.TrimSpace(input.SecretKey), "ak_") {
-		delete(payload, "secret_key")
-		return c.do(ctx, http.MethodPost, "/api/v1/publish", payload, nil, strings.TrimSpace(input.SecretKey))
-	}
-	return c.do(ctx, http.MethodPost, "/api/v1/publish", payload, nil)
+	return c.do(ctx, http.MethodPost, "/api/v1/publish", payload, nil, strings.TrimSpace(input.APIKey))
 }
 
 func (c *Client) do(ctx context.Context, method, path string, body any, out any, bearer ...string) error {
