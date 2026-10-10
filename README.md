@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 732bd5b37ae4c4deadc896260dfdad561d7f97f93f5e2542c0a248aa06986cc9 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 9dfac4416715ed4e7103162e5b3a40a2534c1043834463e627698f0dce148ad6 -->
 
 # GDAM
 
@@ -168,6 +168,14 @@ verifies every download against the locked identity before extracting a byte.
 When `gdam.json` has changed it re-resolves and rewrites the lock;
 `gdam install --frozen-lockfile` fails instead, which is what CI should run.
 Commit the lock.
+
+Starting with v0.1.2, verified downloads populate a digest-addressed archive
+cache. Use `gdam install --cache-dir /path/to/cache` to fill an explicit cache
+while online, then `gdam install --offline --cache-dir /path/to/cache` to restore
+from it without contacting the registry or GitHub. Offline mode requires a
+matching frozen lock and rechecks every archive digest; a missing, modified or
+linked cache entry fails. It cannot discover newer releases or verify current
+remote release metadata.
 
 `gdam update @owner/addon@<tag>` moves one pin and re-resolves; it is the same
 command as `gdam add`.
