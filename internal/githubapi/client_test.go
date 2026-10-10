@@ -3,6 +3,7 @@ package githubapi
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -108,4 +109,47 @@ func testIdentityServer(t *testing.T, body []byte, mutateServer func(*ReleaseIde
 	})
 	s := httptest.NewServer(h)
 	return id, s
+}
+
+func TestReadReleaseIdentity(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		draft     bool
+		assets    int
+		digest    string
+		wantError bool
+	}{
+		{"published", false, 1, "sha256:" + strings.Repeat("b", 64), false},
+		{"draft", true, 1, "sha256:" + strings.Repeat("b", 64), true},
+		{"ambiguous assets", false, 2, "sha256:" + strings.Repeat("b", 64), true},
+		{"missing digest", false, 1, "", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("Authorization") != "Bearer github-token" {
+					t.Error("missing publisher GitHub authorization")
+				}
+				w.Header().Set("Content-Type", "application/json")
+				if strings.Contains(r.URL.Path, "/commits/") {
+					fmt.Fprintf(w, `{"sha":"%s"}`, strings.Repeat("a", 40))
+					return
+				}
+				assets := []map[string]any{}
+				for i := 0; i < tc.assets; i++ {
+					assets = append(assets, map[string]any{"id": 43 + i, "name": "addon.zip", "digest": tc.digest, "size": 100, "state": "uploaded"})
+				}
+				_ = json.NewEncoder(w).Encode(map[string]any{"id": 42, "tag_name": "v1", "published_at": "2026-10-10T00:00:00Z", "draft": tc.draft, "assets": assets})
+			}))
+			defer server.Close()
+			client := NewClient("github-token")
+			client.apiBaseURL = server.URL
+			identity, size, err := client.ReadReleaseIdentity(context.Background(), "owner", "repo", "v1", "")
+			if (err != nil) != tc.wantError {
+				t.Fatalf("identity: %+v error %v", identity, err)
+			}
+			if !tc.wantError && (identity.ReleaseID != 42 || identity.AssetID != 43 || size != 100 || identity.CommitSHA != strings.Repeat("a", 40)) {
+				t.Fatalf("facts: %+v size %d", identity, size)
+			}
+		})
+	}
 }
