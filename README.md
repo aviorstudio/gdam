@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: c9e7cf212e113cd39e388c4a50ac35c12883d3f69273820929e24297563e8693 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 091c71d06750e3f5f382315224259ffeaf1b440f24cf683ee9ff04ca0e4a9868 -->
 
 # GDAM
 
@@ -83,13 +83,14 @@ If you hit GitHub rate limits while installing addons, set `GITHUB_TOKEN`.
 
 | Variable          | Purpose                                                          |
 | ----------------- | ---------------------------------------------------------------- |
-| `GDAM_SECRET_KEY` | Secret key used by `gdam publish` in CI                           |
+| `GDAM_API_KEY` | Clerk publishing key used by `gdam publish` |
+| `GDAM_SECRET_KEY` | Legacy alias for `GDAM_API_KEY` |
 | `GDAM_API_URL`    | Registry API base url, defaults to `https://api.gdam.dev`         |
 | `GITHUB_TOKEN`    | Optional GitHub token to avoid rate limits when downloading       |
 
 Set `GDAM_API_URL` to run the CLI against a local registry while developing it.
 The CLI ships no credentials of its own: reads are public, and publishing is
-authenticated with your secret key.
+authenticated with your Clerk publishing key.
 
 ## Project Files
 
@@ -110,13 +111,21 @@ semantic package version.
 
 The asset name can be anything the publisher chooses. That ZIP should contain the addon files at the archive root, including `plugin.cfg`. GDAM installs the asset into its local convention, such as `res://addons/@username_addon/`, regardless of the asset filename.
 
-For CI publishing, create a secret key from the owner settings page, store it as `GDAM_SECRET_KEY`, and publish releases with:
+For GitHub Actions, use [gdam-actions publish](https://github.com/aviorstudio/gdam-actions)
+v0.3.0 or newer with `permissions: id-token: write`; publishing uses GitHub OIDC
+and needs no stored publishing key.
+
+For manual publishing, create a publishing key from the app's settings page.
+GDAM's Clerk tenant issues the `ak_…` key with the owner scopes you select.
+Set it as `GDAM_API_KEY` and publish an existing registered addon's release with:
 
 ```sh
 gdam publish @username/addon Release-1 @owner_repo.zip
 ```
 
-Secret keys are scoped to one user or org and can only publish releases for existing addons under that owner. If `ASSET_NAME` is omitted, `gdam publish` uses `@owner_repo.zip` from `GITHUB_REPOSITORY` when available.
+Publishing keys are scoped to selected users or orgs and can only publish releases for existing addons under that owner. The CLI reads the registered repository and complete release facts from GitHub
+before posting to the index. Existing `gdam_sk_…` keys and `GDAM_SECRET_KEY`
+remain supported during the transition. If `ASSET_NAME` is omitted, `gdam publish` uses `@owner_repo.zip` from `GITHUB_REPOSITORY` when available.
 
 ## Download integrity and limits
 

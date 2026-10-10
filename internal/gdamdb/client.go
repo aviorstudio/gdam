@@ -26,11 +26,18 @@ type Client struct {
 const maxAPIResponseBytes = int64(4 << 20)
 
 type PublishReleaseInput struct {
-	SecretKey string
-	Owner     string
-	Addon     string
-	TagName   string
-	AssetName string
+	SecretKey   string
+	Owner       string
+	Addon       string
+	TagName     string
+	AssetName   string
+	ReleaseID   int64
+	CommitSHA   string
+	AssetID     int64
+	AssetDigest string
+	AssetSize   int64
+	PublishedAt time.Time
+	Prerelease  bool
 }
 
 func NewDefaultClient() *Client {
@@ -141,16 +148,21 @@ func (r ResolvedAddon) validateCore() error {
 
 func (c *Client) PublishRelease(ctx context.Context, input PublishReleaseInput) error {
 	payload := map[string]any{
-		"secret_key": strings.TrimSpace(input.SecretKey),
-		"owner":      strings.TrimSpace(input.Owner),
-		"addon":      strings.TrimSpace(input.Addon),
-		"tag_name":   strings.TrimSpace(input.TagName),
-		"asset_name": strings.TrimSpace(input.AssetName),
+		"secret_key":        strings.TrimSpace(input.SecretKey),
+		"owner":             strings.TrimSpace(input.Owner),
+		"addon":             strings.TrimSpace(input.Addon),
+		"tag_name":          strings.TrimSpace(input.TagName),
+		"asset_name":        strings.TrimSpace(input.AssetName),
+		"github_release_id": input.ReleaseID, "commit_sha": input.CommitSHA, "asset_id": input.AssetID, "asset_digest": input.AssetDigest, "asset_size": input.AssetSize, "published_at": input.PublishedAt, "prerelease": input.Prerelease,
+	}
+	if strings.HasPrefix(strings.TrimSpace(input.SecretKey), "ak_") {
+		delete(payload, "secret_key")
+		return c.do(ctx, http.MethodPost, "/api/v1/publish", payload, nil, strings.TrimSpace(input.SecretKey))
 	}
 	return c.do(ctx, http.MethodPost, "/api/v1/publish", payload, nil)
 }
 
-func (c *Client) do(ctx context.Context, method, path string, body any, out any) error {
+func (c *Client) do(ctx context.Context, method, path string, body any, out any, bearer ...string) error {
 	if c.baseURL == "" {
 		return fmt.Errorf("missing GDAM API url (set GDAM_API_URL)")
 	}
@@ -169,6 +181,9 @@ func (c *Client) do(ctx context.Context, method, path string, body any, out any)
 		return err
 	}
 	req.Header.Set("Accept", "application/json")
+	if len(bearer) > 0 {
+		req.Header.Set("Authorization", "Bearer "+bearer[0])
+	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -215,4 +230,22 @@ func apiErrorMessage(resp *http.Response) string {
 		return fmt.Sprintf("gdam api failed (%d)", resp.StatusCode)
 	}
 	return fmt.Sprintf("gdam api failed (%d): %s", resp.StatusCode, text)
+}
+
+func (c *Client) AddonRepository(ctx context.Context, owner, addon string) (string, error) {
+	var out struct {
+		Repo string `json:"repo"`
+	}
+	if err := c.do(ctx, http.MethodGet, "/api/v1/owners/"+url.PathEscape(owner)+"/addons/"+url.PathEscape(addon), nil, &out); err != nil {
+		return "", err
+	}
+	parsed, err := url.Parse(out.Repo)
+	if err != nil || parsed.Scheme != "https" || parsed.Host != "github.com" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", fmt.Errorf("registered addon has an invalid GitHub repository")
+	}
+	parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", fmt.Errorf("registered addon has an invalid GitHub repository")
+	}
+	return parts[0] + "/" + strings.TrimSuffix(parts[1], ".git"), nil
 }
