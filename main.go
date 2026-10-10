@@ -246,6 +246,8 @@ func runInstall(args []string) int {
 	fs := flag.NewFlagSet("install", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	frozen := fs.Bool("frozen-lockfile", false, "fail instead of re-resolving when gdam.lock does not answer gdam.json")
+	offline := fs.Bool("offline", false, "install matching gdam.lock from verified cached archives, with no network")
+	cacheDir := fs.String("cache-dir", "", "archive cache (default: user cache/gdam/archives)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -257,7 +259,7 @@ func runInstall(args []string) int {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	if err := commands.Install(ctx, commands.InstallOptions{FrozenLockfile: *frozen}); err != nil {
+	if err := commands.Install(ctx, commands.InstallOptions{FrozenLockfile: *frozen, Offline: *offline, CacheDir: *cacheDir}); err != nil {
 		if errors.Is(err, commands.ErrUserInput) {
 			fmt.Fprintln(os.Stderr, err)
 			return 2
