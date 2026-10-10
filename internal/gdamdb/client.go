@@ -72,6 +72,11 @@ type ResolvedAddon struct {
 	Prerelease      bool      `json:"prerelease"`
 
 	EditorPlugin bool `json:"editor_plugin"`
+
+	// Declared at publish from the asset's own gdam.json and scripts; absent
+	// on releases that predate dependencies.
+	Dependencies  map[string]string `json:"dependencies,omitempty"`
+	GlobalClasses []string          `json:"global_classes,omitempty"`
 }
 
 func (c *Client) ResolveAddon(ctx context.Context, username, addon, requestedTag string) (ResolvedAddon, error) {
