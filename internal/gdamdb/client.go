@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// Client talks to the GDAM API.
+// Client talks to the gdam API.
 //
 // It used to query PostgREST directly, which meant the CLI carried a database
 // key and reimplemented version selection. Both now live server-side: this is a
@@ -164,7 +164,7 @@ func (c *Client) PublishRelease(ctx context.Context, input PublishReleaseInput) 
 
 func (c *Client) do(ctx context.Context, method, path string, body any, out any, bearer ...string) error {
 	if c.baseURL == "" {
-		return fmt.Errorf("missing GDAM API url (set GDAM_API_URL)")
+		return fmt.Errorf("missing gdam API url (set GDAM_API_URL)")
 	}
 
 	var reader io.Reader
