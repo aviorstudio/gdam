@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 9dfac4416715ed4e7103162e5b3a40a2534c1043834463e627698f0dce148ad6 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: da012b9345608b4274a50210d01d17afc98b9857969c1284c0727950150316a2 -->
 
 # GDAM
 
@@ -224,7 +224,12 @@ archive root.
 
 MIT.
 
+## Development
 
-## License
+Install the [Komizo release](https://github.com/nicodes/komizo#install) matching `komizo.lock`.
 
-MIT.
+```sh
+komizo check        # Complete project checks
+komizo run build    # Build the declared distributable artifacts
+komizo describe     # Inspect tools and focused stages
+```
