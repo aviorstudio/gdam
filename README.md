@@ -1,8 +1,8 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: da012b9345608b4274a50210d01d17afc98b9857969c1284c0727950150316a2 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 6ebb138d6ea7ed5ea8d8f5b366eeddda1e9168aa94ac6dcf2f7e19caa37a7c52 -->
 
-# GDAM
+# gdam
 
-GDAM is the Godot Addon Manager.
+gdam is the Godot Addon Manager.
 
 Use it to install, link, remove, and publish Godot addons from GitHub release assets through a small CLI and the public registry at [gdam.dev](https://gdam.dev).
 
@@ -96,7 +96,7 @@ authenticated with your Clerk publishing key.
 `gdam init` creates a `gdam.json` file in a Godot project. Each registered
 dependency stores its exact Release tag in a `tag` field. Old manifests with a
 `version` field are intentionally unsupported and must be recreated with
-`gdam add @owner/addon@<exact-tag>`; GDAM never rewrites them automatically.
+`gdam add @owner/addon@<exact-tag>`; gdam never rewrites them automatically.
 `gdam add`, `gdam remove`, and `gdam install` keep the manifest in sync with
 installed addons under `res://addons/`.
 
@@ -186,14 +186,14 @@ Registry releases are installed from GitHub Release assets. Publish one exact
 GitHub Release tag and, optionally, an asset selector. There is no separate
 semantic package version.
 
-The asset name can be anything the publisher chooses. That ZIP should contain the addon files at the archive root, including `plugin.cfg`. GDAM installs the asset into its local convention, such as `res://addons/@username_addon/`, regardless of the asset filename.
+The asset name can be anything the publisher chooses. That ZIP should contain the addon files at the archive root, including `plugin.cfg`. gdam installs the asset into its local convention, such as `res://addons/@username_addon/`, regardless of the asset filename.
 
 For GitHub Actions, use [gdam-actions publish](https://github.com/aviorstudio/gdam-actions)
 v0.3.0 or newer with `permissions: id-token: write`; publishing uses GitHub OIDC
 and needs no stored publishing key.
 
 For manual publishing, create a publishing key from the app's settings page.
-GDAM's Clerk tenant issues the `ak_…` key with the owner scopes you select.
+gdam's Clerk tenant issues the `ak_…` key with the owner scopes you select.
 Set it as `GDAM_API_KEY` and publish an existing registered addon's release with:
 
 ```sh
@@ -207,7 +207,7 @@ before posting to the index. If `ASSET_NAME` is omitted, `gdam publish` uses `@o
 
 The registry supplies the GitHub Release ID, exact tag, commit SHA, asset ID,
 asset name, SHA-256 digest, publication time, and prerelease state. Before each
-install, GDAM rechecks that identity with GitHub, downloads through the immutable
+install, gdam rechecks that identity with GitHub, downloads through the immutable
 asset-ID endpoint, and verifies the digest before extraction. Any release, tag,
 commit, asset, digest, truncation, or archive-layout drift fails closed.
 
@@ -226,7 +226,7 @@ MIT.
 
 ## Development
 
-Install the [Komizo release](https://github.com/nicodes/komizo#install) matching `komizo.lock`.
+Install the [komizo release](https://github.com/nicodes/komizo#install) matching `komizo.lock`.
 
 ```sh
 komizo check        # Complete project checks
