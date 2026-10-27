@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 6ebb138d6ea7ed5ea8d8f5b366eeddda1e9168aa94ac6dcf2f7e19caa37a7c52 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: d2528ebfaa02594f2d878f7e20b83b5e31ef6284c0f8202546493e27d4d66986 -->
 
 # gdam
 
@@ -11,13 +11,13 @@ Use it to install, link, remove, and publish Godot addons from GitHub release as
 macOS and Linux:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/aviorstudio/gdam/main/scripts/install_cli.sh | sh
+curl -fsSL https://gdam.dev/install | sh
 ```
 
 Install a specific version:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/aviorstudio/gdam/main/scripts/install_cli.sh | VERSION=0.0.5 sh
+curl -fsSL https://gdam.dev/install | VERSION=0.0.5 sh
 ```
 
 Windows builds are available from [GitHub Releases](https://github.com/aviorstudio/gdam/releases).
