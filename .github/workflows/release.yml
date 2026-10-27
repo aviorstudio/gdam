@@ -1,6 +1,5 @@
 name: Release
-
-on:
+'on':
   workflow_dispatch:
     inputs:
       bump:
@@ -8,81 +7,93 @@ on:
         required: true
         type: choice
         options:
-          - patch
-          - minor
-          - major
-
+        - patch
+        - minor
+        - major
 permissions:
   contents: write
   attestations: read
-
 concurrency: release-${{ github.repository }}
-
 jobs:
   release:
-    name: "Release"
+    name: Release
     runs-on: ubuntu-24.04
     env:
       MISE_GITHUB_TOKEN: ${{ github.token }}
-    # Bounded, so a step that hangs fails here rather than sitting until the
-    # runner's own timeout hours later.
     timeout-minutes: 20
     steps:
-      - name: "Check out source"
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-
-      - name: "Set up tools"
-        uses: nicodes/komizo/setup@40086036977a5fc0119d6c4c1d5eb6ae3ab3b4b9
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Determine release version
-        id: release
-        env:
-          BUMP: ${{ inputs.bump }}
-        run: |
-          set -euo pipefail
-          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
-            echo 'Run releases from the main branch.' >&2
-            exit 1
-          fi
-          git fetch --tags --force
-          latest="$(git tag --list 'v[0-9]*' | sed -E 's/^v//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
-          if [ -z "$latest" ]; then
-            VERSION="0.0.4"
-          else
-            IFS=. read -r major minor patch <<< "$latest"
-            case "$BUMP" in
-              major) major=$((major + 1)); minor=0; patch=0 ;;
-              minor) minor=$((minor + 1)); patch=0 ;;
-              patch) patch=$((patch + 1)) ;;
-              *) echo "Unsupported bump: $BUMP" >&2; exit 1 ;;
-            esac
-            VERSION="${major}.${minor}.${patch}"
-          fi
-          TAG="v${VERSION}"
-          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
-            echo "Tag already exists: $TAG" >&2
-            exit 1
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-
-      - name: Check project
-        uses: nicodes/komizo/run@40086036977a5fc0119d6c4c1d5eb6ae3ab3b4b9
-        with:
-          target: check
-        env:
-          VERSION: ${{ steps.release.outputs.version }}
-          COMMIT: ${{ github.sha }}
-
-
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.release.outputs.tag }}
-        run: |
-          set -euo pipefail
-          gh release create "$TAG" dist/*.tar.gz dist/*.zip dist/checksums.txt --target "$GITHUB_SHA" --title "$TAG" --notes "Release $TAG"
+    - name: Check out source
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Set up tools
+      uses: nicodes/komizo/setup@40086036977a5fc0119d6c4c1d5eb6ae3ab3b4b9
+      env:
+        GH_TOKEN: ${{ github.token }}
+    - name: Determine release version
+      id: release
+      env:
+        BUMP: ${{ inputs.bump }}
+      run: |
+        set -euo pipefail
+        if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+          echo 'Run releases from the main branch.' >&2
+          exit 1
+        fi
+        git fetch --tags --force
+        latest="$(git tag --list 'v[0-9]*' | sed -E 's/^v//' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)"
+        if [ -z "$latest" ]; then
+          VERSION="0.0.4"
+        else
+          IFS=. read -r major minor patch <<< "$latest"
+          case "$BUMP" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+            *) echo "Unsupported bump: $BUMP" >&2; exit 1 ;;
+          esac
+          VERSION="${major}.${minor}.${patch}"
+        fi
+        TAG="v${VERSION}"
+        if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+          echo "Tag already exists: $TAG" >&2
+          exit 1
+        fi
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+    - name: Check project
+      uses: nicodes/komizo/run@40086036977a5fc0119d6c4c1d5eb6ae3ab3b4b9
+      with:
+        target: check
+      env:
+        VERSION: ${{ steps.release.outputs.version }}
+        COMMIT: ${{ github.sha }}
+    - name: Upload accepted release artifacts
+      id: accepted
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: accepted-cli-${{ github.sha }}-${{ github.run_attempt }}
+        path: |-
+          dist/*.tar.gz
+          dist/*.zip
+          dist/checksums.txt
+        if-no-files-found: error
+        retention-days: 7
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      artifact-id: ${{ steps.accepted.outputs.artifact-id }}
+    permissions:
+      contents: read
+      attestations: read
+  publish:
+    name: Publish release
+    needs: release
+    uses: nicodes/tools/.github/workflows/cli-publish.yml@0276991861118d6e70a92cd11432dd664d3b030f
+    permissions:
+      contents: write
+    with:
+      tools-ref: '0276991861118d6e70a92cd11432dd664d3b030f'
+      binary: gdam
+      tag: ${{ needs.release.outputs.tag }}
+      artifact-id: ${{ needs.release.outputs.artifact-id }}
