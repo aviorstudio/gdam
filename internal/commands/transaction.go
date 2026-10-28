@@ -314,7 +314,7 @@ func copySnapshot(root *os.Root, src, dst string) error {
 		if e != nil {
 			return e
 		}
-		return root.Symlink(target, dst)
+		return copyProjectLink(root, src, target, dst)
 	}
 	if info.IsDir() {
 		if err = root.Mkdir(dst, info.Mode().Perm()); err != nil {
@@ -501,7 +501,7 @@ func linkProjectPath(projectDir, target, dst string) error {
 	if err = checkParents(root, relative); err != nil {
 		return err
 	}
-	return root.Symlink(target, relative)
+	return createProjectDirectoryLink(root, target, relative)
 }
 
 func findMutationProject(start string) (string, bool) {
