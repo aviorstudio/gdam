@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 77a9aeb37cea1d9eaadd86da6d79bcd3e48447508c1d7bbf834ce7a5615177fc -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 6151aa6c9581774fa72546b6d3eb4336ae8fe9d1366440021698f2a3ff3b251e -->
 
 # gdam
 
@@ -17,7 +17,7 @@ curl -fsSL https://gdam.dev/install | sh
 Install a specific version:
 
 ```sh
-curl -fsSL https://gdam.dev/install | VERSION=0.0.5 sh
+curl -fsSL https://gdam.dev/install | VERSION=0.1.4 sh
 ```
 
 Windows builds are available from [GitHub Releases](https://github.com/aviorstudio/gdam/releases).
