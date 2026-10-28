@@ -87,5 +87,8 @@ func add(ctx context.Context, opts AddOptions) error {
 		Tag:  resolved.TagName,
 		Link: link,
 	})
-	return installManifest(ctx, projectDir, InstallOptions{}, m)
+	if err := installManifest(ctx, projectDir, InstallOptions{}, m); err != nil {
+		return err
+	}
+	return manifest.Save(manifestPath, m)
 }
