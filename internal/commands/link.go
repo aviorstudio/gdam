@@ -20,6 +20,10 @@ type LinkOptions struct {
 }
 
 func Link(ctx context.Context, opts LinkOptions) error {
+	return withProjectMutation(ctx, func(ctx context.Context) error { return link(ctx, opts) })
+}
+
+func link(ctx context.Context, opts LinkOptions) error {
 	_ = ctx
 
 	specInput := strings.TrimSpace(opts.Spec)
@@ -115,19 +119,19 @@ func Link(ctx context.Context, opts LinkOptions) error {
 	}
 
 	dst := filepath.Join(localAddonsDir, addonDirName)
-	if err := fsutil.RemoveAll(dst); err != nil {
+	if err := removeProjectPath(projectDir, dst); err != nil {
 		return err
 	}
 
-	if err := fsutil.SymlinkDir(abs, dst); err != nil {
+	if err := linkProjectPath(projectDir, abs, dst); err != nil {
 		return err
 	}
 
 	if ok, err := pluginCfgExistsAtDirRoot(dst); err != nil {
-		_ = fsutil.RemoveAll(dst)
+		_ = removeProjectPath(projectDir, dst)
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	} else if !ok {
-		_ = fsutil.RemoveAll(dst)
+		_ = removeProjectPath(projectDir, dst)
 		return fmt.Errorf("%w: linked addon is missing plugin.cfg at %s", ErrUserInput, filepath.Join(dst, "plugin.cfg"))
 	}
 

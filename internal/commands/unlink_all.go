@@ -14,6 +14,10 @@ import (
 type UnlinkAllOptions struct{}
 
 func UnlinkAll(ctx context.Context, opts UnlinkAllOptions) error {
+	return withProjectMutation(ctx, func(ctx context.Context) error { return unlinkAll(ctx, opts) })
+}
+
+func unlinkAll(ctx context.Context, opts UnlinkAllOptions) error {
 	_ = opts
 
 	startDir, err := os.Getwd()
@@ -42,7 +46,7 @@ func UnlinkAll(ctx context.Context, opts UnlinkAllOptions) error {
 	sort.Strings(pluginKeys)
 
 	for _, pluginKey := range pluginKeys {
-		if err := Unlink(ctx, UnlinkOptions{Spec: pluginKey}); err != nil {
+		if err := unlink(ctx, UnlinkOptions{Spec: pluginKey}); err != nil {
 			return err
 		}
 	}
