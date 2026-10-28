@@ -13,8 +13,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/aviorstudio/gdam/internal/spec"
+	"io"
 	"os"
+	"path"
+	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/aviorstudio/gdam/internal/fsutil"
@@ -82,6 +87,12 @@ func Load(path string) (Lock, error) {
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&lock); err != nil {
 		return Lock{}, fmt.Errorf("%s: %w", Filename, err)
+	}
+	if err := dec.Decode(new(any)); err != io.EOF {
+		return Lock{}, fmt.Errorf("%s: trailing JSON", Filename)
+	}
+	if err := lock.Validate(); err != nil {
+		return Lock{}, err
 	}
 	if lock.Version != Version {
 		return Lock{}, fmt.Errorf("%s: unsupported version %d (this gdam writes %d)", Filename, lock.Version, Version)
@@ -155,4 +166,46 @@ func (l Lock) Paths() []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// Validate checks destinations before an installation can change project files.
+func (l Lock) Validate() error {
+	seen := map[string]bool{}
+	for key, r := range l.Addons {
+		if r == nil {
+			return fmt.Errorf("%s: invalid entry %q", Filename, key)
+		}
+		pkg, err := spec.ParsePackageSpec(r.Name)
+		if err != nil || pkg.Tag != "" || pkg.Name() != r.Name {
+			return fmt.Errorf("%s: invalid addon name %q", Filename, r.Name)
+		}
+		for _, i := range r.Installs {
+			if !ValidInstallPath(i.Path, r.Name) || seen[strings.ToLower(i.Path)] {
+				return fmt.Errorf("%s: invalid or duplicate install path %q", Filename, i.Path)
+			}
+			seen[strings.ToLower(i.Path)] = true
+		}
+	}
+	return nil
+}
+
+var installPart = regexp.MustCompile(`^@[A-Za-z0-9][A-Za-z0-9._-]*$`)
+
+func ValidInstallPath(p, name string) bool {
+	if p == "" || path.Clean(p) != p || strings.Contains(p, "\\") {
+		return false
+	}
+	parts := strings.Split(p, "/")
+	if len(parts) < 2 || len(parts)%2 != 0 || parts[0] != "addons" {
+		return false
+	}
+	for i := 1; i < len(parts); i += 2 {
+		if !installPart.MatchString(parts[i]) {
+			return false
+		}
+		if i+1 < len(parts) && parts[i+1] != ".gdam" {
+			return false
+		}
+	}
+	return parts[len(parts)-1] == strings.ReplaceAll(name, "/", "_")
 }

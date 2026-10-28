@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aviorstudio/gdam/internal/fsutil"
 	"github.com/aviorstudio/gdam/internal/manifest"
 	"github.com/aviorstudio/gdam/internal/project"
 	"github.com/aviorstudio/gdam/internal/spec"
@@ -19,6 +18,10 @@ type RemoveOptions struct {
 }
 
 func Remove(ctx context.Context, opts RemoveOptions) error {
+	return withProjectMutation(ctx, func(ctx context.Context) error { return remove(ctx, opts) })
+}
+
+func remove(ctx context.Context, opts RemoveOptions) error {
 	specInput := strings.TrimSpace(opts.Spec)
 	if specInput == "" {
 		return fmt.Errorf("%w: missing addon spec", ErrUserInput)
@@ -76,7 +79,7 @@ func Remove(ctx context.Context, opts RemoveOptions) error {
 		return err
 	}
 
-	if err := fsutil.RemoveAll(dst); err != nil {
+	if err := removeProjectPath(projectDir, dst); err != nil {
 		return err
 	}
 

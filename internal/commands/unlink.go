@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aviorstudio/gdam/internal/fsutil"
 	"github.com/aviorstudio/gdam/internal/githubapi"
 	"github.com/aviorstudio/gdam/internal/manifest"
 	"github.com/aviorstudio/gdam/internal/project"
@@ -20,6 +19,10 @@ type UnlinkOptions struct {
 }
 
 func Unlink(ctx context.Context, opts UnlinkOptions) error {
+	return withProjectMutation(ctx, func(ctx context.Context) error { return unlink(ctx, opts) })
+}
+
+func unlink(ctx context.Context, opts UnlinkOptions) error {
 	specInput := strings.TrimSpace(opts.Spec)
 	if specInput == "" {
 		return fmt.Errorf("%w: missing addon spec", ErrUserInput)
@@ -98,7 +101,7 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 	}
 
 	if strings.TrimSpace(addon.Tag) == "" {
-		if err := fsutil.RemoveAll(dst); err != nil {
+		if err := removeProjectPath(projectDir, dst); err != nil {
 			return err
 		}
 
@@ -139,19 +142,19 @@ func Unlink(ctx context.Context, opts UnlinkOptions) error {
 		return err
 	}
 
-	if err := fsutil.RemoveAll(dst); err != nil {
+	if err := removeProjectPath(projectDir, dst); err != nil {
 		return err
 	}
 
-	if err := fsutil.CopyPath(pkgRootDir, dst); err != nil {
+	if err := copyProjectPath(projectDir, pkgRootDir, dst); err != nil {
 		return err
 	}
 
 	if ok, err := pluginCfgExistsAtDirRoot(dst); err != nil {
-		_ = fsutil.RemoveAll(dst)
+		_ = removeProjectPath(projectDir, dst)
 		return fmt.Errorf("%w: %v", ErrUserInput, err)
 	} else if !ok {
-		_ = fsutil.RemoveAll(dst)
+		_ = removeProjectPath(projectDir, dst)
 		return fmt.Errorf("%w: installed addon is missing plugin.cfg at %s", ErrUserInput, filepath.Join(dst, "plugin.cfg"))
 	}
 
