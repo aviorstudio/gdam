@@ -274,3 +274,30 @@ func TestExternalDirectoryLinkSurvivesFailedMutation(t *testing.T) {
 		t.Fatal("external source was changed")
 	}
 }
+
+func TestRecoverySnapshotPreservesPermissions(t *testing.T) {
+	dir := t.TempDir()
+	writeManifest(t, dir, map[string]string{}, "")
+	chdir(t, dir)
+	file := filepath.Join(dir, "project.godot")
+	if err := os.WriteFile(file, []byte("original"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(file, 0666); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.Stat(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = withProjectMutation(context.Background(), func(context.Context) error {
+		if e := os.WriteFile(file, []byte("changed"), 0600); e != nil {
+			return e
+		}
+		return errors.New("synthetic write failure")
+	})
+	after, statErr := os.Stat(file)
+	if err == nil || statErr != nil || before.Mode().Perm() != after.Mode().Perm() || read(t, file) != "original" {
+		t.Fatalf("recovery changed permissions: %v %v", err, statErr)
+	}
+}
