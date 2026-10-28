@@ -34,7 +34,7 @@ func createWindowsProjectLink(root *os.Root, target, dst string, directory bool)
 		flags = 1
 	}
 	err = syscall.CreateSymbolicLink(native, old, flags|2)
-	if err == syscall.ERROR_INVALID_PARAMETER {
+	if err == syscall.Errno(87) {
 		err = syscall.CreateSymbolicLink(native, old, flags)
 	}
 	if err != nil {
