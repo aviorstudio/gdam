@@ -17,6 +17,10 @@ type AddOptions struct {
 }
 
 func Add(ctx context.Context, opts AddOptions) error {
+	return withProjectMutation(ctx, func(ctx context.Context) error { return add(ctx, opts) })
+}
+
+func add(ctx context.Context, opts AddOptions) error {
 	specInput := strings.TrimSpace(opts.Spec)
 	if specInput == "" {
 		return fmt.Errorf("%w: missing addon spec", ErrUserInput)
@@ -83,11 +87,5 @@ func Add(ctx context.Context, opts AddOptions) error {
 		Tag:  resolved.TagName,
 		Link: link,
 	})
-	if err := manifest.Save(manifestPath, m); err != nil {
-		return err
-	}
-
-	// The pin is recorded; the install resolves the whole set, rewrites the
-	// lock and places every copy, this addon's dependencies included.
-	return installProject(ctx, projectDir, InstallOptions{})
+	return installManifest(ctx, projectDir, InstallOptions{}, m)
 }

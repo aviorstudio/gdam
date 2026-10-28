@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aviorstudio/gdam/internal/fsutil"
 	"github.com/aviorstudio/gdam/internal/gdamdb"
 	"github.com/aviorstudio/gdam/internal/githubapi"
 	"github.com/aviorstudio/gdam/internal/godotuid"
@@ -40,6 +39,10 @@ type InstallOptions struct {
 // project's (nested). Each copy that declares dependencies gets a generated
 // .gdam/deps.gd naming where its dependencies landed.
 func Install(ctx context.Context, opts InstallOptions) error {
+	return withProjectMutation(ctx, func(ctx context.Context) error { return install(ctx, opts) })
+}
+
+func install(ctx context.Context, opts InstallOptions) error {
 	startDir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -60,6 +63,14 @@ func installProject(ctx context.Context, projectDir string, opts InstallOptions)
 	if err != nil {
 		return err
 	}
+	return installManifest(ctx, projectDir, opts, m)
+}
+
+func installManifest(ctx context.Context, projectDir string, opts InstallOptions, m manifest.Manifest) error {
+	if opts.Offline {
+		opts.FrozenLockfile = true
+	}
+
 	for pluginKey := range m.Addons {
 		addonDirName, err := addonDirNameForPluginKey(pluginKey)
 		if err != nil {
@@ -131,7 +142,19 @@ func installProject(ctx context.Context, projectDir string, opts InstallOptions)
 			return fmt.Errorf("%w: %v", ErrUserInput, err)
 		}
 		lock = lockFromPlan(pins, plan)
-		if err := lockfile.Save(lockPath, lock); err != nil {
+
+	}
+
+	if err := lock.Validate(); err != nil {
+		return err
+	}
+	root, err := os.OpenRoot(projectDir)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	for _, copy := range plan.Copies {
+		if err := checkParents(root, copy.Path); err != nil {
 			return err
 		}
 	}
@@ -142,7 +165,10 @@ func installProject(ctx context.Context, projectDir string, opts InstallOptions)
 				return err
 			}
 		}
-		return nil
+		if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
+			return err
+		}
+		return lockfile.Save(lockPath, lock)
 	}
 
 	addonsDir := filepath.Join(projectDir, "addons")
@@ -173,11 +199,12 @@ func installProject(ctx context.Context, projectDir string, opts InstallOptions)
 	}
 	gh.WithCache(cache, opts.Offline)
 
+	prepared := map[int]string{}
+
 	for i, c := range plan.Copies {
 		if c.Release.Local {
 			continue
 		}
-		dst := filepath.Join(projectDir, filepath.FromSlash(c.Path))
 		pkgTmpDir := filepath.Join(tmpDir, fmt.Sprintf("pkg-%d", i))
 		if err := os.MkdirAll(pkgTmpDir, 0o755); err != nil {
 			return err
@@ -191,20 +218,25 @@ func installProject(ctx context.Context, projectDir string, opts InstallOptions)
 		} else if !ok {
 			return fmt.Errorf("%w: package is missing plugin.cfg in release asset %s (expected to install it to res://%s/plugin.cfg)", ErrUserInput, c.Release.AssetName, c.Path)
 		}
-		if err := fsutil.RemoveAll(dst); err != nil {
+		prepared[i] = pkgRootDir
+	}
+	for i, c := range plan.Copies {
+		if c.Release.Local {
+			continue
+		}
+		dst := filepath.Join(projectDir, filepath.FromSlash(c.Path))
+		pkgRootDir := prepared[i]
+		if err := removeProjectPath(projectDir, dst); err != nil {
 			return err
 		}
-		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-			return err
-		}
-		if err := fsutil.CopyPath(pkgRootDir, dst); err != nil {
+		if err := copyProjectPath(projectDir, pkgRootDir, dst); err != nil {
 			return err
 		}
 		if ok, err := pluginCfgExistsAtDirRoot(dst); err != nil {
-			_ = fsutil.RemoveAll(dst)
+			_ = removeProjectPath(projectDir, dst)
 			return fmt.Errorf("%w: %v", ErrUserInput, err)
 		} else if !ok {
-			_ = fsutil.RemoveAll(dst)
+			_ = removeProjectPath(projectDir, dst)
 			return fmt.Errorf("%w: installed addon is missing plugin.cfg at %s", ErrUserInput, filepath.Join(dst, "plugin.cfg"))
 		}
 		if c.Nested {
@@ -253,7 +285,10 @@ func installProject(ctx context.Context, projectDir string, opts InstallOptions)
 			return err
 		}
 	}
-	return nil
+	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
+		return err
+	}
+	return lockfile.Save(lockPath, lock)
 }
 
 // registryFetcher answers the resolver from the registry, except for
@@ -392,7 +427,7 @@ func prune(projectDir string, previous, current lockfile.Lock) error {
 			continue
 		}
 		abs := filepath.Join(projectDir, filepath.FromSlash(p))
-		if err := fsutil.RemoveAll(abs); err != nil {
+		if err := removeProjectPath(projectDir, abs); err != nil {
 			return err
 		}
 		fmt.Printf("removed %s\n", p)
