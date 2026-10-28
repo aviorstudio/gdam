@@ -60,7 +60,9 @@
         "release.yml"
       ],
       "ci_gates": [
-        "Test"
+        "Test",
+        "Test (macOS)",
+        "Test (Windows)"
       ]
     }
   }

@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: d2528ebfaa02594f2d878f7e20b83b5e31ef6284c0f8202546493e27d4d66986 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 77a9aeb37cea1d9eaadd86da6d79bcd3e48447508c1d7bbf834ce7a5615177fc -->
 
 # gdam
 
@@ -168,6 +168,8 @@ verifies every download against the locked identity before extracting a byte.
 When `gdam.json` has changed it re-resolves and rewrites the lock;
 `gdam install --frozen-lockfile` fails instead, which is what CI should run.
 Commit the lock.
+
+Updates verify every required download before replacing installed addons. A failed operation restores the prior manifest, lock and addon tree. An interrupted operation is recovered automatically before the next modifying command, including `gdam install`. Keep the generated `.gdam-state/` directory local; it contains the operation lock and recovery backups and ignores its own files in Git. Do not remove it while an operation or recovery is in progress.
 
 Starting with v0.1.2, verified downloads populate a digest-addressed archive
 cache. Use `gdam install --cache-dir /path/to/cache` to fill an explicit cache

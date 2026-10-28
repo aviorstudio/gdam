@@ -3,14 +3,11 @@ package commands
 import (
 	"fmt"
 	"io/fs"
-	"os"
 	"path"
 	"path/filepath"
 	"sort"
 	"strings"
 	"unicode"
-
-	"github.com/aviorstudio/gdam/internal/fsutil"
 )
 
 // The deps file is how an addon reaches the addons it declared without
@@ -73,11 +70,7 @@ func writeDepsFile(projectDir, copyDir, consumer string, dependencies map[string
 			fmt.Fprintf(&b, "const %s = preload(%q)\n", ident, "res://"+path.Join(dependencies[name], script))
 		}
 	}
-	dir := filepath.Join(copyDir, depsDir)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-	return fsutil.WriteFileAtomic(filepath.Join(dir, depsFile), []byte(b.String()), 0o644)
+	return writeProjectFile(projectDir, filepath.Join(copyDir, depsDir, depsFile), []byte(b.String()), 0644)
 }
 
 // dependencyScripts lists the .gd files of an installed addon copy that a
