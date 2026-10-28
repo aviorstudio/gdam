@@ -102,9 +102,11 @@ func installManifest(ctx context.Context, projectDir string, opts InstallOptions
 
 	var plan resolve.Plan
 	var lock lockfile.Lock
+	writeLock := true
 	// A linked addon is a developer's tree whose declaration can change
 	// without gdam.json changing, so links always re-resolve.
 	if hasLock && len(linked) == 0 && previous.Matches(pins) {
+		writeLock = false
 		plan, err = planFromLock(previous)
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrUserInput, err)
@@ -165,10 +167,10 @@ func installManifest(ctx context.Context, projectDir string, opts InstallOptions
 				return err
 			}
 		}
-		if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
-			return err
+		if writeLock {
+			return lockfile.Save(lockPath, lock)
 		}
-		return lockfile.Save(lockPath, lock)
+		return nil
 	}
 
 	addonsDir := filepath.Join(projectDir, "addons")
@@ -285,10 +287,10 @@ func installManifest(ctx context.Context, projectDir string, opts InstallOptions
 			return err
 		}
 	}
-	if err := manifest.Save(filepath.Join(projectDir, "gdam.json"), m); err != nil {
-		return err
+	if writeLock {
+		return lockfile.Save(lockPath, lock)
 	}
-	return lockfile.Save(lockPath, lock)
+	return nil
 }
 
 // registryFetcher answers the resolver from the registry, except for

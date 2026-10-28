@@ -1,7 +1,9 @@
 package commands
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"os/exec"
@@ -272,5 +274,62 @@ func TestExternalDirectoryLinkSurvivesFailedMutation(t *testing.T) {
 	}
 	if read(t, filepath.Join(addon, "plugin.cfg")) != "[plugin]\nname=\"fixture\"\n" {
 		t.Fatal("external source was changed")
+	}
+}
+
+func TestRecoverySnapshotPreservesPermissions(t *testing.T) {
+	dir := t.TempDir()
+	writeManifest(t, dir, map[string]string{}, "")
+	chdir(t, dir)
+	file := filepath.Join(dir, "project.godot")
+	if err := os.WriteFile(file, []byte("original"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(file, 0666); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.Stat(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = withProjectMutation(context.Background(), func(context.Context) error {
+		if e := os.WriteFile(file, []byte("changed"), 0600); e != nil {
+			return e
+		}
+		return errors.New("synthetic write failure")
+	})
+	after, statErr := os.Stat(file)
+	if err == nil || statErr != nil || before.Mode().Perm() != after.Mode().Perm() || read(t, file) != "original" {
+		t.Fatalf("recovery changed permissions: %v %v", err, statErr)
+	}
+}
+
+func TestFrozenInstallPreservesManifestAndLockBytes(t *testing.T) {
+	withFakeRegistryGraph(t, map[string]fakeRelease{"@audit/root@v1": {publish: t0}})
+	dir := t.TempDir()
+	writeManifest(t, dir, map[string]string{"@audit/root": "v1"}, "")
+	chdir(t, dir)
+	if err := Install(context.Background(), InstallOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	before := map[string]string{}
+	for _, name := range []string{"gdam.json", "gdam.lock"} {
+		var compact bytes.Buffer
+		if err := json.Compact(&compact, []byte(read(t, filepath.Join(dir, name)))); err != nil {
+			t.Fatal(err)
+		}
+		value := compact.String() + "\n"
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(value), 0600); err != nil {
+			t.Fatal(err)
+		}
+		before[name] = value
+	}
+	if err := Install(context.Background(), InstallOptions{FrozenLockfile: true}); err != nil {
+		t.Fatal(err)
+	}
+	for name, value := range before {
+		if read(t, filepath.Join(dir, name)) != value {
+			t.Errorf("frozen install rewrote %s", name)
+		}
 	}
 }

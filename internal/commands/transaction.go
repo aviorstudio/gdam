@@ -317,7 +317,7 @@ func copySnapshot(root *os.Root, src, dst string) error {
 		return copyProjectLink(root, src, target, dst)
 	}
 	if info.IsDir() {
-		if err = root.Mkdir(dst, info.Mode().Perm()); err != nil {
+		if err = root.Mkdir(dst, 0700); err != nil {
 			return err
 		}
 		dir, e := root.Open(src)
@@ -334,7 +334,12 @@ func copySnapshot(root *os.Root, src, dst string) error {
 				return err
 			}
 		}
-		return nil
+		modeDir, e := root.Open(dst)
+		if e != nil {
+			return e
+		}
+		defer modeDir.Close()
+		return modeDir.Chmod(info.Mode().Perm())
 	}
 	if !info.Mode().IsRegular() {
 		return fmt.Errorf("unsupported project file %s", src)
@@ -349,6 +354,9 @@ func copySnapshot(root *os.Root, src, dst string) error {
 		return err
 	}
 	_, err = io.Copy(out, in)
+	if err == nil {
+		err = out.Chmod(info.Mode().Perm())
+	}
 	if err == nil {
 		err = out.Sync()
 	}
