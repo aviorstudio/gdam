@@ -245,3 +245,32 @@ func TestRecoveryFindsProjectWithMissingManifest(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestExternalDirectoryLinkSurvivesFailedMutation(t *testing.T) {
+	dir := t.TempDir()
+	addon := t.TempDir()
+	if err := os.WriteFile(filepath.Join(addon, "plugin.cfg"), []byte("[plugin]\nname=\"fixture\"\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	writeManifest(t, dir, map[string]string{}, "")
+	chdir(t, dir)
+	if err := Link(context.Background(), LinkOptions{Spec: "@audit/linked", Path: addon}); err != nil {
+		t.Fatal(err)
+	}
+	err := withProjectMutation(context.Background(), func(context.Context) error {
+		if e := removeProjectPath(dir, filepath.Join(dir, "addons/@audit_linked")); e != nil {
+			return e
+		}
+		return errors.New("synthetic failure after link removal")
+	})
+	if err == nil {
+		t.Fatal("failure accepted")
+	}
+	ok, err := pluginCfgExistsAtDirRoot(filepath.Join(dir, "addons/@audit_linked"))
+	if err != nil || !ok {
+		t.Fatalf("directory link did not recover: %v", err)
+	}
+	if read(t, filepath.Join(addon, "plugin.cfg")) != "[plugin]\nname=\"fixture\"\n" {
+		t.Fatal("external source was changed")
+	}
+}
