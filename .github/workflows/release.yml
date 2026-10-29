@@ -28,7 +28,7 @@ jobs:
         fetch-depth: 0
         persist-credentials: false
     - name: Set up tools
-      uses: nicodes/komizo/setup@54da2b6d20fda9febf3cd02039424a1a8249cffb
+      uses: nicodes/komizo/setup@1b740f28682948a2d5eb4613744bb262d2056e6c
       env:
         GH_TOKEN: ${{ github.token }}
     - name: Determine release version
@@ -63,7 +63,7 @@ jobs:
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
         echo "tag=$TAG" >> "$GITHUB_OUTPUT"
     - name: Check project
-      uses: nicodes/komizo/run@54da2b6d20fda9febf3cd02039424a1a8249cffb
+      uses: nicodes/komizo/run@1b740f28682948a2d5eb4613744bb262d2056e6c
       with:
         target: check
       env:
