@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 6151aa6c9581774fa72546b6d3eb4336ae8fe9d1366440021698f2a3ff3b251e -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 85c264728d8136b796af52a9ac77ff6fe286b57ffbd8853a9e1ce5870cb2b98e -->
 
 # gdam
 
@@ -8,33 +8,19 @@ Use it to install, link, remove, and publish Godot addons from GitHub release as
 
 ## Install The CLI
 
-macOS and Linux:
+Linux and macOS (x86_64 or arm64), using prebuilt binaries:
+
+With curl:
 
 ```sh
 curl -fsSL https://gdam.dev/install | sh
 ```
 
-Install a specific version:
+Or with mise:
 
 ```sh
-curl -fsSL https://gdam.dev/install | VERSION=0.1.4 sh
+mise use --global github:aviorstudio/gdam@latest
 ```
-
-Windows builds are available from [GitHub Releases](https://github.com/aviorstudio/gdam/releases).
-
-If you have the Go toolchain, install it from the module path instead:
-
-```sh
-go install github.com/aviorstudio/gdam@latest
-```
-
-Or run it without installing anything:
-
-```sh
-go run github.com/aviorstudio/gdam@latest --version
-```
-
-Replace `@latest` with a release tag to pin a version. This route compiles from source; the installer script and the release archives ship prebuilt binaries.
 
 ## CLI Usage
 
