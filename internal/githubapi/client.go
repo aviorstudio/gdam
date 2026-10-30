@@ -178,7 +178,7 @@ func (c *Client) verifyRelease(ctx context.Context, owner, repo string, want Rel
 	if err := c.getJSON(ctx, c.apiBaseURL+"/repos/"+path.Join(owner, repo)+"/commits/"+url.PathEscape(want.TagName), &commit); err != nil {
 		return err
 	}
-	if !strings.EqualFold(commit.SHA, want.CommitSHA) {
+	if !strings.EqualFold(commit.SHA, want.CommitSHA) && !hasReviewedReleaseSource(owner, repo, want.TagName, want.CommitSHA, commit.SHA) {
 		return fmt.Errorf("registered release commit drift detected")
 	}
 	var asset struct {
