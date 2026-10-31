@@ -71,8 +71,6 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 [[package]]
 name = "cap-primitives"
 version = "3.4.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e0bf07d379916947be6c4a07f43684153d710a2896c31f9e97781362895596c"
 dependencies = [
  "ambient-authority",
  "fs-set-times",
@@ -316,6 +314,7 @@ name = "gdam"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "cap-primitives",
  "cap-std",
  "chrono",
  "getrandom 0.4.3",

@@ -31,3 +31,9 @@ zip = { version = "9", default-features = false, features = ["deflate"] }
 lto = "thin"
 codegen-units = 1
 strip = true
+
+[target.'cfg(windows)'.dependencies]
+cap-primitives = "=3.4.6"
+
+[patch.crates-io]
+cap-primitives = { path = "vendor/cap-primitives" }

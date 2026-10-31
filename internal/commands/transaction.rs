@@ -108,9 +108,17 @@ fn link(root: &Dir, target: &Path, destination: &str, directory: bool) -> Result
     #[cfg(windows)]
     {
         if directory {
-            root.symlink_dir(target, destination)?;
+            cap_primitives::fs::symlink_dir_contents(
+                target,
+                &root.try_clone()?.into_std_file(),
+                Path::new(destination),
+            )?;
         } else {
-            root.symlink_file(target, destination)?;
+            cap_primitives::fs::symlink_file_contents(
+                target,
+                &root.try_clone()?.into_std_file(),
+                Path::new(destination),
+            )?;
         }
     }
     Ok(())
@@ -213,6 +221,7 @@ fn check_parents(root: &Dir, path: &str) -> Result<()> {
 fn remove(root: &Dir, path: &str) -> Result<()> {
     match root.symlink_metadata(path) {
         Ok(m) if m.is_dir() && !m.file_type().is_symlink() => root.remove_dir_all(path)?,
+        Ok(m) if is_directory_link(&m) => root.remove_dir(path)?,
         Ok(_) => root.remove_file(path)?,
         Err(e) if not_found(&e) => {}
         Err(e) => return Err(e.into()),
@@ -309,6 +318,9 @@ fn recover(root: &Dir) -> Result<()> {
     remove(root, TRANSACTION)
 }
 fn private_dir(root: &Dir, path: &str) -> Result<()> {
+    #[cfg(windows)]
+    let builder = cap_std::fs::DirBuilder::new();
+    #[cfg(unix)]
     let mut builder = cap_std::fs::DirBuilder::new();
     #[cfg(unix)]
     {
