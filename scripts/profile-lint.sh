@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-export GOTOOLCHAIN=local
-unformatted="$(gofmt -l .)"
-if [ -n "$unformatted" ]; then printf '%s\n' "$unformatted"; exit 1; fi
-go vet ./...
+python3 scripts/verify-vendor.py
+cargo fmt --package gdam -- --check
+cargo clippy --locked --all-targets -- -D warnings
 shellcheck scripts/*.sh
 actionlint

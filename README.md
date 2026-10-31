@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 6736bf2eba4483f23661efa9723aab1a59ec7003bc0f257ac3ed2022ce067649 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: e81677936726a2eccbec9f360f2852fa71417a8dd5bd477b2b582a83f9dffb74 -->
 
 # gdam
 
@@ -214,13 +214,17 @@ MIT.
 
 ## Contributor verification
 
+The CLI is implemented in Rust. Source builds require Rust 1.94 and use `cargo build --release --locked`; the executable is `target/release/gdam` (`gdam.exe` on Windows).
+
 Tool versions and native tasks live in `mise.toml`. Prepare the pinned helper source and run the complete gate:
 
 ```sh
 git clone https://github.com/nicodes/tools.git .ci-tools
-git -C .ci-tools checkout --detach 091101094fedf5ce2e67c339c1c9c842d6a662dc
+git -C .ci-tools checkout --detach f412061a7a3f0914db9e09d1159e69504aee8706
 mise install
 mise run check
 ```
+
+CI tests and builds on Linux, macOS and Windows for both x86_64 and arm64. Published Linux binaries use musl, and Windows binaries include the C runtime. Archives retain the executable and README, with SHA-256 checksums and GitHub build provenance. Compatibility checks use frozen contracts and the checksum-pinned former release as a test fixture.
 
 Native build and test commands retain source and output checks, with receipts in `.artifacts/verification`. Existing product release rules and artifacts remain owned by this repository. End users install the product’s published distribution.

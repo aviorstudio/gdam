@@ -7,3 +7,6 @@
 
 .artifacts/
 /.ci-tools/
+
+/target/
+.playwright-cli/
