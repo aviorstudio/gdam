@@ -1,0 +1,15 @@
+{
+  "tag": "v0.1.5",
+  "source_commit": "09990e8cf755d6b5f18e5f0efb2431432a79801e",
+  "baseline_main": "14e92be1cd9588aef152d3995ab0c40136a18e40",
+  "first_party_go_source_and_module_match_baseline": true,
+  "checksums_sha256": "c0479cdd4a2f67d38b8ae28edc1a1d05367851c5d3eb9c294de6f8ab4dd76e19",
+  "archives": {
+    "gdam_Darwin_arm64.tar.gz": "8689102ee96cd0deea6d68dfb97aa96ee5ef03c62fa7197cddb644743ab4e30a",
+    "gdam_Darwin_x86_64.tar.gz": "574cc9681fdb10a96dfbe209024c51ab266dae871d2e1aeadd512a1425aa5a85",
+    "gdam_Linux_arm64.tar.gz": "b9ad8bfec0c54a68f51c8784ed7912604aa90c24604469ac6d46826580791d86",
+    "gdam_Linux_x86_64.tar.gz": "0c24b5958d7663b0cdc52465f39f4481d1d3e92ec1c6221b9dcc5e7faa1ef634",
+    "gdam_Windows_arm64.zip": "1d87f8c0d280e1979a3d193c845d5ac0019ad06332e020a834c9c7db82fb6501",
+    "gdam_Windows_x86_64.zip": "394423b8a76eb1d14186bb07d82a0d2c97e599d6e378923741a7af0b9616b9cf"
+  }
+}

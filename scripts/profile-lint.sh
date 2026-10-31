@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-export GOTOOLCHAIN=local
-unformatted="$(gofmt -l .)"
-if [ -n "$unformatted" ]; then printf '%s\n' "$unformatted"; exit 1; fi
-go vet ./...
+cargo fmt --all -- --check
+cargo clippy --locked --all-targets -- -D warnings
 shellcheck scripts/*.sh
 actionlint

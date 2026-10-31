@@ -1,0 +1,4785 @@
+{
+  "cases": [
+    {
+      "error": false,
+      "expected": {
+        "owner": "user",
+        "repo": "addon",
+        "tag": "Release-1"
+      },
+      "input": "@USER/addon@Release-1",
+      "kind": "spec"
+    },
+    {
+      "error": false,
+      "expected": {
+        "owner": "owner",
+        "repo": "my_repo",
+        "tag": ""
+      },
+      "input": " @owner/my_repo ",
+      "kind": "spec"
+    },
+    {
+      "error": false,
+      "expected": {
+        "owner": "test",
+        "repo": "A.B",
+        "tag": ""
+      },
+      "input": "@test/A.B",
+      "kind": "spec"
+    },
+    {
+      "error": false,
+      "expected": {
+        "owner": "x",
+        "repo": "y",
+        "tag": "feature/a"
+      },
+      "input": "@x/y@feature/a",
+      "kind": "spec"
+    },
+    {
+      "error": true,
+      "expected": {
+        "owner": "",
+        "repo": "",
+        "tag": ""
+      },
+      "input": "",
+      "kind": "spec"
+    },
+    {
+      "error": true,
+      "expected": {
+        "owner": "",
+        "repo": "",
+        "tag": ""
+      },
+      "input": "owner/repo",
+      "kind": "spec"
+    },
+    {
+      "error": true,
+      "expected": {
+        "owner": "",
+        "repo": "",
+        "tag": ""
+      },
+      "input": "@owner",
+      "kind": "spec"
+    },
+    {
+      "error": true,
+      "expected": {
+        "owner": "",
+        "repo": "",
+        "tag": ""
+      },
+      "input": "@owner/",
+      "kind": "spec"
+    },
+    {
+      "error": true,
+      "expected": {
+        "owner": "",
+        "repo": "",
+        "tag": ""
+      },
+      "input": "@/repo",
+      "kind": "spec"
+    },
+    {
+      "error": true,
+      "expected": {
+        "owner": "",
+        "repo": "",
+        "tag": ""
+      },
+      "input": "@a/b@",
+      "kind": "spec"
+    },
+    {
+      "error": true,
+      "expected": {
+        "owner": "",
+        "repo": "",
+        "tag": ""
+      },
+      "input": "@a/b@x@y",
+      "kind": "spec"
+    },
+    {
+      "error": false,
+      "expected": {
+        "addons": {}
+      },
+      "input": "{}",
+      "kind": "manifest"
+    },
+    {
+      "error": false,
+      "expected": {
+        "addons": {}
+      },
+      "input": "null",
+      "kind": "manifest"
+    },
+    {
+      "error": false,
+      "expected": {
+        "addons": {}
+      },
+      "input": "{\"addons\":null}",
+      "kind": "manifest"
+    },
+    {
+      "error": false,
+      "expected": {
+        "addons": {
+          "@x/y": {}
+        }
+      },
+      "input": "{\"addons\":{\"@x/y\":null}}",
+      "kind": "manifest"
+    },
+    {
+      "error": false,
+      "expected": {
+        "addons": {
+          "@x/y": {
+            "tag": "v1"
+          }
+        },
+        "package": "pkg"
+      },
+      "input": "{\"addons\":{\"@x/y\":{\"tag\":\"v1\"}},\"package\":\"pkg\"}",
+      "kind": "manifest"
+    },
+    {
+      "error": true,
+      "expected": {
+        "addons": null
+      },
+      "input": "{\"schemaVersion\":1}",
+      "kind": "manifest"
+    },
+    {
+      "error": true,
+      "expected": {
+        "addons": null
+      },
+      "input": "{\"addons\":{\"@x/y\":{\"version\":\"v1\"}}}",
+      "kind": "manifest"
+    },
+    {
+      "error": true,
+      "expected": {
+        "addons": null
+      },
+      "input": "{\"addons\":{\"@x/y\":{\"link\":{\"enabled\":true,\"path\":\"x\"}}}}",
+      "kind": "manifest"
+    },
+    {
+      "error": true,
+      "expected": {
+        "addons": null
+      },
+      "input": "{\"addons\":{\"@x/y\":{\"tag\":5}}}",
+      "kind": "manifest"
+    },
+    {
+      "error": false,
+      "expected": {
+        "addons": {
+          "@x/y": {}
+        }
+      },
+      "input": "{\"addons\":{\"@x/y\":{\"tag\":null}}}",
+      "kind": "manifest"
+    },
+    {
+      "error": false,
+      "expected": "uid://\u003cinvalid\u003e",
+      "input": -1,
+      "kind": "uid"
+    },
+    {
+      "error": false,
+      "expected": "uid://\u003cinvalid\u003e",
+      "input": 0,
+      "kind": "uid"
+    },
+    {
+      "error": false,
+      "expected": "uid://b",
+      "input": 1,
+      "kind": "uid"
+    },
+    {
+      "error": false,
+      "expected": "uid://y",
+      "input": 24,
+      "kind": "uid"
+    },
+    {
+      "error": false,
+      "expected": "uid://0",
+      "input": 25,
+      "kind": "uid"
+    },
+    {
+      "error": false,
+      "expected": "uid://8",
+      "input": 33,
+      "kind": "uid"
+    },
+    {
+      "error": false,
+      "expected": "uid://ba",
+      "input": 34,
+      "kind": "uid"
+    },
+    {
+      "error": false,
+      "expected": "uid://csrg",
+      "input": 100000,
+      "kind": "uid"
+    },
+    {
+      "error": false,
+      "expected": "uid://d4n4ub6itg400",
+      "input": 9223372036854775807,
+      "kind": "uid"
+    },
+    {
+      "error": false,
+      "expected": true,
+      "input": "addons/@test_addon",
+      "kind": "install_path"
+    },
+    {
+      "error": false,
+      "expected": true,
+      "input": "addons/@x/.gdam/@test_addon",
+      "kind": "install_path"
+    },
+    {
+      "error": false,
+      "expected": true,
+      "input": "addons/@x/.gdam/@y/.gdam/@test_addon",
+      "kind": "install_path"
+    },
+    {
+      "error": false,
+      "expected": false,
+      "input": "addons/@test_addon ",
+      "kind": "install_path"
+    },
+    {
+      "error": false,
+      "expected": false,
+      "input": "addons/@test_addon/",
+      "kind": "install_path"
+    },
+    {
+      "error": false,
+      "expected": false,
+      "input": "addons//omething/@test_addon",
+      "kind": "install_path"
+    },
+    {
+      "error": false,
+      "expected": false,
+      "input": "addons/@x/../@test_addon",
+      "kind": "install_path"
+    },
+    {
+      "error": false,
+      "expected": false,
+      "input": "addons/../@test_addon",
+      "kind": "install_path"
+    },
+    {
+      "error": false,
+      "expected": false,
+      "input": "addons/@test_addon\\x",
+      "kind": "install_path"
+    },
+    {
+      "error": false,
+      "expected": false,
+      "input": "other/@test_addon",
+      "kind": "install_path"
+    },
+    {
+      "error": false,
+      "expected": false,
+      "input": "addons/@wrong",
+      "kind": "install_path"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/b@v1",
+              "@o/c@v1"
+            ],
+            "tag": "v1"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_a/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/b@v1",
+              "@o/c@v1"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_a/.gdam/@o_d",
+            "required_by": [
+              "@o/a@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_b/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/c@v1"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_b/.gdam/@o_d",
+            "required_by": [
+              "@o/b@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_c/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/b@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_c/.gdam/@o_d",
+            "required_by": [
+              "@o/c@v1"
+            ],
+            "tag": "v1"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v2"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_c/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/b@v1"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_c/.gdam/@o_d",
+            "required_by": [
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_b/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_b/.gdam/@o_d",
+            "required_by": [
+              "@o/b@v1"
+            ],
+            "tag": "v1"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v2"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_a/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/b@v1",
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_a/.gdam/@o_d",
+            "required_by": [
+              "@o/a@v1"
+            ],
+            "tag": "v1"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v2"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/b@v1",
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v2"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/b@v1",
+              "@o/c@v1"
+            ],
+            "tag": "v1"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T01:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_a/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/b@v1",
+              "@o/c@v1"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_a/.gdam/@o_d",
+            "required_by": [
+              "@o/a@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T01:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_b/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/c@v1"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_b/.gdam/@o_d",
+            "required_by": [
+              "@o/b@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T01:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_c/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/b@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_c/.gdam/@o_d",
+            "required_by": [
+              "@o/c@v1"
+            ],
+            "tag": "v1"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v2"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T01:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_c/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/b@v1"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_c/.gdam/@o_d",
+            "required_by": [
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T01:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_b/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_b/.gdam/@o_d",
+            "required_by": [
+              "@o/b@v1"
+            ],
+            "tag": "v1"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v2"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T01:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_a/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/b@v1",
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_a/.gdam/@o_d",
+            "required_by": [
+              "@o/a@v1"
+            ],
+            "tag": "v1"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v2"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T01:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/b@v1",
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v2"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T01:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/b@v1",
+              "@o/c@v1",
+              "gdam.json"
+            ],
+            "tag": "v1"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T02:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_a/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/b@v1",
+              "@o/c@v1",
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_a/.gdam/@o_d",
+            "required_by": [
+              "@o/a@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T02:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_b/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/c@v1",
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_b/.gdam/@o_d",
+            "required_by": [
+              "@o/b@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T02:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_a/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_b/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/c@v1",
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_a/.gdam/@o_d",
+            "required_by": [
+              "@o/a@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_b/.gdam/@o_d",
+            "required_by": [
+              "@o/b@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T02:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_c/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/b@v1",
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_c/.gdam/@o_d",
+            "required_by": [
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T02:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_a/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_c/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/b@v1",
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_a/.gdam/@o_d",
+            "required_by": [
+              "@o/a@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_c/.gdam/@o_d",
+            "required_by": [
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T02:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_b/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_c/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_b/.gdam/@o_d",
+            "required_by": [
+              "@o/b@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_c/.gdam/@o_d",
+            "required_by": [
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T02:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_a/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_b/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_c/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_a/.gdam/@o_d",
+            "required_by": [
+              "@o/a@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_b/.gdam/@o_d",
+            "required_by": [
+              "@o/b@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_c/.gdam/@o_d",
+            "required_by": [
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T02:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/b@v1",
+              "@o/c@v1",
+              "gdam.json"
+            ],
+            "tag": "v1"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T03:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_a/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/b@v1",
+              "@o/c@v1",
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_a/.gdam/@o_d",
+            "required_by": [
+              "@o/a@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T03:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_b/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/c@v1",
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_b/.gdam/@o_d",
+            "required_by": [
+              "@o/b@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T03:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_a/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_b/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/c@v1",
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_a/.gdam/@o_d",
+            "required_by": [
+              "@o/a@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_b/.gdam/@o_d",
+            "required_by": [
+              "@o/b@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T03:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_c/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "@o/b@v1",
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_c/.gdam/@o_d",
+            "required_by": [
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T03:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_a/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_c/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/b@v1",
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_a/.gdam/@o_d",
+            "required_by": [
+              "@o/a@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_c/.gdam/@o_d",
+            "required_by": [
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T03:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_b/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_c/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_b/.gdam/@o_d",
+            "required_by": [
+              "@o/b@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_c/.gdam/@o_d",
+            "required_by": [
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T03:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_a/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_b/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/b",
+            "nested": false,
+            "path": "addons/@o_b",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_c/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/c",
+            "nested": false,
+            "path": "addons/@o_c",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_a/.gdam/@o_d",
+            "required_by": [
+              "@o/a@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_b/.gdam/@o_d",
+            "required_by": [
+              "@o/b@v1"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_c/.gdam/@o_d",
+            "required_by": [
+              "@o/c@v1"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/b": "v1",
+          "@o/c": "v1",
+          "@o/d": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/b@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/b",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/c@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/c",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "2026-10-01T03:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_a/.gdam/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v2"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": true,
+            "path": "addons/@o_a/.gdam/@o_d",
+            "required_by": [
+              "@o/a@v1"
+            ],
+            "tag": "v1"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/d": "v2"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/d": "v2"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "0001-01-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "0001-01-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "0001-01-01T00:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": false,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "gdam.json"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/d": "v2"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/d": "v2"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "0001-01-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "0001-01-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "0001-01-01T00:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": true,
+      "expected": {
+        "copies": [],
+        "hoisted": null
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/d": "v2"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v1"
+            },
+            "local": true,
+            "name": "@o/a",
+            "published_at": "0001-01-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "0001-01-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "0001-01-01T00:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": {
+        "copies": [
+          {
+            "dependencies": {
+              "@o/d": "addons/@o_d"
+            },
+            "local": true,
+            "name": "@o/a",
+            "nested": false,
+            "path": "addons/@o_a",
+            "required_by": [
+              "gdam.json"
+            ],
+            "tag": "v1"
+          },
+          {
+            "dependencies": {},
+            "local": false,
+            "name": "@o/d",
+            "nested": false,
+            "path": "addons/@o_d",
+            "required_by": [
+              "@o/a@v1",
+              "gdam.json"
+            ],
+            "tag": "v2"
+          }
+        ],
+        "hoisted": {
+          "@o/a": "v1",
+          "@o/d": "v2"
+        }
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1",
+          "@o/d": "v2"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/d": "v2"
+            },
+            "local": true,
+            "name": "@o/a",
+            "published_at": "0001-01-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v1": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "0001-01-01T00:00:00Z",
+            "tag": "v1"
+          },
+          "@o/d@v2": {
+            "dependencies": null,
+            "local": false,
+            "name": "@o/d",
+            "published_at": "0001-01-01T00:00:00Z",
+            "tag": "v2"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": true,
+      "expected": {
+        "copies": [],
+        "hoisted": null
+      },
+      "input": {
+        "pins": {
+          "@o/a": "v1"
+        },
+        "releases": {
+          "@o/a@v1": {
+            "dependencies": {
+              "@o/a": "v1"
+            },
+            "local": false,
+            "name": "@o/a",
+            "published_at": "0001-01-01T00:00:00Z",
+            "tag": "v1"
+          }
+        }
+      },
+      "kind": "resolve"
+    },
+    {
+      "error": false,
+      "expected": "config_version=5\n\n[editor_plugins]\nenabled=PackedStringArray(\"res://x/plugin.cfg\")\n",
+      "input": {
+        "enabled": true,
+        "plugin": "res://x/plugin.cfg",
+        "text": "config_version=5\n"
+      },
+      "kind": "editor_plugin"
+    },
+    {
+      "error": false,
+      "expected": "config_version=5\n",
+      "input": {
+        "enabled": false,
+        "plugin": "res://x/plugin.cfg",
+        "text": "config_version=5\n"
+      },
+      "kind": "editor_plugin"
+    },
+    {
+      "error": false,
+      "expected": "config_version=4\r\n\r\n[application]\r\nconfig/name=\"Fixture\"\r\n\r\n[editor_plugins]\r\nenabled=PoolStringArray(\"res://x/plugin.cfg\")\r\n",
+      "input": {
+        "enabled": true,
+        "plugin": "res://x/plugin.cfg",
+        "text": "config_version=4\r\n\r\n[application]\r\nconfig/name=\"Fixture\"\r\n"
+      },
+      "kind": "editor_plugin"
+    },
+    {
+      "error": false,
+      "expected": "config_version=4\r\n\r\n[application]\r\nconfig/name=\"Fixture\"\r\n",
+      "input": {
+        "enabled": false,
+        "plugin": "res://x/plugin.cfg",
+        "text": "config_version=4\r\n\r\n[application]\r\nconfig/name=\"Fixture\"\r\n"
+      },
+      "kind": "editor_plugin"
+    },
+    {
+      "error": false,
+      "expected": "[editor_plugins]\nenabled=PackedStringArray(\"res://old/plugin.cfg\", \"res://x/plugin.cfg\")\n\n[display]\nwindow/size=1\n",
+      "input": {
+        "enabled": true,
+        "plugin": "res://x/plugin.cfg",
+        "text": "[editor_plugins]\nenabled=PackedStringArray(\"res://old/plugin.cfg\")\n\n[display]\nwindow/size=1\n"
+      },
+      "kind": "editor_plugin"
+    },
+    {
+      "error": false,
+      "expected": "[editor_plugins]\nenabled=PackedStringArray(\"res://old/plugin.cfg\")\n\n[display]\nwindow/size=1\n",
+      "input": {
+        "enabled": false,
+        "plugin": "res://x/plugin.cfg",
+        "text": "[editor_plugins]\nenabled=PackedStringArray(\"res://old/plugin.cfg\")\n\n[display]\nwindow/size=1\n"
+      },
+      "kind": "editor_plugin"
+    },
+    {
+      "error": false,
+      "expected": "[editor_plugins]\nenabled=PoolStringArray(\"res://x/plugin.cfg\", \"res://x/plugin.cfg\")",
+      "input": {
+        "enabled": true,
+        "plugin": "res://x/plugin.cfg",
+        "text": "[editor_plugins]\nenabled=PoolStringArray(\"res://x/plugin.cfg\", \"res://x/plugin.cfg\")"
+      },
+      "kind": "editor_plugin"
+    },
+    {
+      "error": false,
+      "expected": "[editor_plugins]\nenabled=PoolStringArray()",
+      "input": {
+        "enabled": false,
+        "plugin": "res://x/plugin.cfg",
+        "text": "[editor_plugins]\nenabled=PoolStringArray(\"res://x/plugin.cfg\", \"res://x/plugin.cfg\")"
+      },
+      "kind": "editor_plugin"
+    }
+  ],
+  "source_commit": "14e92be1cd9588aef152d3995ab0c40136a18e40"
+}
