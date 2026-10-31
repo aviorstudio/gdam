@@ -14,7 +14,7 @@ name = "gdam"
 path = "main.rs"
 
 [dependencies]
-cap-std = "=3.4.6"
+cap-std = "=4.0.3"
 anyhow = "1"
 chrono = { version = "0.4", default-features = false, features = ["std", "serde"] }
 getrandom = "0.4"
