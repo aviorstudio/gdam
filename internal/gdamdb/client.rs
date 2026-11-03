@@ -164,7 +164,10 @@ impl Network {
                 }
                 if !github
                     && let Ok(v) = serde_json::from_str::<Value>(&text)
-                    && let Some(msg) = v["message"].as_str().filter(|s| !s.trim().is_empty())
+                    && let Some(msg) = v["error"]["message"]
+                        .as_str()
+                        .or_else(|| v["message"].as_str())
+                        .filter(|s| !s.trim().is_empty())
                 {
                     bail!("{msg}");
                 }

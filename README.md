@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: e81677936726a2eccbec9f360f2852fa71417a8dd5bd477b2b582a83f9dffb74 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: cf696c88220a9727d88f9b309d122b242dfba40861c5b833a64ebde328795c37 -->
 
 # gdam
 
@@ -228,3 +228,13 @@ mise run check
 CI tests and builds on Linux, macOS and Windows for both x86_64 and arm64. Published Linux binaries use musl, and Windows binaries include the C runtime. Archives retain the executable and README, with SHA-256 checksums and GitHub build provenance. Compatibility checks use frozen contracts and the checksum-pinned former release as a test fixture.
 
 Native build and test commands retain source and output checks, with receipts in `.artifacts/verification`. Existing product release rules and artifacts remain owned by this repository. End users install the product’s published distribution.
+
+## Contributor task interface
+
+Contributor tool versions and task entry points live in the native Mise configuration. Use `mise run lint` for source checks, `mise run test` for the applicable behavioral tests, and `mise run check` for the complete supported gate. `mise run clean` removes declared generated outputs while preserving source, credentials and retained data. This package has no separate Mise development service; use its native entry points directly.
+
+## Machine results and project settings
+
+Use `gdam --json COMMAND [arguments]` for one versioned JSON result. Successful project mutations return the resulting manifest and project root. Publishing returns an acknowledgement after the registry accepts it. Progress and diagnostics use stderr; invalid use exits 2 and failed operations exit 1. Help and version succeed.
+
+`gdam.json` and `gdam.lock` remain project-local. Installation honors the existing platform cache directory; `install --cache-dir DIR` overrides it. Machine mode changes presentation, preserving transaction recovery, file ownership, dependency resolution and frozen/offline behavior.

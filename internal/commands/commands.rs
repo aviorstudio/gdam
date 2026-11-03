@@ -45,7 +45,7 @@ pub fn add(p: &Project, network: &Network, s: &str) -> Result<()> {
         old.tag = r.identity.tag;
         m.addons.insert(name.clone(), old.clone());
         p.save_manifest(&m)?;
-        println!("updated {name}@{} (linked)", old.tag);
+        crate::progress!("updated {name}@{} (linked)", old.tag);
         return Ok(());
     }
     collision(&m, &name)?;
@@ -74,12 +74,12 @@ pub fn remove(p: &Project, network: &Network, s: &str) -> Result<()> {
     let dir = dir_name(&name).map_err(input)?;
     let cfg = format!("res://addons/{dir}/plugin.cfg");
     if p.set_plugin(&cfg, false)? {
-        println!("disabled {cfg}");
+        crate::progress!("disabled {cfg}");
     }
     p.remove(&format!("addons/{dir}"))?;
     m.addons.remove(&name);
     p.save_manifest(&m)?;
-    println!("removed {name}");
+    crate::progress!("removed {name}");
     install::install(p, network, &Options::default(), &m)
 }
 fn resolved(path: &Path) -> PathBuf {
@@ -187,10 +187,10 @@ pub fn link(p: &Project, network: &Network, s: &str, path: Option<&str>) -> Resu
         aliases(p, &m, &name, &dir, &target)?;
         let cfg = format!("res://addons/{dir}/plugin.cfg");
         if p.set_plugin(&cfg, true)? {
-            println!("enabled {cfg}");
+            crate::progress!("enabled {cfg}");
         }
     }
-    println!("linked {name} -> {path}");
+    crate::progress!("linked {name} -> {path}");
     Ok(())
 }
 pub fn unlink(p: &Project, network: &Network, s: &str) -> Result<()> {
@@ -215,14 +215,14 @@ pub fn unlink(p: &Project, network: &Network, s: &str) -> Result<()> {
     }
     let cfg = format!("res://addons/{dir}/plugin.cfg");
     if p.set_plugin(&cfg, false)? {
-        println!("disabled {cfg}");
+        crate::progress!("disabled {cfg}");
     }
     let dst = format!("addons/{dir}");
     if a.tag.trim().is_empty() {
         p.remove(&dst)?;
         m.addons.insert(name.clone(), a);
         p.save_manifest(&m)?;
-        println!("unlinked {name}");
+        crate::progress!("unlinked {name}");
         return Ok(());
     }
     let r = network.resolve(&name, &a.tag).map_err(input)?;
@@ -235,9 +235,9 @@ pub fn unlink(p: &Project, network: &Network, s: &str) -> Result<()> {
     m.addons.insert(name.clone(), a);
     p.save_manifest(&m)?;
     if r.identity.editor_plugin && p.set_plugin(&cfg, true)? {
-        println!("enabled {cfg}");
+        crate::progress!("enabled {cfg}");
     }
-    println!("unlinked {name}");
+    crate::progress!("unlinked {name}");
     Ok(())
 }
 pub fn unlink_all(p: &Project, network: &Network) -> Result<()> {
@@ -275,6 +275,6 @@ pub fn publish(network: &Network, s: &str, tag: &str, asset: Option<&str>) -> Re
     network
         .publish(key.trim(), &pkg.owner, &pkg.repo, &r, size)
         .context("publishing release")?;
-    println!("published {}@{tag}", pkg.name());
+    crate::progress!("published {}@{tag}", pkg.name());
     Ok(())
 }
