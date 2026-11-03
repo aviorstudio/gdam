@@ -168,7 +168,7 @@ fn run() -> Result<u8> {
     if command == "init" {
         let cwd = std::env::current_dir()?;
         if project::find_up(&cwd, "gdam.json").is_none() {
-            let dir = project::find_up(&cwd, "project.godot").unwrap_or(cwd);
+            let dir = project::find_up(&cwd, "project.godot").unwrap_or_else(|| cwd.clone());
             let path = dir.join("gdam.json");
             Manifest::default().save(&path)?;
             gdam::progress!("created {}", path.display());

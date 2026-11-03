@@ -23,6 +23,12 @@ fn machine_output_reports_committed_project_state_without_mixing_progress() {
     let value: serde_json::Value = serde_json::from_slice(&initialized.stdout).unwrap();
     assert_eq!(value["result"]["command"], "init");
     assert!(String::from_utf8_lossy(&initialized.stderr).contains("created"));
+    let resolved = run(root.path(), &["--json", "install"]);
+    assert!(
+        resolved.status.success(),
+        "{}",
+        String::from_utf8_lossy(&resolved.stderr)
+    );
     let installed = run(root.path(), &["--json", "install", "--offline"]);
     assert!(
         installed.status.success(),
