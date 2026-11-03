@@ -127,7 +127,7 @@ fn run() -> Result<u8> {
             use sha2::{Digest, Sha256};
             println!(
                 "{}",
-                serde_json::json!({"runtime":"rust","version":env!("GDAM_VERSION"),"source_commit":env!("GDAM_COMMIT"),"target":env!("GDAM_TARGET"),"lock_sha256":format!("{:x}",Sha256::digest(include_bytes!("Cargo.lock")))})
+                serde_json::json!({"runtime":"rust","version":env!("GDAM_VERSION"),"source_commit":env!("GDAM_COMMIT"),"target":env!("GDAM_TARGET"),"lock_sha256":format!("{:x}",Sha256::digest(include_bytes!("../Cargo.lock")))})
             );
             return Ok(0);
         }
