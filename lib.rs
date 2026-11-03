@@ -55,3 +55,22 @@ mod network_tests;
 #[cfg(test)]
 #[path = "internal/reference_tests.rs"]
 mod reference_tests;
+
+/// One CLI process chooses machine output before invoking library operations.
+/// Library consumers keep the existing default; progress never becomes result data.
+pub mod output {
+    static MACHINE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    pub fn select_machine(value: bool) {
+        MACHINE.store(value, std::sync::atomic::Ordering::Relaxed);
+    }
+    pub fn machine() -> bool {
+        MACHINE.load(std::sync::atomic::Ordering::Relaxed)
+    }
+}
+#[macro_export]
+macro_rules! progress {
+    ($($argument:tt)*) => {
+        if $crate::output::machine() { eprintln!($($argument)*); }
+        else { println!($($argument)*); }
+    };
+}

@@ -194,7 +194,7 @@ pub fn prune(
                 .any(|root| p == *root || p.starts_with(&format!("{root}/")))
         {
             project.remove(&p)?;
-            println!("removed {p}");
+            crate::progress!("removed {p}");
         }
     }
     Ok(())
@@ -332,12 +332,12 @@ pub fn install(project: &Project, network: &Network, opts: &Options, m: &Manifes
         if has_godot && c.release.identity.editor_plugin && !c.nested {
             let cfg = format!("res://{}/plugin.cfg", c.path);
             if project.set_plugin(&cfg, true)? {
-                println!("enabled {cfg}");
+                crate::progress!("enabled {cfg}");
             }
         }
         let r = &c.release.identity;
         if c.nested {
-            println!(
+            crate::progress!(
                 "installed {}@{} nested at {} ({} pins it)",
                 r.name,
                 r.tag,
@@ -345,7 +345,7 @@ pub fn install(project: &Project, network: &Network, opts: &Options, m: &Manifes
                 c.required_by.join(", ")
             );
         } else {
-            println!("installed {}@{}", r.name, r.tag);
+            crate::progress!("installed {}@{}", r.name, r.tag);
         }
     }
     for c in &plan.copies {
