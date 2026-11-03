@@ -3,8 +3,8 @@ use gdam::{
 };
 use std::{path::PathBuf, time::Duration};
 fn usage() -> String {
-    format!(
-        "gdam - Godot addon manager (GitHub addons installer)\n\nUsage:\n  gdam --version\n  gdam init\n  gdam add @username/addon[@tag]\n  gdam update @username/addon@tag\n  gdam install [--frozen-lockfile] [--offline] [--cache-dir DIR]\n  gdam publish @username/addon TAG [ASSET_NAME]\n  gdam remove @username/addon\n  gdam link @username/addon [local_path]\n  gdam unlink @username/addon\n  gdam unlink --all\n\nMachine results: gdam --json COMMAND [arguments] emits one JSON document; progress uses stderr.\n\nEnvironment:\n  GDAM_API_KEY      Clerk publishing key for manual publishing.\n  GDAM_API_URL      Registry API base url (default https://api.gdam.dev).\n  GITHUB_TOKEN      Optional GitHub token to avoid rate limits."
+    String::from(
+        "gdam - Godot addon manager (GitHub addons installer)\n\nUsage:\n  gdam --version\n  gdam init\n  gdam add @username/addon[@tag]\n  gdam update @username/addon@tag\n  gdam install [--frozen-lockfile] [--offline] [--cache-dir DIR]\n  gdam publish @username/addon TAG [ASSET_NAME]\n  gdam remove @username/addon\n  gdam link @username/addon [local_path]\n  gdam unlink @username/addon\n  gdam unlink --all\n\nMachine results: gdam --json COMMAND [arguments] emits one JSON document; progress uses stderr.\n\nEnvironment:\n  GDAM_API_KEY      Clerk publishing key for manual publishing.\n  GDAM_API_URL      Registry API base url (default https://api.gdam.dev).\n  GITHUB_TOKEN      Optional GitHub token to avoid rate limits.",
     )
 }
 fn help() {
