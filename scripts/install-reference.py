@@ -10,7 +10,7 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-record = json.loads((ROOT/'internal/testdata/legacy-release.json').read_text())
+record = json.loads((ROOT/'src/internal/testdata/legacy-release.json').read_text())
 label = {'Linux':'Linux','Darwin':'Darwin','Windows':'Windows'}[platform.system()]
 arch = {'x86_64':'x86_64','AMD64':'x86_64','aarch64':'arm64','arm64':'arm64','ARM64':'arm64'}[platform.machine()]
 name = f'gdam_{label}_{arch}.'+('zip' if label == 'Windows' else 'tar.gz')
