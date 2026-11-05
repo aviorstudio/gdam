@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: b8da872ae9a06634ae2b4ad85643253f031bcc8cd239ff7f999a0bc6c3068e77 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: adbbef328998c6bc4d1deebbeebecde626764849b9369994b4f0e009831be248 -->
 
 # gdam
 
@@ -214,24 +214,20 @@ MIT.
 
 ## Contributor verification
 
-The CLI is implemented in Rust. Source builds require Rust 1.94 and use `cargo build --release --locked`; the executable is `target/release/gdam` (`gdam.exe` on Windows).
-
-Tool versions and native tasks live in `mise.toml`. Prepare the pinned helper source and run the complete gate:
+`mise.toml` pins contributor SDKs. The generated root Makefile selects an immutable revision of the shared cookbook and binds it to `cookbook.toml`.
 
 ```sh
-git clone https://github.com/nicodes/tools.git .ci-tools
-git -C .ci-tools checkout --detach a1c0321f3b4917a7e99eca42e241e46670f6e1e1
-mise install
-mise run check
+make help
+make setup
+make build
+make test
 ```
 
-CI tests and builds on Linux, macOS and Windows for both x86_64 and arm64. Published Linux binaries use musl, and Windows binaries include the C runtime. Archives retain the executable and README, with SHA-256 checksums and GitHub build provenance. Compatibility checks use frozen contracts and the checksum-pinned former release as a test fixture.
+`make help` works offline before setup. `make setup` explicitly prepares the pinned SDKs, locked dependencies and declared fixtures. `make build` compiles the executable, packages the native archive and verifies its source and output identity. `make test` runs lint, deterministic native unit tests, security checks and the declared integration journeys against those verified artifacts. Run build again after changing source; tests do not install tools or build missing shipping artifacts.
 
-Native build and test commands retain source and output checks, with receipts in `.artifacts/verification`. Existing product release rules and artifacts remain owned by this repository. End users install the product’s published distribution.
+Use `make fmt` to apply formatting, `make test:lint`, `make test:unit`, `make test:security` or `make test:integration` to select a group, and `make clean` to remove the declared generated outputs. Build and test evidence is recorded in `.artifacts/verification`.
 
-## Contributor task interface
-
-Contributor tool versions and task entry points live in the native Mise configuration. Use `mise run lint` for source checks, `mise run test` for the applicable behavioral tests, and `mise run check` for the complete supported gate. `mise run clean` removes declared generated outputs while preserving source, credentials and retained data. This package has no separate Mise development service; use its native entry points directly.
+The verified executable is `.artifacts/build/gdam` (`gdam.exe` on Windows). CI retains Linux, macOS and Windows builds for both x86_64 and arm64. Published Linux binaries use musl, and Windows binaries include the C runtime. Release archives retain their existing contents, checksums and source-workflow build provenance. Compatibility journeys preserve frozen contracts, the checksum-pinned former release, transactional recovery and offline addon installation.
 
 ## Machine results and project settings
 
