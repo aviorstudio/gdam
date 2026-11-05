@@ -1,0 +1,117 @@
+version = 1
+recipe = "rust-cli"
+
+[[components.rust]]
+name = "cli"
+manifest = "Cargo.toml"
+binaries = ["gdam"]
+profile = "release"
+
+[[components.fixtures]]
+repository = "aviorstudio/gdam"
+binary = "gdam"
+manifest = "src/internal/testdata/legacy-release.json"
+environment = "GDAM_REFERENCE_EXECUTABLE"
+files = ["README.md"]
+version_arguments = ["--version"]
+version_first_lines = ["gdam 0.1.5", "gdam v0.1.5"]
+source_line = "commit: {source_commit}"
+native_targets = [{target="x86_64-unknown-linux-musl",platform="Linux",arch="x86_64",extension="tar.gz"}, {target="aarch64-unknown-linux-musl",platform="Linux",arch="arm64",extension="tar.gz"}, {target="x86_64-apple-darwin",platform="Darwin",arch="x86_64",extension="tar.gz"}, {target="aarch64-apple-darwin",platform="Darwin",arch="arm64",extension="tar.gz"}, {target="x86_64-pc-windows-msvc",platform="Windows",arch="x86_64",extension="zip"}, {target="aarch64-pc-windows-msvc",platform="Windows",arch="arm64",extension="zip"}]
+
+[package]
+binary = "gdam"
+component = "cli"
+output = ".artifacts/build/gdam"
+profile = "release"
+files = ["README.md"]
+version_arguments = ["version"]
+version_template = "{binary} {version}\ncommit: {commit}\nbuilt: {date}"
+release_metadata = false
+
+[[package.native_targets]]
+timeout_minutes = 25
+runner = "ubuntu-24.04"
+target = "x86_64-unknown-linux-musl"
+platform = "Linux"
+arch = "x86_64"
+extension = "tar.gz"
+checks = ["tests/cli_contract_test.py"]
+
+[[package.native_targets]]
+timeout_minutes = 25
+runner = "ubuntu-24.04-arm"
+target = "aarch64-unknown-linux-musl"
+platform = "Linux"
+arch = "arm64"
+extension = "tar.gz"
+checks = ["tests/cli_contract_test.py"]
+
+[[package.native_targets]]
+timeout_minutes = 25
+runner = "macos-15-intel"
+target = "x86_64-apple-darwin"
+platform = "Darwin"
+arch = "x86_64"
+extension = "tar.gz"
+checks = ["tests/cli_contract_test.py"]
+
+[[package.native_targets]]
+timeout_minutes = 25
+runner = "macos-15"
+target = "aarch64-apple-darwin"
+platform = "Darwin"
+arch = "arm64"
+extension = "tar.gz"
+checks = ["tests/cli_contract_test.py"]
+
+[[package.native_targets]]
+timeout_minutes = 25
+runner = "windows-2025"
+target = "x86_64-pc-windows-msvc"
+platform = "Windows"
+arch = "x86_64"
+extension = "zip"
+checks = ["tests/cli_contract_test.py"]
+
+[[package.native_targets]]
+timeout_minutes = 25
+runner = "windows-11-arm"
+target = "aarch64-pc-windows-msvc"
+platform = "Windows"
+arch = "arm64"
+extension = "zip"
+checks = ["tests/cli_contract_test.py"]
+
+[artifacts]
+paths = ["dist", ".artifacts/build", ".artifacts/native-package"]
+environment = ["VERSION", "COMMIT", "DATE", "RUST_TARGET"]
+revision_environment = ["COMMIT"]
+
+[artifacts.binary_environment]
+GDAM_EXECUTABLE = ".artifacts/build/gdam"
+
+[lint]
+shell_paths = ["scripts/install_cli.sh"]
+
+[[tests.lint]]
+runner = "python"
+path = "tests/vendor_contract_test.py"
+
+[[tests.integration]]
+runner = "python"
+path = "tests/cli_contract_test.py"
+
+[clean]
+paths = ["dist", "target", ".artifacts/build", ".artifacts/rust-target", ".artifacts/native-package", ".artifacts/advisory-db", ".artifacts/fixtures"]
+
+[ci]
+runner = "ubuntu-24.04"
+timeout_minutes = 30
+
+[publication]
+tag_prefix = "v"
+initial = "bump"
+version_identity = "tag"
+validation_timeout = 30
+acceptance_timeout = 30
+cargo_manifest = "Cargo.toml"
