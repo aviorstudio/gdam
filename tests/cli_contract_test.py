@@ -11,8 +11,8 @@ import tempfile
 import threading
 import unittest
 
-BINARY = Path(os.environ.get('GDAM_EXECUTABLE', str(Path(os.environ.get('CARGO_TARGET_DIR', 'target'))/'debug/gdam'))).resolve()
-REFERENCE = os.environ.get('GDAM_REFERENCE_EXECUTABLE')
+BINARY = Path(os.environ.get('COOKBOOK_CLI_BINARY', str(Path(os.environ.get('CARGO_TARGET_DIR', 'target'))/'debug/gdam'))).resolve()
+REFERENCE = os.environ.get('COOKBOOK_FIXTURE_GDAM_BINARY')
 
 
 def environment():
