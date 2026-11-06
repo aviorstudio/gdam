@@ -84,8 +84,6 @@ checks = ["tests/cli_contract_test.py"]
 
 [artifacts]
 paths = ["dist", ".artifacts/build", ".artifacts/native-package"]
-environment = ["VERSION", "COMMIT", "DATE", "RUST_TARGET"]
-revision_environment = ["COMMIT"]
 
 [artifacts.binary_environment]
 GDAM_EXECUTABLE = ".artifacts/build/gdam"
@@ -104,9 +102,6 @@ path = "tests/cli_contract_test.py"
 [clean]
 paths = ["dist", "target", ".artifacts/build", ".artifacts/rust-target", ".artifacts/native-package", ".artifacts/advisory-db", ".artifacts/fixtures"]
 
-[ci]
-runner = "ubuntu-24.04"
-timeout_minutes = 30
 
 [publication]
 tag_prefix = "v"
