@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 808d6de7187c63ceff75bb756d97034c38a09dbd603603ea87eb5e5515088223 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: d7bcccf7f38e7484f33d92e100abfcb90a08b8d7d923c2722616bb7eaaa63d7c -->
 
 # gdam
 
@@ -225,18 +225,18 @@ MIT.
 
 ## Contributor verification
 
-`mise.toml` pins contributor SDKs. The generated root Makefile selects an immutable revision of the shared cookbook and binds it to `cookbook.toml`.
+`mise.toml` pins contributor SDKs. The canonical generated task block in root `mise.toml` selects an immutable revision of the shared cookbook and binds it to `cookbook.toml`.
 
 ```sh
-make help
-make setup
-make build
-make test
+mise run help
+mise run setup
+mise run build
+mise run test
 ```
 
-`make help` works offline before setup. `make setup` explicitly prepares the pinned SDKs, locked dependencies and declared fixtures. `make build` compiles the executable, packages the native archive and verifies its source and output identity. `make test` runs lint, deterministic native unit tests, security checks and the declared integration journeys against those verified artifacts. Run build again after changing source; tests do not install tools or build missing shipping artifacts.
+`mise run help` works offline before setup. `mise run setup` explicitly prepares the pinned SDKs, locked dependencies and declared fixtures. `mise run build` compiles the executable, packages the native archive and verifies its source and output identity. `mise run test` runs lint, deterministic native unit tests, security checks and the declared integration journeys against those verified artifacts. Run build again after changing source; tests do not install tools or build missing shipping artifacts.
 
-Use `make fmt` to apply formatting, `make test:lint`, `make test:unit`, `make test:security` or `make test:integration` to select a group, and `make clean` to remove the declared generated outputs. Build and test evidence is recorded in `.artifacts/verification`.
+Use `mise run fmt` to apply formatting, `mise run test:lint`, `mise run test:unit`, `mise run test:security` or `mise run test:integration` to select a group, and `mise run clean` to remove the declared generated outputs. Build and test evidence is recorded in `.artifacts/verification`.
 
 The verified executable is `.artifacts/build/gdam` (`gdam.exe` on Windows). CI retains Linux, macOS and Windows builds for both x86_64 and arm64. Published Linux binaries use musl, and Windows binaries include the C runtime. Release archives retain their existing contents, checksums and source-workflow build provenance. Compatibility journeys preserve frozen contracts, the checksum-pinned former release, transactional recovery and offline addon installation.
 
