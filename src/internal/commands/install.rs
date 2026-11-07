@@ -78,11 +78,15 @@ pub fn cache_dir() -> Result<PathBuf> {
     Ok(base.join("gdam/archives"))
 }
 pub fn package_dependencies(path: &Path) -> Result<BTreeMap<String, String>> {
-    let p = path.join("gdam.json");
+    let p = path.join("gdam.toml");
     if !p.exists() {
+        ensure!(
+            !path.join("gdam.json").exists(),
+            "legacy source gdam.json requires explicit conversion to gdam.toml; legacy JSON v1 must be converted manually; no automatic import"
+        );
         return Ok(BTreeMap::new());
     }
-    let m = Manifest::parse(&fsutil::read_limited(&p, fsutil::MAX_JSON)?)?;
+    let m = Manifest::parse_source(&fsutil::read_limited(&p, fsutil::MAX_JSON)?)?;
     let mut deps = BTreeMap::new();
     for (name, a) in m.addons {
         ensure!(

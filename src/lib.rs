@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+pub mod source_toml;
 pub type Result<T> = anyhow::Result<T>;
 #[path = "internal/fsutil/zip.rs"]
 pub mod archive;

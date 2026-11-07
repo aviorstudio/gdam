@@ -167,16 +167,22 @@ fn run() -> Result<u8> {
     }
     if command == "init" {
         let cwd = std::env::current_dir()?;
-        if project::find_up(&cwd, "gdam.json").is_none() {
+        if let Some(root) = gdam::transaction::find(&cwd) {
+            gdam::require(
+                root.join("gdam.toml").exists(),
+                "legacy gdam.json or recovery state requires explicit conversion to gdam.toml before init; legacy JSON v1 must be converted manually; no automatic import",
+            )?;
+        }
+        if project::find_up(&cwd, "gdam.toml").is_none() {
             let dir = project::find_up(&cwd, "project.godot").unwrap_or_else(|| cwd.clone());
-            let path = dir.join("gdam.json");
+            let path = dir.join("gdam.toml");
             Manifest::default().save(&path)?;
             gdam::progress!("created {}", path.display());
         }
         if machine {
             println!(
                 "{}",
-                serde_json::json!({"v":1,"ok":true,"result":{"command":"init","root":project::find_up(&cwd,"gdam.json")}})
+                serde_json::json!({"v":1,"ok":true,"result":{"command":"init","root":project::find_up(&cwd,"gdam.toml")}})
             );
         }
         return Ok(0);

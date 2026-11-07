@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: adbbef328998c6bc4d1deebbeebecde626764849b9369994b4f0e009831be248 -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 808d6de7187c63ceff75bb756d97034c38a09dbd603603ea87eb5e5515088223 -->
 
 # gdam
 
@@ -79,20 +79,31 @@ authenticated with your Clerk publishing key.
 
 ## Project Files
 
-`gdam init` creates a `gdam.json` file in a Godot project. Each registered
+`gdam init` creates a `gdam.toml` file in a Godot project. Each registered
 dependency stores its exact Release tag in a `tag` field. Old manifests with a
 `version` field are intentionally unsupported and must be recreated with
 `gdam add @owner/addon@<exact-tag>`; gdam never rewrites them automatically.
 `gdam add`, `gdam remove`, and `gdam install` keep the manifest in sync with
 installed addons under `res://addons/`.
 
-Local development links are tracked separately with `gdam.link.json`, so a project can use an unpublished local addon without changing the published dependency manifest.
+Local development links are tracked separately with `gdam.link.toml`, so a project can use an unpublished local addon without changing the published dependency manifest.
+
+Current-source builds use TOML for project manifests and links. Convert legacy source files explicitly; ordinary reads and `init` do not import JSON. Existing transaction journals are recovered before a legacy source is refused. Published package JSON, `gdam.lock` and transaction state keep their existing protocols. Existing installed binaries retain their released interfaces.
+
+```toml
+package = "addon"
+
+[addons."@aviorstudio/gd-session"]
+tag = "v0.0.1"
+```
+
+Current-source migration is manual: create the named TOML source with the same effective settings and archive the legacy JSON v1 source outside the active configuration directory. No automatic import command is provided. Preserve explicit `false`, zero and empty arrays; omit null overrides only where they meant inheritance or defaults. Do not copy credentials into tracked source files. Existing installed settings are not migrated by a source update.
 
 ## Dependencies
 
 An addon can depend on other addons. Its release asset ships a `gdam.json` at
-its root, in the same shape as a project's, naming the exact tag of each addon
-it needs:
+its root as the existing published package protocol, naming the exact tag of each addon
+it needs. The authored source is `addon/gdam.toml`; packaging projects its addons-only declaration into this JSON wire format:
 
 ```json
 { "addons": { "@aviorstudio/gd-session": { "tag": "v0.0.1" } } }
@@ -137,9 +148,9 @@ a game hands to gd-clerk, say) is matched by its methods, not by `is` against
 the dependency's class, because the game and the addon may hold different
 copies of that class.
 
-In an addon's own repository, `"package": "addon"` in the project's `gdam.json`
+In an addon's own repository, `package = "addon"` in the project's `gdam.toml`
 names the addon's source directory. `gdam install` then checks the directory's
-own `gdam.json` against the project's pins (they must name the same tags) and
+own `gdam.toml` against the project's pins (they must name the same tags) and
 writes `addon/.gdam/deps.gd` there, so the addon under development reaches its
 dependencies exactly as an installed copy does.
 
@@ -149,9 +160,9 @@ dependencies exactly as an installed copy does.
 set, its GitHub release id, asset id and SHA-256, and every path it was
 installed to with the declaration that asked for it. `gdam add`, `gdam update`
 and `gdam remove` resolve and rewrite it. `gdam install` installs from the lock
-alone when it still answers `gdam.json`, without consulting the registry, and
+alone when it still answers `gdam.toml`, without consulting the registry, and
 verifies every download against the locked identity before extracting a byte.
-When `gdam.json` has changed it re-resolves and rewrites the lock;
+When `gdam.toml` has changed it re-resolves and rewrites the lock;
 `gdam install --frozen-lockfile` fails instead, which is what CI should run.
 Commit the lock.
 
@@ -233,4 +244,4 @@ The verified executable is `.artifacts/build/gdam` (`gdam.exe` on Windows). CI r
 
 Use `gdam --json COMMAND [arguments]` for one versioned JSON result. Successful project mutations return the resulting manifest and project root. Publishing returns an acknowledgement after the registry accepts it. Progress and diagnostics use stderr; invalid use exits 2 and failed operations exit 1. Help and version succeed.
 
-`gdam.json` and `gdam.lock` remain project-local. Installation honors the existing platform cache directory; `install --cache-dir DIR` overrides it. Machine mode changes presentation, preserving transaction recovery, file ownership, dependency resolution and frozen/offline behavior.
+`gdam.toml` and `gdam.lock` remain project-local. Installation honors the existing platform cache directory; `install --cache-dir DIR` overrides it. Machine mode changes presentation, preserving transaction recovery, file ownership, dependency resolution and frozen/offline behavior.

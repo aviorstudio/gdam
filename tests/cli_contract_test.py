@@ -4,6 +4,8 @@ import io
 import zipfile
 import http.server
 import json
+import tomllib
+from source_toml import source_text
 import os
 from pathlib import Path
 import subprocess
@@ -54,10 +56,34 @@ class NativeCLI(unittest.TestCase):
         sub = self.project/'deep'/'inside'
         sub.mkdir(parents=True)
         self.success('init', root=sub)
-        self.assertEqual(json.loads((self.project/'gdam.json').read_bytes()), {'addons': {}})
-        before = (self.project/'gdam.json').read_bytes()
+        self.assertEqual(tomllib.loads((self.project/'gdam.toml').read_text()), {'addons': {}})
+        before = (self.project/'gdam.toml').read_bytes()
         self.success('init', root=sub)
-        self.assertEqual((self.project/'gdam.json').read_bytes(), before)
+        self.assertEqual((self.project/'gdam.toml').read_bytes(), before)
+
+    def test_legacy_v1_source_is_refused_and_left_untouched(self):
+        legacy = self.project/'gdam.json'
+        legacy.write_text('{"addons":{}}')
+        before = inventory(self.project)
+        result = invoke(BINARY, self.project, 'init')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('JSON v1', result.stderr)
+        self.assertEqual(inventory(self.project), before)
+        self.assertFalse((self.project/'gdam.toml').exists())
+        result = invoke(BINARY, self.project, 'unlink', '--all')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('JSON v1', result.stderr)
+        self.assertFalse((self.project/'.gdam-state').exists())
+        self.assertEqual(inventory(self.project), before)
+        legacy.unlink()
+        links = self.project/'gdam.link.json'
+        links.write_text('{"addons":{}}')
+        before = inventory(self.project)
+        result = invoke(BINARY, self.project, 'init')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('JSON v1', result.stderr)
+        self.assertFalse((self.project/'gdam.toml').exists())
+        self.assertEqual(inventory(self.project), before)
 
     def test_frozen_and_offline_refuse_missing_lock_without_metadata_changes(self):
         self.success('init')
@@ -78,19 +104,19 @@ class NativeCLI(unittest.TestCase):
         destination = self.project/'addons/@test_addon'
         self.assertTrue(destination.is_symlink())
         self.assertEqual(destination.resolve(), self.source.resolve())
-        self.assertNotIn('link', json.loads((self.project/'gdam.json').read_text())['addons']['@test/addon'])
+        self.assertNotIn('link', tomllib.loads((self.project/'gdam.toml').read_text())['addons']['@test/addon'])
         self.success('unlink', '@test/addon')
         self.assertFalse(destination.exists())
         self.success('link', '@test/addon')
         self.assertEqual(destination.resolve(), self.source.resolve())
         self.success('unlink', '--all')
         self.assertEqual(inventory(self.source), before)
-        self.assertFalse(json.loads((self.project/'gdam.link.json').read_text())['addons']['@test/addon']['enabled'])
+        self.assertFalse(tomllib.loads((self.project/'gdam.link.toml').read_text())['addons']['@test/addon']['enabled'])
 
     def test_install_retains_local_link_when_replacing_a_registered_copy(self):
         self.success('init')
         name = '@test/addon'
-        (self.project/'gdam.json').write_text(json.dumps({'addons': {name: {'tag': 'v1'}}}))
+        (self.project/'gdam.toml').write_text(source_text({'addons': {name: {'tag': 'v1'}}}))
         release = {'name': name, 'tag': 'v1', 'github_owner': 'test', 'github_repo': 'addon',
                    'github_release_id': 1, 'commit_sha': 'a'*40, 'asset_id': 1,
                    'asset_name': 'fixture.zip', 'asset_digest': 'sha256:'+'0'*64,
@@ -119,7 +145,7 @@ class NativeCLI(unittest.TestCase):
     def test_frozen_archive_install_preserves_lock_and_rolls_back_missing_plugin(self):
         self.success('init')
         name = '@test/addon'
-        (self.project/'gdam.json').write_text(json.dumps({'addons': {name: {'tag': 'v1'}}}))
+        (self.project/'gdam.toml').write_text(source_text({'addons': {name: {'tag': 'v1'}}}))
         cache = self.root/'cache'
         cache.mkdir()
         for valid in [True, False]:
@@ -172,7 +198,15 @@ class NativeCLI(unittest.TestCase):
             for args in [('init',), ('install',), ('link', '@test/addon', str(self.source)),
                          ('unlink', '@test/addon'), ('link', '@test/addon'), ('unlink', '--all')]:
                 self.success(*args, root=root, binary=binary)
-            outputs.append(inventory(root))
+            raw = inventory(root)
+            # Source names/encoding deliberately change; all other native bytes remain exact.
+            for old, new in [('gdam.json','gdam.toml'), ('gdam.link.json','gdam.link.toml')]:
+                name = old if binary != BINARY else new
+                if name in raw:
+                    kind, content = raw.pop(name)
+                    model = json.loads(content) if binary != BINARY else tomllib.loads(content.decode())
+                    raw[new] = (kind, json.dumps(model, sort_keys=True).encode())
+            outputs.append(raw)
         self.assertEqual(outputs[0], outputs[1])
         self.assertEqual(inventory(self.source), before)
 
@@ -214,11 +248,19 @@ class NativeCLI(unittest.TestCase):
             self.assertEqual(json.loads(journal.read_text())['state'], 'prepared')
             (self.project/'gdam.json').write_text('interrupted metadata is invalid')
             (self.project/'addons/@test_addon').unlink()
-            self.success('unlink', '--all')
+            recovered = invoke(BINARY, self.project, 'unlink', '--all')
+            self.assertNotEqual(recovered.returncode, 0)
+            self.assertIn('explicit conversion', recovered.stderr)
             self.assertFalse(journal.exists())
             self.assertEqual(json.loads((self.project/'gdam.json').read_text()),
                              json.loads(before['gdam.json'][1]))
-            self.assertFalse(json.loads((self.project/'gdam.link.json').read_text())['addons']['@test/addon']['enabled'])
+            # An explicit, versioned source conversion follows recovery; there is no loader fallback.
+            for old, new in [('gdam.json','gdam.toml'), ('gdam.link.json','gdam.link.toml')]:
+                legacy = self.project/old
+                (self.project/new).write_text(source_text(json.loads(legacy.read_text())))
+                legacy.unlink()
+            self.success('unlink', '--all')
+            self.assertFalse(tomllib.loads((self.project/'gdam.link.toml').read_text())['addons']['@test/addon']['enabled'])
             self.assertEqual((self.source/'keep.gd').read_text(), 'extends RefCounted\n')
         finally:
             release.set()

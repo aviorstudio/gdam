@@ -1,5 +1,5 @@
 use crate::{
-    Result, fsutil,
+    Result,
     lockfile::Lock,
     manifest::{LINK_FILENAME, Manifest},
 };
@@ -274,8 +274,11 @@ fn recover(root: &Dir) -> Result<()> {
     let mut seen = BTreeSet::new();
     for e in &j.entries {
         let allowed = [
-            "gdam.json",
+            "gdam.toml",
             LINK_FILENAME,
+            // Existing v1 recovery journals are state, not authored config fallback.
+            "gdam.json",
+            "gdam.link.json",
             "gdam.lock",
             "project.godot",
             "addons",
@@ -333,13 +336,21 @@ fn private_dir(root: &Dir, path: &str) -> Result<()> {
 pub fn find(start: &Path) -> Option<PathBuf> {
     start
         .ancestors()
-        .find(|p| p.join("gdam.json").exists() || p.join(TRANSACTION).join("journal.json").exists())
+        .find(|p| {
+            p.join("gdam.toml").exists()
+                || p.join("gdam.json").exists()
+                || p.join(TRANSACTION).join("journal.json").exists()
+        })
         .map(Path::to_owned)
 }
 impl Project {
     pub fn with_mutation<T>(action: impl FnOnce(&Self) -> Result<T>) -> Result<T> {
         let dir = find(&std::env::current_dir()?)
-            .ok_or_else(|| crate::input("no gdam.json found (run `gdam init`)"))?;
+            .ok_or_else(|| crate::input("no gdam.toml found (run `gdam init`)"))?;
+        // A prepared v1 journal is recovered before source-format refusal.
+        if !dir.join(TRANSACTION).join("journal.json").exists() {
+            crate::manifest::require_current_source(&dir)?;
+        }
         let project = Self {
             root: Dir::open_ambient_dir(&dir, ambient_authority())?,
             dir,
@@ -385,8 +396,9 @@ impl Project {
             .try_lock()
             .context("another gdam operation may be running")?;
         recover(root).context("recovering interrupted gdam operation")?;
+        crate::manifest::require_current_source(&project.dir)?;
         let mut paths = [
-            "gdam.json",
+            "gdam.toml",
             LINK_FILENAME,
             "gdam.lock",
             "project.godot",
@@ -481,7 +493,7 @@ impl Project {
         }
     }
     pub fn manifest(&self) -> Result<Manifest> {
-        Manifest::load(&self.dir.join("gdam.json"))
+        Manifest::load(&self.dir.join("gdam.toml"))
     }
     pub fn relative<'a>(&self, path: &'a Path) -> Result<&'a Path> {
         let relative = path.strip_prefix(&self.dir)?;
@@ -563,8 +575,8 @@ impl Project {
         if links.addons.is_empty() {
             self.remove(LINK_FILENAME)?;
         } else {
-            self.write(LINK_FILENAME, &fsutil::json_bytes(&links)?, 0o644)?;
+            self.write(LINK_FILENAME, &Manifest::source_bytes(&links)?, 0o644)?;
         }
-        self.write("gdam.json", &fsutil::json_bytes(m)?, 0o644)
+        self.write("gdam.toml", &Manifest::source_bytes(m)?, 0o644)
     }
 }
