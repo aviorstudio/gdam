@@ -81,6 +81,11 @@ struct Binding {
     publisher_commit: String,
     source_commit: String,
 }
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Sources {
+    release_sources: Vec<Binding>,
+}
 fn reviewed_source(
     owner: &str,
     repo: &str,
@@ -88,7 +93,8 @@ fn reviewed_source(
     publisher: &str,
     source: &str,
 ) -> Result<bool> {
-    let rows: Vec<Binding> = serde_json::from_str(include_str!("reviewed_release_sources.json"))?;
+    let rows =
+        toml::from_str::<Sources>(include_str!("reviewed_release_sources.toml"))?.release_sources;
     let repo_pattern = regex::Regex::new(r"^[a-z0-9][a-z0-9_.-]*/[a-z0-9][a-z0-9_.-]*$")?;
     let commit_pattern = regex::Regex::new(r"^[a-f0-9]{40}$")?;
     let mut seen = std::collections::BTreeSet::new();
@@ -300,8 +306,9 @@ mod source_binding_tests {
     use super::*;
     #[test]
     fn reviewed_legacy_bindings_are_exact_repository_tag_and_both_commits() {
-        let rows: Vec<Binding> =
-            serde_json::from_str(include_str!("reviewed_release_sources.json")).unwrap();
+        let rows = toml::from_str::<Sources>(include_str!("reviewed_release_sources.toml"))
+            .unwrap()
+            .release_sources;
         for row in rows {
             let (owner, repo) = row.repository.split_once('/').unwrap();
             assert!(
