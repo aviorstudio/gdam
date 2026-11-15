@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 561213418826c252172b54d2447ade0f89f54dac3501d6f14962ec5a74c802be -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: abf0ec9a835d6c7df032938c78adae30bca22351c561a0e29aa6d719d4743ada -->
 
 # gdam
 
@@ -236,7 +236,7 @@ mise run test
 
 Use `mise run fmt` to apply formatting, `mise run test:lint`, `mise run test:unit`, `mise run test:security` or `mise run test:integration` to select a group, and `mise run clean` to remove the declared generated outputs. Build and test evidence is recorded in `.artifacts/verification`.
 
-The verified executable is `.artifacts/build/gdam` (`gdam.exe` on Windows). CI retains Linux, macOS and Windows builds for both x86_64 and arm64. Published Linux binaries use musl, and Windows binaries include the C runtime. Release archives retain their existing contents, checksums and source-workflow build provenance. Compatibility journeys preserve frozen contracts, the checksum-pinned former release, transactional recovery and offline addon installation.
+The verified executable is `.artifacts/build/gdam` (`gdam.exe` on Windows). CI retains Linux, macOS and Windows builds for both x86_64 and arm64. Published Linux binaries use musl, and Windows binaries include the C runtime. Release archives include checksums and source-workflow build provenance. Current native journeys verify transactional recovery, interrupted installs, concurrent locking, frozen resolution and offline addon installation.
 
 ## Machine results and project settings
 
