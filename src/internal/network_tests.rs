@@ -368,6 +368,182 @@ fn addon_archive(name: &str, dependencies: Value) -> Vec<u8> {
     }
     zip.finish().unwrap().into_inner()
 }
+fn registry_release(r: &Release) -> Value {
+    let mut value = serde_json::to_value(r).unwrap();
+    value["tag_name"] = json!(r.tag);
+    value
+}
+fn empty_project(path: &std::path::Path) -> crate::transaction::Project {
+    fs::create_dir(path).unwrap();
+    let p = crate::transaction::Project {
+        root: cap_std::fs::Dir::open_ambient_dir(path, cap_std::ambient_authority()).unwrap(),
+        dir: path.into(),
+    };
+    p.save_manifest(&crate::manifest::Manifest::default())
+        .unwrap();
+    p
+}
+#[test]
+fn add_reuses_its_selected_root_but_each_command_resolves_again() {
+    let bytes = addon_archive("@dev/addon", json!({}));
+    let r = identity(&bytes);
+    let resolved = registry_release(&r);
+    let s = provider(bytes, r.clone(), move |req, reply| {
+        if req.target.starts_with("/api/v1/resolve/") {
+            body(resolved.clone())
+        } else {
+            reply
+        }
+    });
+    let network = s.client();
+    let dir = tempfile::tempdir().unwrap();
+    for (index, spec) in ["@dev/addon", "@dev/addon@Release/v1"]
+        .into_iter()
+        .enumerate()
+    {
+        let p = empty_project(&dir.path().join(index.to_string()));
+        crate::commands::add(&p, &network, spec).unwrap();
+        assert!(p.dir.join("addons/@dev_addon/plugin.cfg").is_file());
+        assert_eq!(p.manifest().unwrap().addons["@dev/addon"].tag, r.tag);
+        let lock = crate::lockfile::Lock::load(&p.dir.join("gdam.lock")).unwrap();
+        let installed = &lock.addons["@dev/addon@Release/v1"];
+        assert_eq!(installed.commit_sha, r.commit_sha);
+        assert_eq!(installed.asset_digest, r.asset_digest);
+        let requests = s.seen.lock().unwrap();
+        assert_eq!(
+            requests
+                .iter()
+                .filter(|r| r.target.starts_with("/api/v1/resolve/"))
+                .count(),
+            index + 1,
+            "one registry resolution per whole add, without reuse across commands"
+        );
+        // A prefetched registry answer never replaces independent GitHub proof,
+        // including on an archive-cache hit during the second command.
+        for part in ["/releases/11", "/commits/", "/releases/assets/22"] {
+            assert_eq!(
+                requests
+                    .iter()
+                    .filter(|r| r.target.contains(part)
+                        && r.headers
+                            .get("accept")
+                            .is_some_and(|v| v == "application/vnd.github+json"))
+                    .count(),
+                index + 1,
+                "{part}"
+            );
+        }
+        assert!(
+            requests
+                .iter()
+                .filter(|r| r.target.starts_with("/api/v1/"))
+                .all(|r| !r.headers.contains_key("authorization"))
+        );
+    }
+}
+#[test]
+fn prefetched_root_cannot_answer_another_addon_tag_or_registry() {
+    use crate::{
+        install,
+        manifest::{Addon, Manifest},
+    };
+    for change in ["addon", "tag", "registry"] {
+        let r = identity(b"not downloaded");
+        let resolved = registry_release(&r);
+        let s = Server::new(move |_| body(resolved.clone()));
+        let network = s.client();
+        let root = install::ResolvedRoot::resolve(&network, "@dev/addon", &r.tag).unwrap();
+        let other_resolved = registry_release(&r);
+        let other = Server::new(move |req| {
+            if req.target.starts_with("/api/v1/resolve/") {
+                body(other_resolved.clone())
+            } else {
+                Reply {
+                    status: 404,
+                    headers: vec![],
+                    body: vec![],
+                }
+            }
+        });
+        let other_network = other.client();
+        let mut m = Manifest::default();
+        m.addons.insert(
+            if change == "addon" {
+                "@dev/other"
+            } else {
+                "@dev/addon"
+            }
+            .into(),
+            Addon {
+                tag: if change == "tag" { "other-tag" } else { &r.tag }.into(),
+                ..Default::default()
+            },
+        );
+        let dir = tempfile::tempdir().unwrap();
+        let p = empty_project(&dir.path().join("project"));
+        let before = fs::read(p.dir.join("gdam.toml")).unwrap();
+        let chosen = if change == "registry" {
+            &other_network
+        } else {
+            &network
+        };
+        assert!(
+            install::install_with_root(&p, chosen, &m, &root).is_err(),
+            "{change}"
+        );
+        let requests = if change == "registry" {
+            &other.seen
+        } else {
+            &s.seen
+        };
+        assert_eq!(
+            requests
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|r| r.target.starts_with("/api/v1/resolve/"))
+                .count(),
+            if change == "registry" { 1 } else { 2 },
+            "{change}"
+        );
+        assert_eq!(fs::read(p.dir.join("gdam.toml")).unwrap(), before);
+        assert!(!p.dir.join("gdam.lock").exists());
+        assert!(!p.dir.join("addons/@dev_addon").exists());
+    }
+}
+#[test]
+fn add_rejects_github_disagreement_after_its_single_registry_resolution() {
+    let bytes = addon_archive("@dev/addon", json!({}));
+    let r = identity(&bytes);
+    let resolved = registry_release(&r);
+    let s = provider(bytes, r, move |req, reply| {
+        if req.target.starts_with("/api/v1/resolve/") {
+            body(resolved.clone())
+        } else if req.target.ends_with("/releases/11") {
+            let mut value: Value = serde_json::from_slice(&reply.body).unwrap();
+            value["tag_name"] = json!("other-tag");
+            body(value)
+        } else {
+            reply
+        }
+    });
+    let dir = tempfile::tempdir().unwrap();
+    let p = empty_project(&dir.path().join("project"));
+    let before = fs::read(p.dir.join("gdam.toml")).unwrap();
+    assert!(crate::commands::add(&p, &s.client(), "@dev/addon").is_err());
+    assert_eq!(
+        s.seen
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|r| r.target.starts_with("/api/v1/resolve/"))
+            .count(),
+        1
+    );
+    assert_eq!(fs::read(p.dir.join("gdam.toml")).unwrap(), before);
+    assert!(!p.dir.join("gdam.lock").exists());
+    assert!(!p.dir.join("addons/@dev_addon").exists());
+}
 #[test]
 fn complete_install_resolves_nested_dependencies_regenerates_uids_and_reuses_frozen_cache() {
     use crate::{install, manifest::Manifest, transaction::Project};
