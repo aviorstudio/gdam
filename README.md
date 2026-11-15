@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: abf0ec9a835d6c7df032938c78adae30bca22351c561a0e29aa6d719d4743ada -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 95f72f55bb7477d22d0470ca37439a4fe04e0c966db98dfc51f9ea90aa7f0836 -->
 
 # gdam
 
@@ -166,8 +166,8 @@ Commit the lock.
 
 Updates verify every required download before replacing installed addons. A failed operation restores the prior manifest, lock and addon tree. An interrupted operation is recovered automatically before the next modifying command, including `gdam install`. Keep the generated `.gdam-state/` directory local; it contains the operation lock and recovery backups and ignores its own files in Git. Do not remove it while an operation or recovery is in progress.
 
-Starting with v0.1.2, verified downloads populate a digest-addressed archive
-cache. Use `gdam install --cache-dir /path/to/cache` to fill an explicit cache
+Verified downloads populate a digest-addressed archive cache.
+Use `gdam install --cache-dir /path/to/cache` to fill an explicit cache
 while online, then `gdam install --offline --cache-dir /path/to/cache` to restore
 from it without contacting the registry or GitHub. Offline mode requires a
 matching frozen lock and rechecks every archive digest; a missing, modified or
@@ -186,7 +186,7 @@ semantic package version.
 The asset name can be anything the publisher chooses. That ZIP should contain the addon files at the archive root, including `plugin.cfg`. gdam installs the asset into its local convention, such as `res://addons/@username_addon/`, regardless of the asset filename.
 
 For GitHub Actions, use [gdam-actions publish](https://github.com/aviorstudio/gdam-actions)
-v0.3.0 or newer with `permissions: id-token: write`; publishing uses GitHub OIDC
+with `permissions: id-token: write`; publishing uses GitHub OIDC
 and needs no stored publishing key.
 
 For manual publishing, create a publishing key from the app's settings page.
