@@ -38,11 +38,11 @@ pub fn add(p: &Project, network: &Network, s: &str) -> Result<()> {
     let pkg = package(s)?;
     let name = pkg.name();
     let mut m = p.manifest()?;
-    let r = network.resolve(&name, &pkg.tag).map_err(input)?;
+    let r = install::ResolvedRoot::resolve(network, &name, &pkg.tag).map_err(input)?;
     let old = m.addons.get(&name).cloned().unwrap_or_default();
     if linked(&old) {
         let mut old = old;
-        old.tag = r.identity.tag;
+        old.tag = r.tag().into();
         m.addons.insert(name.clone(), old.clone());
         p.save_manifest(&m)?;
         crate::progress!("updated {name}@{} (linked)", old.tag);
@@ -52,11 +52,11 @@ pub fn add(p: &Project, network: &Network, s: &str) -> Result<()> {
     m.addons.insert(
         name,
         Addon {
-            tag: r.identity.tag,
+            tag: r.tag().into(),
             link: old.link,
         },
     );
-    install::install(p, network, &Options::default(), &m)?;
+    install::install_with_root(p, network, &m, &r)?;
     p.save_manifest(&m)
 }
 pub fn remove(p: &Project, network: &Network, s: &str) -> Result<()> {

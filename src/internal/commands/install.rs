@@ -21,6 +21,29 @@ pub struct Options {
     pub offline: bool,
     pub cache: PathBuf,
 }
+// The result belongs to this command's network and cannot be supplied from a
+// different registry or retained as a cross-command cache.
+pub(crate) struct ResolvedRoot<'a> {
+    network: &'a Network,
+    release: Release,
+}
+impl<'a> ResolvedRoot<'a> {
+    pub(crate) fn resolve(network: &'a Network, name: &str, tag: &str) -> Result<Self> {
+        Ok(Self {
+            network,
+            release: network.resolve(name, tag)?,
+        })
+    }
+    pub(crate) fn tag(&self) -> &str {
+        &self.release.identity.tag
+    }
+    fn matching(&self, network: &Network, name: &str, tag: &str) -> Option<&Release> {
+        (std::ptr::eq(self.network, network)
+            && self.release.identity.name == name
+            && self.release.identity.tag == tag)
+            .then_some(&self.release)
+    }
+}
 pub fn linked(addon: &crate::manifest::Addon) -> bool {
     addon
         .link
@@ -204,6 +227,23 @@ pub fn prune(
     Ok(())
 }
 pub fn install(project: &Project, network: &Network, opts: &Options, m: &Manifest) -> Result<()> {
+    install_plan(project, network, opts, m, None)
+}
+pub(crate) fn install_with_root(
+    project: &Project,
+    network: &Network,
+    m: &Manifest,
+    root: &ResolvedRoot<'_>,
+) -> Result<()> {
+    install_plan(project, network, &Options::default(), m, Some(root))
+}
+fn install_plan(
+    project: &Project,
+    network: &Network,
+    opts: &Options,
+    m: &Manifest,
+    root: Option<&ResolvedRoot<'_>>,
+) -> Result<()> {
     let frozen = opts.frozen || opts.offline;
     let mut destinations = BTreeSet::new();
     for name in m.addons.keys() {
@@ -263,7 +303,10 @@ pub fn install(project: &Project, network: &Network, opts: &Options, m: &Manifes
                     ..Release::default()
                 });
             }
-            let r = network.resolve(name, tag)?;
+            let r = match root.and_then(|r| r.matching(network, name, tag)) {
+                Some(r) => r.clone(),
+                None => network.resolve(name, tag)?,
+            };
             ensure!(
                 r.identity.tag == tag,
                 "registry answered {} for tag {tag}",
