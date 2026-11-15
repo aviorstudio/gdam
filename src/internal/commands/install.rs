@@ -210,7 +210,7 @@ pub fn install(project: &Project, network: &Network, opts: &Options, m: &Manifes
         let dir = dir_name(name).map_err(input)?;
         require(
             destinations.insert(dir.to_lowercase()),
-            format!("addon directory collision in gdam.json: {name}"),
+            format!("addon directory collision in gdam.toml: {name}"),
         )?;
     }
     let mut links = BTreeMap::new();
@@ -238,7 +238,7 @@ pub fn install(project: &Project, network: &Network, opts: &Options, m: &Manifes
             return Err(input(if previous.is_none() {
                 "--frozen-lockfile requires gdam.lock; run `gdam install` once to create it"
             } else {
-                "gdam.lock does not answer gdam.json; run `gdam install` without --frozen-lockfile to re-resolve"
+                "gdam.lock does not answer gdam.toml; run `gdam install` without --frozen-lockfile to re-resolve"
             }));
         }
         for (name, tag) in &mut pins {
@@ -367,7 +367,7 @@ pub fn install(project: &Project, network: &Network, opts: &Options, m: &Manifes
         require(
             path.is_dir(),
             format!(
-                "gdam.json names package directory {:?}, which does not exist",
+                "gdam.toml names package directory {:?}, which does not exist",
                 m.package
             ),
         )?;
@@ -378,7 +378,7 @@ pub fn install(project: &Project, network: &Network, opts: &Options, m: &Manifes
             require(
                 have == Some(&tag),
                 format!(
-                    "{}/gdam.json declares {name}@{tag} but the project installs {}; pin the same tag in gdam.json",
+                    "{}/gdam.toml declares {name}@{tag} but the project installs {}; pin the same tag in gdam.toml",
                     m.package,
                     have.map(String::as_str).unwrap_or("no copy")
                 ),

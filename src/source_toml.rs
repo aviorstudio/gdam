@@ -1,5 +1,5 @@
 //! Canonical authored configuration: TOML with JSON-compatible scalar values.
-//! Wire JSON and explicit legacy-v1 decoders stay separate from file discovery.
+//! Package JSON decoding stays separate from authored file discovery.
 use serde_json::Value;
 
 pub fn parse(text: &str) -> Result<Value, String> {

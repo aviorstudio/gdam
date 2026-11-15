@@ -120,7 +120,7 @@ class NativeCLI(unittest.TestCase):
                    'github_release_id': 1, 'commit_sha': 'a'*40, 'asset_id': 1,
                    'asset_name': 'fixture.zip', 'asset_digest': 'sha256:'+'0'*64,
                    'published_at': '2026-10-01T00:00:00Z', 'prerelease': False,
-                   'editor_plugin': False, 'installs': [{'path': 'addons/@test_addon', 'required_by': ['gdam.json']}]}
+                   'editor_plugin': False, 'installs': [{'path': 'addons/@test_addon', 'required_by': ['gdam.toml']}]}
         (self.project/'gdam.lock').write_text(json.dumps({'version': 1, 'requirements': {name: 'v1'}, 'addons': {name+'@v1': release}}))
         self.success('link', name, str(self.source))
         before = inventory(self.source)
@@ -160,7 +160,7 @@ class NativeCLI(unittest.TestCase):
                        'github_release_id': 1, 'commit_sha': 'a'*40, 'asset_id': 1,
                        'asset_name': 'fixture.zip', 'asset_digest': 'sha256:'+digest,
                        'published_at': '2026-10-01T00:00:00Z', 'prerelease': False,
-                       'editor_plugin': True, 'installs': [{'path': 'addons/@test_addon', 'required_by': ['gdam.json']}]}
+                       'editor_plugin': True, 'installs': [{'path': 'addons/@test_addon', 'required_by': ['gdam.toml']}]}
             locked = json.dumps({'version': 1, 'requirements': {name: 'v1'}, 'addons': {name+'@v1': release}}, indent=4).encode()
             (self.project/'gdam.lock').write_bytes(locked)
             before = inventory(self.project)

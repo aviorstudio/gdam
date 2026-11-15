@@ -502,6 +502,10 @@ fn complete_install_resolves_nested_dependencies_regenerates_uids_and_reuses_fro
     let locked = fs::read(root.join("gdam.lock")).unwrap();
     let lock = crate::lockfile::Lock::load(&root.join("gdam.lock")).unwrap();
     assert_eq!(lock.paths().len(), 3);
+    assert_eq!(
+        lock.addons["@dev/a@v1"].installs[0].required_by,
+        ["gdam.toml"]
+    );
     let calls = s.seen.lock().unwrap().len();
     let frozen = install::Options {
         cache: cache.clone(),

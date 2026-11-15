@@ -69,7 +69,7 @@ pub fn remove(p: &Project, network: &Network, s: &str) -> Result<()> {
     let mut m = p.manifest()?;
     require(
         m.addons.contains_key(&name),
-        format!("addon not found in gdam.json: {name}"),
+        format!("addon not found in gdam.toml: {name}"),
     )?;
     let dir = dir_name(&name).map_err(input)?;
     let cfg = format!("res://addons/{dir}/plugin.cfg");
@@ -205,7 +205,7 @@ pub fn unlink(p: &Project, network: &Network, s: &str) -> Result<()> {
         .addons
         .get(&name)
         .cloned()
-        .ok_or_else(|| input(format!("addon not found in gdam.json: {name}")))?;
+        .ok_or_else(|| input(format!("addon not found in gdam.toml: {name}")))?;
     require(linked(&a), format!("addon is not linked: {name}"))?;
     let target = absolute(&p.dir, &a.link.as_ref().unwrap().path)?;
     a.link.as_mut().unwrap().enabled = false;
