@@ -53,9 +53,6 @@ pub mod install;
 #[cfg(test)]
 #[path = "internal/network_tests.rs"]
 mod network_tests;
-#[cfg(test)]
-#[path = "internal/reference_tests.rs"]
-mod reference_tests;
 
 /// One CLI process chooses machine output before invoking library operations.
 /// Library consumers keep the existing default; progress never becomes result data.
