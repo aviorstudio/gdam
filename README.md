@@ -1,4 +1,4 @@
-<!-- Generated from private documentation source. Do not edit directly. Source SHA256: d7bcccf7f38e7484f33d92e100abfcb90a08b8d7d923c2722616bb7eaaa63d7c -->
+<!-- Generated from private documentation source. Do not edit directly. Source SHA256: 561213418826c252172b54d2447ade0f89f54dac3501d6f14962ec5a74c802be -->
 
 # gdam
 
@@ -80,15 +80,13 @@ authenticated with your Clerk publishing key.
 ## Project Files
 
 `gdam init` creates a `gdam.toml` file in a Godot project. Each registered
-dependency stores its exact Release tag in a `tag` field. Old manifests with a
-`version` field are intentionally unsupported and must be recreated with
-`gdam add @owner/addon@<exact-tag>`; gdam never rewrites them automatically.
+dependency stores its exact Release tag in a `tag` field.
 `gdam add`, `gdam remove`, and `gdam install` keep the manifest in sync with
 installed addons under `res://addons/`.
 
 Local development links are tracked separately with `gdam.link.toml`, so a project can use an unpublished local addon without changing the published dependency manifest.
 
-Current-source builds use TOML for project manifests and links. Convert legacy source files explicitly; ordinary reads and `init` do not import JSON. Existing transaction journals are recovered before a legacy source is refused. Published package JSON, `gdam.lock` and transaction state keep their existing protocols. Existing installed binaries retain their released interfaces.
+Project manifests and local links use TOML. Published packages carry a generated `gdam.json`; `gdam.lock` records resolved identities, while transaction journals protect interrupted installation and recovery. These files have distinct purposes. Source configuration is never imported or rewritten as a side effect of a read.
 
 ```toml
 package = "addon"
@@ -97,7 +95,7 @@ package = "addon"
 tag = "v0.0.1"
 ```
 
-Current-source migration is manual: create the named TOML source with the same effective settings and archive the legacy JSON v1 source outside the active configuration directory. No automatic import command is provided. Preserve explicit `false`, zero and empty arrays; omit null overrides only where they meant inheritance or defaults. Do not copy credentials into tracked source files. Existing installed settings are not migrated by a source update.
+Do not copy credentials into tracked source files.
 
 ## Dependencies
 
