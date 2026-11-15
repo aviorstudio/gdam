@@ -166,7 +166,6 @@ impl Network {
                     && let Ok(v) = serde_json::from_str::<Value>(&text)
                     && let Some(msg) = v["error"]["message"]
                         .as_str()
-                        .or_else(|| v["message"].as_str())
                         .filter(|s| !s.trim().is_empty())
                 {
                     bail!("{msg}");
@@ -240,48 +239,26 @@ impl Network {
             p.tag.is_empty(),
             "invalid addon key {name}: tags belong in the tag field"
         );
-        let mut v = self.registry(
+        let v = self.registry(
             &["api", "v1", "resolve", &p.owner, &p.repo],
             (!tag.trim().is_empty()).then_some(("tag", tag.trim())),
         )?;
-        let list = self.registry(
-            &[
-                "api", "v1", "owners", &p.owner, "addons", &p.repo, "releases",
-            ],
-            None,
-        )?;
-        let rows = list
-            .as_array()
-            .ok_or_else(|| anyhow::anyhow!("registry releases must be an array"))?;
-        let r = rows
-            .iter()
-            .find(|r| {
-                r["github_release_id"].as_i64() == v["github_release_id"].as_i64()
-                    && r["github_release_id"].as_i64().is_some_and(|n| n > 0)
-            })
-            .ok_or_else(|| {
-                anyhow::anyhow!("resolved release is missing from registry release list")
-            })?;
-        for k in [
-            "tag_name",
-            "commit_sha",
-            "asset_id",
-            "asset_name",
-            "asset_digest",
-        ] {
-            ensure!(r[k] == v[k], "registry release identity drift detected");
-        }
-        v["published_at"] = r["published_at"].clone();
-        v["prerelease"] = r["prerelease"].clone();
+        ensure!(
+            v["prerelease"].is_boolean(),
+            "invalid registry response: missing prerelease status"
+        );
         let globals = v
             .get("global_classes")
             .filter(|v| !v.is_null())
             .map(|v| serde_json::from_value(v.clone()))
             .transpose()?
             .unwrap_or_default();
-        let mut map = v.as_object().unwrap().clone();
-        let tag = map.remove("tag_name").unwrap_or(Value::Null);
-        map.insert("tag".into(), tag);
+        let mut map = v
+            .as_object()
+            .ok_or_else(|| anyhow::anyhow!("registry release must be an object"))?
+            .clone();
+        let release_tag = map.remove("tag_name").unwrap_or(Value::Null);
+        map.insert("tag".into(), release_tag);
         map.retain(|k, _| {
             [
                 "name",
@@ -313,7 +290,12 @@ impl Network {
                 && identity.asset_id > 0,
             "invalid registry response: missing verified release identity fields"
         );
+        ensure!(
+            identity.name == p.name() && (tag.trim().is_empty() || identity.tag == tag.trim()),
+            "registry returned a different addon or tag"
+        );
         crate::github::timestamp(&identity.published_at)?;
+        crate::github::digest_hex(&identity.asset_digest)?;
         Ok(Release {
             identity,
             global_classes: globals,

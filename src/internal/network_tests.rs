@@ -300,24 +300,18 @@ fn github_auth_is_removed_on_an_origin_change_even_on_the_same_host() {
     );
 }
 #[test]
-fn registry_exact_tags_are_encoded_and_cross_checked_against_the_release_list() {
+fn registry_resolves_complete_identity_in_one_request_with_encoded_exact_tag() {
     let r = identity(b"a");
     let mut resolved = serde_json::to_value(&r).unwrap();
     let map = resolved.as_object_mut().unwrap();
     map.remove("installs");
     map.remove("tag");
     map.insert("tag_name".into(), json!(r.tag));
-    let list = resolved.clone();
-    let s = Server::new(move |req| {
-        if req.target.contains("/resolve/") {
-            body(resolved.clone())
-        } else {
-            body(json!([list]))
-        }
-    });
+    let s = Server::new(move |_| body(resolved.clone()));
     let actual = s.client().resolve("@DEV/addon", "Release/v1").unwrap();
     assert_eq!(actual.identity.tag, "Release/v1");
     let requests = s.seen.lock().unwrap();
+    assert_eq!(requests.len(), 1);
     assert!(requests[0].target.ends_with("?tag=Release%2Fv1"));
     assert!(
         requests
@@ -422,20 +416,6 @@ fn complete_install_resolves_nested_dependencies_regenerates_uids_and_reuses_fro
             value["tag_name"] = json!(r.tag);
             return body(value);
         }
-        if req.target.ends_with("/releases") {
-            let repo = req.target.split('/').rev().nth(1).unwrap();
-            return body(json!(
-                releases
-                    .iter()
-                    .filter(|(r, _)| r.github_repo == repo)
-                    .map(|(r, _)| {
-                        let mut v = serde_json::to_value(r).unwrap();
-                        v["tag_name"] = json!(r.tag);
-                        v
-                    })
-                    .collect::<Vec<_>>()
-            ));
-        }
         if req.target.contains("/commits/") {
             return body(json!({"sha":"a".repeat(40)}));
         }
@@ -522,6 +502,10 @@ fn complete_install_resolves_nested_dependencies_regenerates_uids_and_reuses_fro
     let locked = fs::read(root.join("gdam.lock")).unwrap();
     let lock = crate::lockfile::Lock::load(&root.join("gdam.lock")).unwrap();
     assert_eq!(lock.paths().len(), 3);
+    assert_eq!(
+        lock.addons["@dev/a@v1"].installs[0].required_by,
+        ["gdam.toml"]
+    );
     let calls = s.seen.lock().unwrap().len();
     let frozen = install::Options {
         cache: cache.clone(),
@@ -553,30 +537,36 @@ fn complete_install_resolves_nested_dependencies_regenerates_uids_and_reuses_fro
     assert!(!root.join("addons/@dev_shared").exists());
 }
 #[test]
-fn incomplete_and_drifting_registry_identities_fail_closed() {
-    for change in ["missing", "digest", "zero-time", "no-list"] {
+fn incomplete_and_mismatched_registry_identities_fail_closed() {
+    for change in [
+        "missing",
+        "digest",
+        "zero-time",
+        "prerelease",
+        "name",
+        "tag",
+        "object",
+    ] {
         let r = identity(b"a");
         let mut v = serde_json::to_value(r).unwrap();
         v["tag_name"] = json!("Release/v1");
-        let mut list = v.clone();
         match change {
             "missing" => v["asset_id"] = json!(0),
-            "digest" => list["asset_digest"] = json!("sha256:other"),
-            "zero-time" => list["published_at"] = json!("0001-01-01T00:00:00Z"),
-            _ => (),
-        }
-        let s = Server::new(move |req| {
-            if req.target.contains("/resolve/") {
-                body(v.clone())
-            } else if change == "no-list" {
-                body(json!([]))
-            } else {
-                body(json!([list]))
+            "digest" => v["asset_digest"] = json!("sha256:other"),
+            "zero-time" => v["published_at"] = json!("0001-01-01T00:00:00Z"),
+            "prerelease" => {
+                v.as_object_mut().unwrap().remove("prerelease");
             }
-        });
+            "name" => v["name"] = json!("@different/addon"),
+            "tag" => v["tag_name"] = json!("different-tag"),
+            "object" => v = json!([]),
+            _ => unreachable!(),
+        }
+        let s = Server::new(move |_| body(v.clone()));
         assert!(
             s.client().resolve("@dev/addon", "Release/v1").is_err(),
             "{change}"
         );
+        assert_eq!(s.seen.lock().unwrap().len(), 1, "{change}");
     }
 }

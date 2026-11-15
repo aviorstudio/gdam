@@ -31,7 +31,7 @@ pub fn resolve(
     let mut requesters: BTreeMap<String, BTreeMap<String, Vec<String>>> = BTreeMap::new();
     let mut queue = pins
         .iter()
-        .map(|(n, t)| (n.clone(), t.clone(), "gdam.json".to_owned()))
+        .map(|(n, t)| (n.clone(), t.clone(), "gdam.toml".to_owned()))
         .collect::<VecDeque<_>>();
     while let Some((name, tag, by)) = queue.pop_front() {
         requesters
@@ -106,7 +106,7 @@ pub fn resolve(
             } else {
                 ensure!(
                     !consumer.release.local,
-                    "linked addon {} pins {name}@{tag} but the project installs {name}@{}; pin the same tag in gdam.json",
+                    "linked addon {} pins {name}@{tag} but the project installs {name}@{}; pin the same tag in gdam.toml",
                     consumer.release.identity.name,
                     hoisted[name]
                 );

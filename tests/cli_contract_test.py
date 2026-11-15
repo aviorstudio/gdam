@@ -1,4 +1,4 @@
-"""Exercise the native CLI in disposable projects, including legacy recovery."""
+"""Exercise the native CLI in disposable projects, including interrupted transaction recovery."""
 import hashlib
 import io
 import zipfile
@@ -14,7 +14,6 @@ import threading
 import unittest
 
 BINARY = Path(os.environ.get('COOKBOOK_CLI_BINARY', str(Path(os.environ.get('CARGO_TARGET_DIR', 'target'))/'debug/gdam'))).resolve()
-REFERENCE = os.environ.get('COOKBOOK_FIXTURE_GDAM_BINARY')
 
 
 def environment():
@@ -121,7 +120,7 @@ class NativeCLI(unittest.TestCase):
                    'github_release_id': 1, 'commit_sha': 'a'*40, 'asset_id': 1,
                    'asset_name': 'fixture.zip', 'asset_digest': 'sha256:'+'0'*64,
                    'published_at': '2026-10-01T00:00:00Z', 'prerelease': False,
-                   'editor_plugin': False, 'installs': [{'path': 'addons/@test_addon', 'required_by': ['gdam.json']}]}
+                   'editor_plugin': False, 'installs': [{'path': 'addons/@test_addon', 'required_by': ['gdam.toml']}]}
         (self.project/'gdam.lock').write_text(json.dumps({'version': 1, 'requirements': {name: 'v1'}, 'addons': {name+'@v1': release}}))
         self.success('link', name, str(self.source))
         before = inventory(self.source)
@@ -161,7 +160,7 @@ class NativeCLI(unittest.TestCase):
                        'github_release_id': 1, 'commit_sha': 'a'*40, 'asset_id': 1,
                        'asset_name': 'fixture.zip', 'asset_digest': 'sha256:'+digest,
                        'published_at': '2026-10-01T00:00:00Z', 'prerelease': False,
-                       'editor_plugin': True, 'installs': [{'path': 'addons/@test_addon', 'required_by': ['gdam.json']}]}
+                       'editor_plugin': True, 'installs': [{'path': 'addons/@test_addon', 'required_by': ['gdam.toml']}]}
             locked = json.dumps({'version': 1, 'requirements': {name: 'v1'}, 'addons': {name+'@v1': release}}, indent=4).encode()
             (self.project/'gdam.lock').write_bytes(locked)
             before = inventory(self.project)
@@ -187,33 +186,9 @@ class NativeCLI(unittest.TestCase):
         self.assertEqual(inventory(external), before)
         self.assertEqual((self.project/'addons').resolve(), external.resolve())
 
-    @unittest.skipUnless(REFERENCE, 'legacy executable supplied for independent compatibility acceptance')
-    def test_metadata_and_links_match_original_main(self):
-        before = inventory(self.source)
-        outputs = []
-        for binary in [Path(REFERENCE), BINARY]:
-            root = self.root/('legacy' if binary != BINARY else 'rust')
-            root.mkdir()
-            (root/'project.godot').write_bytes((self.project/'project.godot').read_bytes())
-            for args in [('init',), ('install',), ('link', '@test/addon', str(self.source)),
-                         ('unlink', '@test/addon'), ('link', '@test/addon'), ('unlink', '--all')]:
-                self.success(*args, root=root, binary=binary)
-            raw = inventory(root)
-            # Source names/encoding deliberately change; all other native bytes remain exact.
-            for old, new in [('gdam.json','gdam.toml'), ('gdam.link.json','gdam.link.toml')]:
-                name = old if binary != BINARY else new
-                if name in raw:
-                    kind, content = raw.pop(name)
-                    model = json.loads(content) if binary != BINARY else tomllib.loads(content.decode())
-                    raw[new] = (kind, json.dumps(model, sort_keys=True).encode())
-            outputs.append(raw)
-        self.assertEqual(outputs[0], outputs[1])
-        self.assertEqual(inventory(self.source), before)
-
-    @unittest.skipUnless(REFERENCE, 'legacy executable supplied for independent recovery acceptance')
-    def test_recovers_original_go_prepared_journal_before_reading_manifest(self):
-        self.success('init', binary=Path(REFERENCE))
-        self.success('link', '@test/addon', str(self.source), binary=Path(REFERENCE))
+    def test_recovers_interrupted_native_journal_before_reading_manifest(self):
+        self.success('init')
+        self.success('link', '@test/addon', str(self.source))
         before = inventory(self.project)
         entered, release = threading.Event(), threading.Event()
         class Handler(http.server.BaseHTTPRequestHandler):
@@ -235,9 +210,9 @@ class NativeCLI(unittest.TestCase):
         try:
             env = environment()
             env['GDAM_API_URL'] = f'http://127.0.0.1:{server.server_port}'
-            process = subprocess.Popen([REFERENCE, 'add', '@test/new'], cwd=self.project,
+            process = subprocess.Popen([str(BINARY), 'add', '@test/new'], cwd=self.project,
                                        env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            self.assertTrue(entered.wait(10), 'original CLI never reached its prepared transaction')
+            self.assertTrue(entered.wait(10), 'CLI never reached its prepared transaction')
             competing = invoke(BINARY, self.project, 'unlink', '--all')
             self.assertEqual(competing.returncode, 1, competing.stderr)
             self.assertIn('another gdam operation', competing.stderr)
@@ -246,20 +221,12 @@ class NativeCLI(unittest.TestCase):
             process.communicate(timeout=5)
             journal = self.project/'.gdam-state/transaction/journal.json'
             self.assertEqual(json.loads(journal.read_text())['state'], 'prepared')
-            (self.project/'gdam.json').write_text('interrupted metadata is invalid')
+            (self.project/'gdam.toml').write_text('interrupted metadata is invalid')
             (self.project/'addons/@test_addon').unlink()
             recovered = invoke(BINARY, self.project, 'unlink', '--all')
-            self.assertNotEqual(recovered.returncode, 0)
-            self.assertIn('explicit conversion', recovered.stderr)
+            self.assertEqual(recovered.returncode, 0, recovered.stderr)
             self.assertFalse(journal.exists())
-            self.assertEqual(json.loads((self.project/'gdam.json').read_text()),
-                             json.loads(before['gdam.json'][1]))
-            # An explicit, versioned source conversion follows recovery; there is no loader fallback.
-            for old, new in [('gdam.json','gdam.toml'), ('gdam.link.json','gdam.link.toml')]:
-                legacy = self.project/old
-                (self.project/new).write_text(source_text(json.loads(legacy.read_text())))
-                legacy.unlink()
-            self.success('unlink', '--all')
+            self.assertEqual((self.project/'gdam.toml').read_bytes(), before['gdam.toml'][1])
             self.assertFalse(tomllib.loads((self.project/'gdam.link.toml').read_text())['addons']['@test/addon']['enabled'])
             self.assertEqual((self.source/'keep.gd').read_text(), 'extends RefCounted\n')
         finally:
