@@ -90,3 +90,6 @@ version_identity = "tag"
 validation_timeout = 30
 acceptance_timeout = 30
 cargo_manifest = "Cargo.toml"
+
+[ci]
+single_job = true
